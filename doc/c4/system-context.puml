@@ -1,0 +1,30 @@
+@startuml system-context
+!include <C4/C4_Context>
+
+title System Context diagram for eShop
+
+Person(shopper, "Shopper")
+Person(seller, "Seller")
+Person(contentEditor, "Content Editor")
+Person(marketer, "Marketer")
+Person(merchandiser, "Merchandiser")
+Person(csAgent, "Customer Service Agent")
+Person(siteAdmin, "Site Administrator")
+Person(devOps, "Developer/Operator")
+
+System(eshop, "eShop")
+
+System_Ext(idp, "External Identity Provider")
+
+Rel(shopper, eshop, "Buys products")
+Rel(seller, eshop, "Submits product data")
+Rel(contentEditor, eshop, "Edits CMS content")
+Rel(marketer, eshop, "Manages campaigns")
+Rel(merchandiser, eshop, "Reviews submissions")
+Rel(csAgent, eshop, "Manages Shopper data")
+Rel(siteAdmin, eshop, "Administers the platform")
+Rel(devOps, eshop, "Runs and monitors")
+Rel(eshop, idp, "Authenticates via OIDC")
+
+SHOW_LEGEND()
+@enduml

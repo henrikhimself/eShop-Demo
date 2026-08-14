@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <RootNamespace>Hj.$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <LangVersion>14</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Authors>Henrik Jensen</Authors>
+    <Copyright>Copyright 2026 Henrik Jensen</Copyright>
+  </PropertyGroup>
+</Project>

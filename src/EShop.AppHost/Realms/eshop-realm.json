@@ -1,0 +1,97 @@
+{
+  "realm": "eshop",
+  "enabled": true,
+  "sslRequired": "none",
+  "users": [
+    {
+      "username": "test-seller",
+      "email": "test-seller@example.com",
+      "firstName": "Test",
+      "lastName": "Seller",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "TestSeller123!",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "test-content-editor",
+      "email": "test-content-editor@example.com",
+      "firstName": "Test",
+      "lastName": "Content Editor",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "TestContentEditor123!",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "test-marketer",
+      "email": "test-marketer@example.com",
+      "firstName": "Test",
+      "lastName": "Marketer",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "TestMarketer123!",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "test-merchandiser",
+      "email": "test-merchandiser@example.com",
+      "firstName": "Test",
+      "lastName": "Merchandiser",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "TestMerchandiser123!",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "test-customer-service-agent",
+      "email": "test-customer-service-agent@example.com",
+      "firstName": "Test",
+      "lastName": "Customer Service Agent",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "TestCustomerServiceAgent123!",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "test-site-administrator",
+      "email": "test-site-administrator@example.com",
+      "firstName": "Test",
+      "lastName": "Site Administrator",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "TestSiteAdministrator123!",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

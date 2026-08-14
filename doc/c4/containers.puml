@@ -1,0 +1,69 @@
+@startuml containers
+!include <C4/C4_Container>
+
+title Container diagram for eShop
+
+Person(shopper, "Shopper")
+Person(seller, "Seller")
+Person(contentEditor, "Content Editor")
+Person(marketer, "Marketer")
+Person(merchandiser, "Merchandiser")
+Person(csAgent, "Customer Service Agent")
+Person(siteAdmin, "Site Administrator")
+Person(devOps, "Developer/Operator")
+
+System_Ext(idp, "External Identity Provider", "Keycloak (local dev) / Microsoft Entra External ID (production)")
+
+System_Boundary(eshop, "eShop") {
+    Container(storefront, "Storefront", "Optimizely CMS + Commerce Connect")
+    Container(searchSvc, "Storefront search microservice", "Microservice")
+    Container(sellerPortal, "Seller Portal", "Web application")
+    Container(profileSvc, "Profile microservice", "Microservice")
+    Container(devTools, "DevTools", "Development-only web application")
+    ContainerQueue(serviceBus, "Azure Service Bus", "Aspire-hosted message broker")
+    ContainerDb(blobStorage, "Azure Blob Storage", "Aspire-hosted object storage")
+    ContainerDb(storefrontCmsDb, "Storefront CMS database", "SQL Server (local dev) / Azure SQL Database (production)")
+    ContainerDb(storefrontCommerceDb, "Storefront Commerce database", "SQL Server (local dev) / Azure SQL Database (production)")
+    ContainerDb(storefrontSearch, "Storefront search index", "Elasticsearch (local dev) / Azure AI Search (production)")
+    ContainerDb(sellerDb, "seller-db", "SQL Server (local dev) / Azure SQL Database (production)")
+    ContainerDb(cache, "cache", "Redis (local dev) / Azure Cache for Redis (production)")
+}
+
+Rel(shopper, storefront, "Buys products")
+Rel(contentEditor, storefront, "Edits CMS content")
+Rel(marketer, storefront, "Manages campaigns")
+Rel(merchandiser, storefront, "Reviews submissions")
+Rel(csAgent, storefront, "Manages Shopper data")
+Rel(siteAdmin, storefront, "Administers the platform")
+Rel(devOps, storefront, "Runs and monitors")
+Rel(devOps, searchSvc, "Runs and monitors")
+Rel(devOps, sellerPortal, "Runs and monitors")
+Rel(devOps, profileSvc, "Runs and monitors")
+Rel(devOps, devTools, "Uses developer tools")
+
+Rel(seller, sellerPortal, "Submits product data")
+Rel(storefront, storefrontCmsDb, "Reads/writes CMS data")
+Rel(storefront, storefrontCommerceDb, "Reads/writes Commerce data")
+Rel(storefront, searchSvc, "Uses catalog search API")
+Rel(searchSvc, storefrontSearch, "Indexes and queries catalog data")
+Rel(sellerPortal, sellerDb, "Reads/writes its own data")
+Rel(sellerPortal, cache, "Stores auth tickets and Data Protection keys")
+
+Rel(sellerPortal, serviceBus, "Sends submission message")
+Rel(serviceBus, storefront, "Delivers submission message")
+Rel(storefront, serviceBus, "Sends review outcome message")
+Rel(serviceBus, sellerPortal, "Delivers review outcome message")
+Rel(devTools, serviceBus, "Inspects and drives messages")
+
+Rel(sellerPortal, blobStorage, "Stores submission images")
+Rel(storefront, blobStorage, "Reads/deletes submission images")
+Rel(devTools, blobStorage, "Reads submission images")
+
+Rel(storefront, profileSvc, "Reads/writes Shopper profile data")
+
+Rel(storefront, idp, "Authenticates via OIDC")
+Rel(sellerPortal, idp, "Authenticates via OIDC")
+Rel(profileSvc, idp, "Authenticates via OIDC")
+
+SHOW_LEGEND()
+@enduml

@@ -1,0 +1,91 @@
+@page
+@using Hj.EShop.DevTools.Hubs
+@model Hj.EShop.DevTools.Pages.Tools.SellerDraftApprovalSimulator.IndexModel
+@{
+    ViewData["Title"] = "Seller Draft Approval Simulator";
+}
+
+<h1>Seller Draft Approval Simulator</h1>
+<p>
+    Stands in for Commerce Connect's Merchandiser review.
+    Approve assigns a SKU; Reject requires a reason. Both publish the outcome back to
+    the Seller Portal and remove the row below.
+</p>
+
+@if (Model.PendingSubmissions.Count == 0)
+{
+    <p>No pending submissions.</p>
+}
+else
+{
+    <table>
+        <thead>
+            <tr>
+                <th>Kind</th>
+                <th>Title</th>
+                <th>Details</th>
+                <th>Images</th>
+                <th>Received at (UTC)</th>
+                <th>Approve</th>
+                <th>Reject</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (Hj.EShop.DevTools.Services.SellerPendingSubmission submission in Model.PendingSubmissions)
+            {
+                <tr>
+                    <td>@submission.Message.Kind</td>
+                    <td>@submission.Message.TitleSnapshot</td>
+                    <td>
+                        @if (submission.Message.FormatVariants is not null)
+                        {
+                            @string.Join(", ", submission.Message.FormatVariants.Select(v => $"{v.Format} ({v.Price:C})"))
+                        }
+                        else if (submission.Message.Price is { } price)
+                        {
+                            @price.ToString("C")
+                        }
+                    </td>
+                    <td>
+                        @foreach (string blobReference in submission.Message.ImageBlobReferences)
+                        {
+                            string imageUrl = "?handler=Image&blobReference=" + Uri.EscapeDataString(blobReference);
+                            <a href="@imageUrl" target="_blank" rel="noopener noreferrer">
+                                <img src="@imageUrl" alt="Submitted image" class="thumbnail" />
+                            </a>
+                        }
+                    </td>
+                    <td>@submission.ReceivedAtUtc</td>
+                    <td>
+                        <form asp-page-handler="Approve" method="post">
+                            <input type="hidden" name="submissionId" value="@submission.Message.SubmissionId" />
+                            <button type="submit">Approve</button>
+                        </form>
+                    </td>
+                    <td>
+                        <form asp-page-handler="Reject" method="post">
+                            <input type="hidden" name="submissionId" value="@submission.Message.SubmissionId" />
+                            <input type="text" name="rejectionReason" placeholder="Reason" required />
+                            <button type="submit">Reject</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@section Scripts {
+    <script src="~/lib/signalr/signalr.min.js" asp-append-version="true"></script>
+    <script>
+        // Full reload on push so the page matches Approve/Reject's POST-redirect-GET result.
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/hubs/seller-submissions")
+            .withAutomaticReconnect()
+            .build();
+
+        connection.on("@SellerSubmissionsHub.SubmissionsChangedEvent", () => location.reload());
+
+        connection.start().catch(err => console.error("SignalR connection failed:", err));
+    </script>
+}

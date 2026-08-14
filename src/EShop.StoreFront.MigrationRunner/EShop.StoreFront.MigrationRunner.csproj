@@ -1,0 +1,108 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- EPiServer.CMS.Core/EPiServer.Commerce.Core 13.0.2/15.1.0 each declare an upper
+         bound of Microsoft.Data.SqlClient < 7.0.0, predating this repo's 7.0.1 pin
+         (ADR 0013). This project only uses EPiServer.CMS.Core/Commerce.Core for their
+         tools/ folder, never their C# API surface, and the actual migration runner code
+         (raw SqlConnection/SqlCommand) is verified end to end against a real SQL Server
+         with 7.0.1 - see doc/CHRONICLE.md. -->
+    <NoWarn>NU1608</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <!-- Referenced purely to make NuGet restore these packages and expose their
+         resolved version to CopyOptimizelySchemaScripts below - no C# API from either
+         is used. The "Core" packages, not the "meta" ones EShop.StoreFront.Web
+         references: this project only needs their tools/ folder (the shipped SQL
+         scripts), not the UI/Shell/Commerce-UI dependency tree the meta packages carry. -->
+    <PackageReference Include="EPiServer.CMS.Core" />
+    <PackageReference Include="EPiServer.Commerce.Core" />
+    <!-- Direct reference so the Directory.Packages.props security-fix pin actually
+         applies: central package management doesn't override a purely transitive
+         dependency's version unless something in this project references it directly. -->
+    <PackageReference Include="System.Security.Cryptography.Xml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../EShop.Common/EShop.Common.csproj" />
+    <ProjectReference Include="../EShop.Migrations.Common/EShop.Migrations.Common.csproj" />
+    <ProjectReference Include="../EShop.Migrations.Orchestration/EShop.Migrations.Orchestration.csproj" />
+    <ProjectReference Include="../EShop.Migrations.Optimizely/EShop.Migrations.Optimizely.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="EShop.StoreFront.MigrationRunner.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Microsoft.NET.Sdk (a plain console app, not Sdk.Web) doesn't copy this to
+         output by default the way Sdk.Web does. -->
+    <None Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- Copies the real Optimizely SQL scripts (episerver.cms.core/episerver.commerce.core
+       NuGet packages' own tools/ folder) into this project's build output, so the runner
+       ships them without needing the NuGet cache present at runtime - see
+       doc/adr/0023-explicit-database-schema-migration-resources.md and doc/CHRONICLE.md.
+       Merges two source packages into each destination folder: episerver.commerce.core's
+       tools/epiupdates_CMS/sql ships CMS-targeting scripts despite living inside the
+       Commerce package (confirmed by decompiling EPiServer.Net.Cli's UpdateDatabase -
+       see doc/CHRONICLE.md), so it's merged into the "Cms" destination alongside
+       episerver.cms.core's own tools/epiupdates/sql, not into "Commerce". -->
+  <Target Name="CopyOptimizelySchemaScripts" AfterTargets="Build">
+    <!-- @(PackageReference) items don't carry %(Version) metadata under central
+         package management by the time this target runs - read the version from
+         @(PackageVersion) instead, the item group Directory.Packages.props itself
+         populates, always available regardless of package resolution. -->
+    <ItemGroup>
+      <_CmsCoreReference Include="@(PackageVersion)" Condition="'%(Identity)' == 'EPiServer.CMS.Core'" />
+      <_CommerceCoreReference Include="@(PackageVersion)" Condition="'%(Identity)' == 'EPiServer.Commerce.Core'" />
+    </ItemGroup>
+
+    <PropertyGroup>
+      <_CmsCoreToolsDir>$(NuGetPackageRoot)episerver.cms.core\@(_CmsCoreReference->'%(Version)')\tools\</_CmsCoreToolsDir>
+      <_CommerceCoreToolsDir>$(NuGetPackageRoot)episerver.commerce.core\@(_CommerceCoreReference->'%(Version)')\tools\</_CommerceCoreToolsDir>
+      <_CmsDestDir>$(OutDir)OptimizelySchemaScripts\Cms\</_CmsDestDir>
+      <_CommerceDestDir>$(OutDir)OptimizelySchemaScripts\Commerce\</_CommerceDestDir>
+    </PropertyGroup>
+
+    <!-- Every item carries its own destination subfolder explicitly - none of these
+         globs are recursive (**), so MSBuild's %(RecursiveDir) metadata (which only
+         populates for a recursive glob) can't be relied on to preserve the epiupdates/
+         sql nesting. -->
+    <ItemGroup>
+      <_CmsScripts Include="$(_CmsCoreToolsDir)EPiServer.Cms.Core.sql">
+        <DestinationSubdir></DestinationSubdir>
+      </_CmsScripts>
+      <_CmsScripts Include="$(_CmsCoreToolsDir)epiupdates\sql\*.sql">
+        <DestinationSubdir>epiupdates\sql\</DestinationSubdir>
+      </_CmsScripts>
+      <_CmsScripts Include="$(_CommerceCoreToolsDir)epiupdates_CMS\sql\*.sql">
+        <DestinationSubdir>epiupdates_CMS\sql\</DestinationSubdir>
+      </_CmsScripts>
+      <_CommerceScripts Include="$(_CommerceCoreToolsDir)EPiServer.Commerce.Core.sql">
+        <DestinationSubdir></DestinationSubdir>
+      </_CommerceScripts>
+      <_CommerceScripts Include="$(_CommerceCoreToolsDir)epiupdates_commerce\sql\*.sql">
+        <DestinationSubdir>epiupdates_commerce\sql\</DestinationSubdir>
+      </_CommerceScripts>
+    </ItemGroup>
+
+    <Copy
+      SourceFiles="@(_CmsScripts)"
+      DestinationFolder="$(_CmsDestDir)%(DestinationSubdir)"
+      SkipUnchangedFiles="true" />
+    <Copy
+      SourceFiles="@(_CommerceScripts)"
+      DestinationFolder="$(_CommerceDestDir)%(DestinationSubdir)"
+      SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

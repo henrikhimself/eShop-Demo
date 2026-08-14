@@ -1,0 +1,74 @@
+@page
+@using Hj.EShop.DevTools.Hubs
+@model Hj.EShop.DevTools.Pages.Tools.SellerInventoryReportSimulator.IndexModel
+@{
+    ViewData["Title"] = "Inventory Report Simulator";
+}
+
+<h1>Inventory Report Simulator</h1>
+<p>
+    Stands in for Commerce Connect's per-Seller warehouse sync, which doesn't exist
+    yet (ADR 0007). Confirm marks the report synced; Fail requires an error message.
+    Both publish the outcome back to the Seller Portal and remove the row below.
+</p>
+
+@if (Model.PendingReports.Count == 0)
+{
+    <p>No pending inventory reports.</p>
+}
+else
+{
+    <table>
+        <thead>
+            <tr>
+                <th>Seller Id</th>
+                <th>SKU</th>
+                <th>Quantity</th>
+                <th>Received at (UTC)</th>
+                <th>Confirm</th>
+                <th>Fail</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (Hj.EShop.DevTools.Services.SellerPendingInventoryReport report in Model.PendingReports)
+            {
+                <tr>
+                    <td>@report.Message.SellerId</td>
+                    <td>@report.Message.Sku</td>
+                    <td>@report.Message.Quantity</td>
+                    <td>@report.ReceivedAtUtc</td>
+                    <td>
+                        <form asp-page-handler="Confirm" method="post">
+                            <input type="hidden" name="sellerId" value="@report.Message.SellerId" />
+                            <input type="hidden" name="sku" value="@report.Message.Sku" />
+                            <button type="submit">Confirm</button>
+                        </form>
+                    </td>
+                    <td>
+                        <form asp-page-handler="Fail" method="post">
+                            <input type="hidden" name="sellerId" value="@report.Message.SellerId" />
+                            <input type="hidden" name="sku" value="@report.Message.Sku" />
+                            <input type="text" name="error" placeholder="Error" required />
+                            <button type="submit">Fail</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@section Scripts {
+    <script src="~/lib/signalr/signalr.min.js" asp-append-version="true"></script>
+    <script>
+        // Full reload on push so the page matches Confirm/Fail's POST-redirect-GET result.
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/hubs/seller-inventory")
+            .withAutomaticReconnect()
+            .build();
+
+        connection.on("@SellerInventoryHub.InventoryChangedEvent", () => location.reload());
+
+        connection.start().catch(err => console.error("SignalR connection failed:", err));
+    </script>
+}

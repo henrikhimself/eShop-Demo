@@ -1,0 +1,78 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <!-- See EShop.StoreFront.MigrationRunner.csproj - same transitive
+         EPiServer.CMS.Core/EPiServer.Commerce.Core upper-bound conflict via the project
+         reference below. -->
+    <NoWarn>NU1608</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <PackageReference Include="xunit.v3.mtp-v2" />
+    <!-- See EShop.StoreFront.MigrationRunner.csproj - direct reference needed for the
+         Directory.Packages.props security-fix pin to actually apply. -->
+    <PackageReference Include="System.Security.Cryptography.Xml" />
+    <!-- Referenced so RealOptimizelyScriptsTests can run the actual shipped scripts
+         (not just the synthetic fixture ones), giving a version bump a real test to
+         fail against - only needs the tools/ folder, mirroring
+         EShop.StoreFront.MigrationRunner.csproj's own reference/copy step. Not shared
+         with that project's build output on purpose - test projects don't reference
+         each other's output in this repo. -->
+    <PackageReference Include="EPiServer.CMS.Core" />
+    <PackageReference Include="EPiServer.Commerce.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/EShop.Migrations.Orchestration/EShop.Migrations.Orchestration.csproj" />
+    <ProjectReference Include="../../src/EShop.Migrations.Optimizely/EShop.Migrations.Optimizely.csproj" />
+    <ProjectReference Include="../../src/EShop.StoreFront.MigrationRunner/EShop.StoreFront.MigrationRunner.csproj" />
+  </ItemGroup>
+
+  <!-- See EShop.StoreFront.MigrationRunner.csproj's own CopyOptimizelySchemaScripts -
+       same shape, duplicated rather than shared. -->
+  <Target Name="CopyRealOptimizelySchemaScripts" AfterTargets="Build">
+    <ItemGroup>
+      <_CmsCoreReference Include="@(PackageVersion)" Condition="'%(Identity)' == 'EPiServer.CMS.Core'" />
+      <_CommerceCoreReference Include="@(PackageVersion)" Condition="'%(Identity)' == 'EPiServer.Commerce.Core'" />
+    </ItemGroup>
+
+    <PropertyGroup>
+      <_CmsCoreToolsDir>$(NuGetPackageRoot)episerver.cms.core\@(_CmsCoreReference->'%(Version)')\tools\</_CmsCoreToolsDir>
+      <_CommerceCoreToolsDir>$(NuGetPackageRoot)episerver.commerce.core\@(_CommerceCoreReference->'%(Version)')\tools\</_CommerceCoreToolsDir>
+      <_CmsDestDir>$(OutDir)RealOptimizelySchemaScripts\Cms\</_CmsDestDir>
+      <_CommerceDestDir>$(OutDir)RealOptimizelySchemaScripts\Commerce\</_CommerceDestDir>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <_CmsScripts Include="$(_CmsCoreToolsDir)EPiServer.Cms.Core.sql">
+        <DestinationSubdir></DestinationSubdir>
+      </_CmsScripts>
+      <_CmsScripts Include="$(_CmsCoreToolsDir)epiupdates\sql\*.sql">
+        <DestinationSubdir>epiupdates\sql\</DestinationSubdir>
+      </_CmsScripts>
+      <_CmsScripts Include="$(_CommerceCoreToolsDir)epiupdates_CMS\sql\*.sql">
+        <DestinationSubdir>epiupdates_CMS\sql\</DestinationSubdir>
+      </_CmsScripts>
+      <_CommerceScripts Include="$(_CommerceCoreToolsDir)EPiServer.Commerce.Core.sql">
+        <DestinationSubdir></DestinationSubdir>
+      </_CommerceScripts>
+      <_CommerceScripts Include="$(_CommerceCoreToolsDir)epiupdates_commerce\sql\*.sql">
+        <DestinationSubdir>epiupdates_commerce\sql\</DestinationSubdir>
+      </_CommerceScripts>
+    </ItemGroup>
+
+    <Copy
+      SourceFiles="@(_CmsScripts)"
+      DestinationFolder="$(_CmsDestDir)%(DestinationSubdir)"
+      SkipUnchangedFiles="true" />
+    <Copy
+      SourceFiles="@(_CommerceScripts)"
+      DestinationFolder="$(_CommerceDestDir)%(DestinationSubdir)"
+      SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

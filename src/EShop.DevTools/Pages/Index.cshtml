@@ -1,0 +1,25 @@
+@page
+@model Hj.EShop.DevTools.Pages.IndexModel
+@{
+    ViewData["Title"] = "Dev Tools";
+}
+
+<h1>Dev Tools</h1>
+<p>
+    Internal, dev-only tools for exercising parts of the system that don't have a real
+    counterpart yet, or that a developer needs to drive by hand locally. Never
+    deployed.
+</p>
+
+<ul>
+    <li>
+        <a asp-page="/Tools/SellerDraftApprovalSimulator/Index">Seller Draft Approval Simulator</a>
+        - approve or reject a Seller's submitted movie draft by hand, standing in for
+        Commerce Connect's Merchandiser review.
+    </li>
+    <li>
+        <a asp-page="/Tools/SellerInventoryReportSimulator/Index">Inventory Report Simulator</a>
+        - confirm or fail a Seller's reported inventory quantity by hand, standing in
+        for Commerce Connect's per-Seller warehouse sync (ADR 0007).
+    </li>
+</ul>
