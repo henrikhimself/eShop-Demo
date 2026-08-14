@@ -1,0 +1,17 @@
+{
+    "dotnet.defaultSolution": "EShop.slnx",
+    "editor.minimap.enabled": false,
+    "files.exclude": {
+      ".agents": true,
+      ".claude": true,
+      "**/bin": true,
+      "**/obj": true,
+      "**/*.binlog": true,
+      "**/*.sarif": true
+    },
+    "csharp.debug.symbolOptions.searchNuGetOrgSymbolServer": true,
+    "csharp.debug.symbolOptions.searchMicrosoftSymbolServer": true,
+    "csharp.debug.justMyCode": true,
+    "csharp.debug.requireExactSource": true,
+    "csharp.debug.suppressJITOptimizations": false
+}

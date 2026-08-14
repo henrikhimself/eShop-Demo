@@ -1,0 +1,38 @@
+@startuml seller-submission-review
+!include <C4/C4_Component>
+
+title Component diagram for Seller submission review (inside the Storefront container)
+
+Person(merchandiser, "Merchandiser")
+ContainerQueue_Ext(serviceBus, "Azure Service Bus")
+ContainerDb_Ext(blobStorage, "Azure Blob Storage")
+
+Container_Boundary(storefront, "Storefront") {
+    Component(submissionHandler, "Submission Message Handler", "Message consumer")
+    Component(submissionContent, "Submission Content", "Optimizely IContent / IVersionable")
+    Component(approvalEngine, "Content Approval Engine", "Optimizely IApprovalRepository / IApprovalEngine")
+    Component(rejectedJob, "Rejected Submission Job", "Scheduled job")
+    Component(approvedJob, "Approved Submission Job", "Scheduled job")
+    Component(catalog, "Catalog", "Commerce Connect catalog")
+    Component(blobClient, "Blob Storage Client", "Component")
+}
+
+Rel(serviceBus, submissionHandler, "Delivers submission message")
+Rel(submissionHandler, submissionContent, "Creates")
+Rel(submissionContent, approvalEngine, "Enters approval workflow")
+Rel(merchandiser, approvalEngine, "Reviews")
+
+Rel(approvalEngine, rejectedJob, "Rejected")
+Rel(rejectedJob, serviceBus, "Sends rejection message")
+Rel(rejectedJob, submissionContent, "Deletes")
+
+Rel(approvalEngine, approvedJob, "Approved")
+Rel(approvedJob, catalog, "Creates/resolves product variant")
+Rel(approvedJob, serviceBus, "Sends assigned-SKU message")
+Rel(approvedJob, submissionContent, "Deletes")
+
+Rel(submissionContent, blobClient, "References images")
+Rel(blobClient, blobStorage, "Reads/deletes images")
+
+SHOW_LEGEND()
+@enduml

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>@ViewData["Title"] - Dev Tools</title>
+    <style>
+        body { font-family: sans-serif; margin: 2rem; }
+        nav a { margin-right: 1rem; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: left; }
+        .thumbnail { width: 60px; height: 60px; object-fit: cover; margin-right: 0.25rem; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a asp-page="/Index">Dev Tools</a>
+        <a asp-page="/Tools/SellerDraftApprovalSimulator/Index">Seller Draft Approval Simulator</a>
+        <a asp-page="/Tools/SellerInventoryReportSimulator/Index">Inventory Report Simulator</a>
+    </nav>
+    <hr />
+    <main role="main">
+        @RenderBody()
+    </main>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

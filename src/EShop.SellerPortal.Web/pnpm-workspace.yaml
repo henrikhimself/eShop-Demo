@@ -1,0 +1,9 @@
+allowBuilds:
+  sharp: true
+  unrs-resolver: true
+
+# Aspire's AddNextJsApp runs `pnpm install` as a non-interactive subprocess (no TTY),
+# so pnpm's interactive "purge node_modules?" confirmation must be disabled, or the
+# install silently aborts (ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY) every time the
+# AppHost starts.
+confirmModulesPurge: false

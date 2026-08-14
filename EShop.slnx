@@ -1,0 +1,28 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/EShop.AppHost/EShop.AppHost.csproj" />
+    <Project Path="src/EShop.Cli/EShop.Cli.csproj" />
+    <Project Path="src/EShop.Common/EShop.Common.csproj" />
+    <Project Path="src/EShop.DevTools/EShop.DevTools.csproj" />
+    <Project Path="src/EShop.Messaging/EShop.Messaging.csproj" />
+    <Project Path="src/EShop.Migrations.Common/EShop.Migrations.Common.csproj" />
+    <Project Path="src/EShop.Migrations.Orchestration/EShop.Migrations.Orchestration.csproj" />
+    <Project Path="src/EShop.Migrations.Optimizely/EShop.Migrations.Optimizely.csproj" />
+    <Project Path="src/EShop.SellerPortal.Bff/EShop.SellerPortal.Bff.csproj" />
+    <Project Path="src/EShop.SellerPortal.MigrationRunner/EShop.SellerPortal.MigrationRunner.csproj" />
+    <Project Path="src/EShop.ServiceDefaults/EShop.ServiceDefaults.csproj" />
+    <Project Path="src/EShop.StoreFront.MigrationRunner/EShop.StoreFront.MigrationRunner.csproj" />
+    <Project Path="src/EShop.StoreFront.Web/EShop.StoreFront.Web.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/EShop.AppHost.Tests/EShop.AppHost.Tests.csproj" />
+    <Project Path="test/EShop.Cli.Tests/EShop.Cli.Tests.csproj" />
+    <Project Path="test/EShop.DevTools.Tests/EShop.DevTools.Tests.csproj" />
+    <Project Path="test/EShop.Migrations.Common.Tests/EShop.Migrations.Common.Tests.csproj" />
+    <Project Path="test/EShop.Migrations.Orchestration.Tests/EShop.Migrations.Orchestration.Tests.csproj" />
+    <Project Path="test/EShop.Migrations.Optimizely.Tests/EShop.Migrations.Optimizely.Tests.csproj" />
+    <Project Path="test/EShop.SellerPortal.Bff.Tests/EShop.SellerPortal.Bff.Tests.csproj" />
+    <Project Path="test/EShop.SellerPortal.MigrationRunner.Tests/EShop.SellerPortal.MigrationRunner.Tests.csproj" />
+    <Project Path="test/EShop.StoreFront.MigrationRunner.Tests/EShop.StoreFront.MigrationRunner.Tests.csproj" />
+  </Folder>
+</Solution>

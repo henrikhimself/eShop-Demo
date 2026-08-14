@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "binlogtool": {
+      "version": "1.0.29",
+      "commands": [
+        "binlogtool"
+      ],
+      "rollForward": false
+    },
+    "dotnet-coverage": {
+      "version": "18.8.0",
+      "commands": [
+        "dotnet-coverage"
+      ],
+      "rollForward": false
+    },
+    "dotnet-ef": {
+      "version": "10.0.10",
+      "commands": [
+        "dotnet-ef"
+      ],
+      "rollForward": false
+    },
+    "dotnet-reportgenerator-globaltool": {
+      "version": "5.5.10",
+      "commands": [
+        "reportgenerator"
+      ],
+      "rollForward": false
+    },
+    "mdreport": {
+      "version": "1.0.1",
+      "commands": [
+        "mdreport"
+      ],
+      "rollForward": false
+    }
+  }
+}

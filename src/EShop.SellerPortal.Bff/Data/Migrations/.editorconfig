@@ -1,0 +1,12 @@
+# EF Core generates these files (`dotnet ef migrations add`); they are regenerated on
+# every migration and are not hand-edited. Silence the style/analyzer rules that only
+# make sense for hand-written code, rather than hand-fixing generated output that will
+# just be regenerated the same way next time.
+[*.cs]
+dotnet_diagnostic.CA1515.severity = none
+dotnet_diagnostic.CA1861.severity = none
+dotnet_diagnostic.IDE0005.severity = none
+dotnet_diagnostic.IDE0073.severity = none
+dotnet_diagnostic.IDE0161.severity = none
+dotnet_diagnostic.IDE0300.severity = none
+dotnet_diagnostic.S1186.severity = none

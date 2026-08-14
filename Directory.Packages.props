@@ -1,0 +1,141 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Aspire.Azure.Messaging.ServiceBus" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Azure.Storage.Blobs" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Hosting.Azure.AppContainers" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Hosting.Azure.Redis" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Hosting.Azure.ServiceBus" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Hosting.Azure.Sql" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Hosting.Azure.Storage" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Hosting.JavaScript" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Hosting.Keycloak" Version="13.4.6-preview.1.26319.6" />
+    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Microsoft.EntityFrameworkCore.SqlServer" Version="13.4.6" />
+    <PackageVersion Include="Aspire.StackExchange.Redis" Version="13.4.6" />
+    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.4.6" />
+    <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.20.1" />
+    <!-- Optimizely CMS 13/Commerce Connect 15 (ADR 0001) - the "meta" packages, matching
+         the marketing version numbers exactly (13.x/15.x). Restored from Optimizely's own
+         NuGet feed (see nuget.config's package source mapping). EPiServer.CMS pinned to
+         13.0.2, not the newer 13.1.1: Commerce 15.1.0's own dependency graph expects CMS
+         13.0.2 specifically - 13.1.1 restores without a NuGet warning but crashes at
+         runtime (a stale assembly-versioned reference inside Mediachase.Commerce/
+         Mediachase.Search), see doc/CHRONICLE.md. EPiServer.Events.ChangeNotification and
+         EPiServer.OptimizelyIdentity are extra direct references neither meta-package
+         pulls in transitively, but AddCommerce() needs both at runtime regardless (the
+         former for Mediachase.Commerce/Search's own type scanning, the latter for
+         EPiServer.Commerce.UI.Admin.AddCommerceAdmin()) - found by actually running the
+         app, not by restore/build warnings. -->
+    <PackageVersion Include="EPiServer.CMS" Version="13.0.2" />
+    <!-- EShop.StoreFront.MigrationRunner references these two directly (not the "meta"
+         packages above) - it only needs their tools/ folder (the shipped SQL scripts),
+         not the UI/Shell/Commerce-UI dependency tree the meta packages pull in. Pinned
+         to the exact same version as their meta package, matching Optimizely's own
+         lockstep versioning. -->
+    <PackageVersion Include="EPiServer.CMS.Core" Version="13.0.2" />
+    <PackageVersion Include="EPiServer.Commerce" Version="15.1.0" />
+    <PackageVersion Include="EPiServer.Commerce.Core" Version="15.1.0" />
+    <PackageVersion Include="EPiServer.Events.ChangeNotification" Version="13.0.2" />
+    <PackageVersion Include="EPiServer.OptimizelyIdentity" Version="13.0.2" />
+    <!-- 10.0.9, not the newer 10.0.10: 10.0.10 does not clear ADR 0013's 40-day
+         quarantine as of when this was pinned; 10.0.9 does. Covers this whole
+         contiguous run of three packages. -->
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.9" />
+    <!-- 10.0.10, not the "compliant" 10.0.9: 10.0.9 transitively pulls in
+         Microsoft.AspNetCore.DataProtection 10.0.9, which depends on
+         System.Security.Cryptography.Xml 10.0.9 - a disclosed high-severity
+         vulnerability NuGet's own audit catches at restore time. ADR 0013's
+         exception for a security fix applies - 10.0.10 is kept despite not
+         clearing the 40-day quarantine. -->
+    <PackageVersion Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="10.0.10" />
+    <!-- Direct pin, not just a transitive consequence of the override above: the
+         EPiServer.CMS.Core/EPiServer.Commerce.Core dependency graph (referenced by
+         EShop.StoreFront.MigrationRunner/EShop.StoreFront.Web) pulls in
+         System.Security.Cryptography.Xml 10.0.6 on its own, a disclosed high-severity
+         vulnerability NuGet's own audit catches at restore time - same ADR 0013
+         security exception as the override above, applied directly here too. 10.0.10,
+         not 10.0.9: 10.0.9 still trips the same advisories NuGet's audit catches. -->
+    <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.9" />
+    <!-- Direct pin, overriding Microsoft.AspNetCore.OpenApi's own transitive
+         reference: that package's default brings a version with a known
+         high-severity DoS advisory (GHSA-v5pm-xwqc-g5wc), patched in 2.7.5+.
+         2.9.0, not the newer 2.10.0/2.11.0: neither clears ADR 0013's 40-day
+         quarantine as of when this was pinned; 2.9.0 does, and still carries the
+         fix (well above the 2.7.5 patch line). -->
+    <PackageVersion Include="Microsoft.OpenApi" Version="2.9.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="5.3.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.3.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.3.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="5.3.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="5.3.0" />
+    <!-- 10.0.9, not the newer 10.0.10: 10.0.10 does not clear ADR 0013's 40-day
+         quarantine as of when this was pinned; 10.0.9 does. Covers this whole
+         contiguous run of four packages. -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
+    <!-- Not a new version entering the graph: EShop.SellerPortal.Bff already resolves
+         Microsoft.EntityFrameworkCore 10.0.9 and Microsoft.Data.SqlClient 7.0.1
+         transitively via Aspire.Microsoft.EntityFrameworkCore.SqlServer - these are
+         direct pins at the exact same, already-running versions, for
+         EShop.SellerPortal.Migrations' own raw ADO.NET (sp_getapplock) and migration
+         (IExecutionStrategy) use. -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
+    <!-- Direct pin, not just Aspire.Microsoft.EntityFrameworkCore.SqlServer's own
+         transitive 10.0.8: without it, EShop.SellerPortal.MigrationRunner's own
+         restore lands on a different Microsoft.EntityFrameworkCore.Relational version
+         than the EShop.SellerPortal.Bff assembly it references was built against
+         (which pulls 10.0.9 via its own direct Microsoft.EntityFrameworkCore.Design
+         reference), causing an MSB3277 conflict. -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.9" />
+    <!-- 2.1.12, not the "compliant" 2.1.11: 2.1.11 has a disclosed high-severity
+         vulnerability (GHSA-2m69-gcr7-jv3q) NuGet's own audit catches at restore
+         time. ADR 0013's exception for a security fix applies - 2.1.12 is kept
+         despite not clearing the 40-day quarantine. -->
+    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.12" />
+    <!-- 10.7.0, not the newer 10.8.0: 10.8.0 does not clear ADR 0013's 40-day
+         quarantine as of when this was pinned; 10.7.0 does. Covers this whole
+         contiguous run of four packages - they can't be quarantined
+         independently of each other (Http.Resilience 10.8.0 requires
+         Resilience >= 10.8.0). -->
+    <PackageVersion Include="Microsoft.Extensions.Caching.Hybrid" Version="10.7.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.7.0" />
+    <PackageVersion Include="Microsoft.Extensions.Resilience" Version="10.7.0" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.7.0" />
+    <PackageVersion Include="Microsoft.Playwright" Version="1.61.0" />
+    <!-- 2.2.3, not the newer 2.3.3: 2.3.3 does not clear ADR 0013's 40-day
+         quarantine as of when this was pinned, and neither does 2.3.0, the oldest
+         2.3.x release; 2.2.3 does. Covers both of these packages. -->
+    <PackageVersion Include="Microsoft.Testing.Extensions.HangDump" Version="2.2.3" />
+    <PackageVersion Include="Microsoft.Testing.Extensions.TrxReport" Version="2.2.3" />
+    <!-- 1.16.0, not the newer 1.17.0: 1.17.0 does not clear ADR 0013's 40-day
+         quarantine as of when this was pinned; 1.16.0 does. Covers this whole
+         contiguous run of four packages. -->
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.16.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.16.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.16.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.16.0" />
+    <!-- 1.15.1, not 1.16.0 like its siblings above: this package's own 1.16.0
+         release is on a different publish date than theirs and does not itself
+         clear ADR 0013's 40-day quarantine as of when this was pinned; 1.15.1
+         does. -->
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
+    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.28.0.143324" />
+    <!-- 0.57.1, not the newer 0.57.2: 0.57.2 does not clear ADR 0013's 40-day
+         quarantine as of when this was pinned; 0.57.1 does. -->
+    <PackageVersion Include="Spectre.Console" Version="0.57.1" />
+    <PackageVersion Include="Spectre.Console.Cli" Version="0.55.0" />
+    <PackageVersion Include="xunit.v3.mtp-v2" Version="3.2.2" />
+  </ItemGroup>
+</Project>

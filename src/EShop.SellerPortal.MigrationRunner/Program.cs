@@ -1,0 +1,41 @@
+// <copyright file="Program.cs" company="Henrik Jensen">
+// Copyright 2026 Henrik Jensen
+//
+// Licensed under the Apache License, Version 2.0 (the "License")
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// </copyright>
+
+using Hj.EShop.Common;
+using Hj.EShop.SellerPortal.Bff.Data;
+using Hj.EShop.SellerPortal.MigrationRunner;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
+// One-shot: acquire the migration lock, apply pending migrations, write a schema
+// marker, release the lock, exit (see SchemaMigrator.cs for that flow). No HTTP
+// endpoint at all - AddEFMigrations (Aspire.Hosting.EntityFrameworkCore) assumed one
+// existed and failed on this project's http-only Bff; a plain console resource
+// sidesteps that entirely (see doc/CHRONICLE.md). Runs the migration programmatically
+// (Database.MigrateAsync()), not `dotnet ef database update`, so it gets the same
+// retry-on-cold-start behavior the Bff used to have inline, which that CLI command has
+// no equivalent for.
+HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+builder.AddSqlServerDbContext<SellerPortalDbContext>(connectionName: KnownNames.ResourceSellerDb);
+
+using IHost host = builder.Build();
+ILogger logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("MigrationRunner");
+
+using IServiceScope scope = host.Services.CreateScope();
+SellerPortalDbContext dbContext = scope.ServiceProvider.GetRequiredService<SellerPortalDbContext>();
+
+return await SchemaMigrator.RunAsync(dbContext, logger, CancellationToken.None);

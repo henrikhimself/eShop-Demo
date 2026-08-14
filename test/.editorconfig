@@ -1,0 +1,53 @@
+root = false
+
+[*.cs]
+# IDE0073: File header
+dotnet_diagnostic.IDE0073.severity = none
+
+# CA1707: Test method names intentionally use underscores (Subject_Scenario_Expectation convention)
+dotnet_diagnostic.CA1707.severity = none
+
+# CA2000: Dispose objects before losing scope - suppressed in test code where IDisposable mocks are intentionally passed to the SUT which owns their lifetime, or disposal is being verified
+dotnet_diagnostic.CA2000.severity = none
+
+# IDE1006: Test method names intentionally do not include the Async suffix
+dotnet_diagnostic.IDE1006.severity = none
+
+# xUnit2001: Do not use invalid equality check
+dotnet_diagnostic.xUnit2001.severity = error
+
+# xUnit2022: Boolean assertions should not be negated
+dotnet_diagnostic.xUnit2022.severity = error
+
+# xUnit2023: Do not use collection methods for single-item collections
+dotnet_diagnostic.xUnit2023.severity = error
+
+# xUnit2024: Do not use boolean asserts for simple equality tests
+dotnet_diagnostic.xUnit2024.severity = error
+
+# xUnit2025: The boolean assertion statement can be simplified
+dotnet_diagnostic.xUnit2025.severity = error
+
+# xUnit2032: Type assertions based on 'assignable from' are confusingly named
+dotnet_diagnostic.xUnit2032.severity = error
+
+# xUnit1033: Test classes decorated with 'IClassFixture<T>' or 'ICollectionFixture<T>' should add a constructor argument of type 'T'
+dotnet_diagnostic.xUnit1033.severity = error
+
+# xUnit1042: The member referenced by the MemberData attribute returns untyped data rows
+dotnet_diagnostic.xUnit1042.severity = error
+
+# xUnit1044: Avoid using TheoryData type arguments that are not serializable
+dotnet_diagnostic.xUnit1044.severity = error
+
+# xUnit1045: Avoid using TheoryData type arguments that might not be serializable
+dotnet_diagnostic.xUnit1045.severity = error
+
+# xUnit1046: Avoid using TheoryDataRow arguments that are not serializable
+dotnet_diagnostic.xUnit1046.severity = error
+
+# xUnit1047: Avoid using TheoryDataRow arguments that might not be serializable
+dotnet_diagnostic.xUnit1047.severity = error
+
+# xUnit1050: The class referenced by the ClassData attribute returns untyped data rows
+dotnet_diagnostic.xUnit1050.severity = error

@@ -1,0 +1,39 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.4.6">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>602c428e-fc18-4962-afe6-6465b7708636</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.Azure.AppContainers" />
+    <PackageReference Include="Aspire.Hosting.Azure.Redis" />
+    <PackageReference Include="Aspire.Hosting.Azure.ServiceBus" />
+    <PackageReference Include="Aspire.Hosting.Azure.Sql" />
+    <PackageReference Include="Aspire.Hosting.Azure.Storage" />
+    <PackageReference Include="Aspire.Hosting.JavaScript" />
+    <PackageReference Include="Aspire.Hosting.Keycloak" />
+    <PackageReference Include="Aspire.Hosting.SqlServer" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../EShop.Common/EShop.Common.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="../EShop.DevTools/EShop.DevTools.csproj" />
+    <ProjectReference Include="../EShop.SellerPortal.Bff/EShop.SellerPortal.Bff.csproj" />
+    <ProjectReference Include="../EShop.SellerPortal.MigrationRunner/EShop.SellerPortal.MigrationRunner.csproj" />
+    <ProjectReference Include="../EShop.StoreFront.MigrationRunner/EShop.StoreFront.MigrationRunner.csproj" />
+    <ProjectReference Include="../EShop.StoreFront.Web/EShop.StoreFront.Web.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="EShop.AppHost.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Realms/**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

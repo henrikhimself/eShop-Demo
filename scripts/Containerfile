@@ -1,0 +1,172 @@
+# syntax=docker/dockerfile:1
+FROM ubuntu:24.04
+
+ARG TARGETARCH
+
+# Tool version pins. The .NET SDK, Node.js, and pnpm pins are read from
+# global.json/.nvmrc/package.json, The Playwright browser pin is read from
+# the Microsoft.Playwright entry in Directory.Packages.props.
+ARG RUMDL_VERSION=v0.2.45
+ARG PLANTUML_VERSION=v1.2026.6
+ARG SHELLCHECK_VERSION=v0.11.0
+ARG POWERSHELL_VERSION=v7.6.4
+
+# Add files that contain tool versions.
+COPY global.json /tmp/global.json
+COPY .nvmrc /tmp/.nvmrc
+COPY package.json /tmp/package.json
+
+# Needed by the Playwright browser install step below: central package management
+# and the shared analyzer settings.
+COPY Directory.Packages.props /tmp/Directory.Packages.props
+COPY Directory.Build.props /tmp/Directory.Build.props
+
+# Needed by the Aspire CLI install step below: its version is pinned to the same
+# Aspire.AppHost.Sdk version the AppHost already builds against.
+COPY src/EShop.AppHost/EShop.AppHost.csproj /tmp/EShop.AppHost.csproj
+
+RUN <<'EOF'
+set -eu
+
+# APT (docker.io for the client CLI only).
+apt-get update && apt-get install -y --no-install-recommends \
+  ca-certificates libnss3-tools curl docker.io jq default-jre-headless graphviz libicu74 xz-utils
+
+# Downloads a GitHub release asset to /tmp/<asset> and verifies it against the digest
+# the GitHub Releases API reports.
+fetch_and_verify() {
+    repo="$1"; tag="$2"; asset="$3"
+    dest="/tmp/${asset}"
+    json="$(curl -fsSL "https://api.github.com/repos/${repo}/releases/tags/${tag}")"
+    digest="$(printf '%s' "${json}" | jq -r --arg name "${asset}" '.assets[] | select(.name == $name) | .digest')"
+    url="$(printf '%s' "${json}" | jq -r --arg name "${asset}" '.assets[] | select(.name == $name) | .browser_download_url')"
+    curl -fsSLo "${dest}" "${url}"
+    echo "${digest#sha256:}  ${dest}" | sha256sum -c -
+}
+
+# rumdl - https://github.com/rvben/rumdl.
+case "${TARGETARCH}" in
+    amd64) rumdl_arch=x86_64 ;;
+    arm64) rumdl_arch=aarch64 ;;
+    *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;;
+esac
+rumdl_asset="rumdl-${RUMDL_VERSION}-${rumdl_arch}-unknown-linux-gnu.tar.gz"
+fetch_and_verify "rvben/rumdl" "${RUMDL_VERSION}" "${rumdl_asset}"
+tar -xzf "/tmp/${rumdl_asset}" -C /usr/local/bin
+
+# shellcheck - https://github.com/koalaman/shellcheck.
+case "${TARGETARCH}" in
+    amd64) shellcheck_arch=x86_64 ;;
+    arm64) shellcheck_arch=aarch64 ;;
+    *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;;
+esac
+shellcheck_asset="shellcheck-${SHELLCHECK_VERSION}.linux.${shellcheck_arch}.tar.gz"
+fetch_and_verify "koalaman/shellcheck" "${SHELLCHECK_VERSION}" "${shellcheck_asset}"
+tar -xzf "/tmp/${shellcheck_asset}" -C /tmp
+mv "/tmp/shellcheck-${SHELLCHECK_VERSION}/shellcheck" /usr/local/bin/shellcheck
+
+# PlantUML - https://github.com/plantuml/plantuml (the "-mit" release variant, for an
+# unambiguous permissive/commercial-use license; asset names do NOT include the tag
+# "v" prefix, unlike rumdl above).
+plantuml_version="${PLANTUML_VERSION#v}"
+plantuml_asset="plantuml-mit-${plantuml_version}.jar"
+fetch_and_verify "plantuml/plantuml" "${PLANTUML_VERSION}" "${plantuml_asset}"
+mkdir -p /usr/local/lib
+mv "/tmp/${plantuml_asset}" /usr/local/lib/plantuml.jar
+printf '#!/bin/sh\nexec java -jar /usr/local/lib/plantuml.jar "$@"\n' > /usr/local/bin/plantuml
+chmod +x /usr/local/bin/plantuml
+
+# .NET SDK - installed via the official Microsoft dotnet-install.sh. global.json pins
+# "10.0.0" with rollForward:latestFeature, which is a resolution anchor, not an
+# installable version.
+dotnet_channel="$(jq -r '.sdk.version' /tmp/global.json | cut -d. -f1,2)"
+curl -fsSL https://builds.dotnet.microsoft.com/dotnet/scripts/v1/dotnet-install.sh -o /tmp/dotnet-install.sh
+chmod +x /tmp/dotnet-install.sh
+/tmp/dotnet-install.sh --channel "${dotnet_channel}" --quality GA --install-dir /usr/local/share/dotnet --no-path
+ln -s /usr/local/share/dotnet/dotnet /usr/local/bin/dotnet
+
+# Aspire CLI - https://aspire.dev/install.sh. Version pinned to the same
+# Aspire.AppHost.Sdk version EShop.AppHost.csproj already builds against. The CLI
+# writes mutable state (logs, cache) at runtime, always two directories above its own
+# binary (mirroring its default $HOME/.aspire/{bin,logs,cache,...} layout) thus the
+# write target is chmod-ed world-writable.
+aspire_version="$(grep -oP 'Aspire\.AppHost\.Sdk/\K[^\x22]+' /tmp/EShop.AppHost.csproj)"
+curl -fsSL https://aspire.dev/install.sh -o /tmp/get-aspire-cli.sh
+bash /tmp/get-aspire-cli.sh --version "${aspire_version}" \
+  --install-path /usr/local/share/aspire-cli/bin --skip-path
+chmod -R a+rwX /usr/local/share/aspire-cli
+ln -s /usr/local/share/aspire-cli/bin/aspire /usr/local/bin/aspire
+
+# Node.js - https://github.com/nodejs/node. Version pinned in the repo-root .nvmrc.
+node_version="$(tr -d '[:space:]' < /tmp/.nvmrc)"
+case "${TARGETARCH}" in
+    amd64) node_arch=x64 ;;
+    arm64) node_arch=arm64 ;;
+    *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;;
+esac
+node_asset="node-v${node_version}-linux-${node_arch}.tar.xz"
+node_dist="https://nodejs.org/dist/v${node_version}"
+curl -fsSLo "/tmp/${node_asset}" "${node_dist}/${node_asset}"
+curl -fsSLo /tmp/SHASUMS256.txt "${node_dist}/SHASUMS256.txt"
+(cd /tmp && grep " ${node_asset}\$" SHASUMS256.txt | sha256sum -c -)
+mkdir -p /usr/local/share/nodejs
+tar -xJf "/tmp/${node_asset}" -C /usr/local/share/nodejs --strip-components=1
+ln -s /usr/local/share/nodejs/bin/node /usr/local/bin/node
+ln -s /usr/local/share/nodejs/bin/npm /usr/local/bin/npm
+ln -s /usr/local/share/nodejs/bin/npx /usr/local/bin/npx
+
+# corepack/pnpm - COREPACK_HOME is the actual install location of the pinned pnpm.
+# Version pinned in the "packageManager" field of the repo-root package.json.
+package_manager="$(jq -r '.packageManager' /tmp/package.json)"
+export COREPACK_HOME=/usr/local/share/corepack
+/usr/local/share/nodejs/bin/corepack enable --install-directory /usr/local/bin pnpm
+/usr/local/share/nodejs/bin/corepack install --global "${package_manager}"
+
+# PowerShell (pwsh) - https://github.com/PowerShell/PowerShell.
+case "${TARGETARCH}" in
+    amd64) powershell_arch=x64 ;;
+    arm64) powershell_arch=arm64 ;;
+    *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;;
+esac
+powershell_asset="powershell-${POWERSHELL_VERSION#v}-linux-${powershell_arch}.tar.gz"
+fetch_and_verify "PowerShell/PowerShell" "${POWERSHELL_VERSION}" "${powershell_asset}"
+mkdir -p /usr/local/share/powershell
+tar -xzf "/tmp/${powershell_asset}" -C /usr/local/share/powershell
+ln -s /usr/local/share/powershell/pwsh /usr/local/bin/pwsh
+
+# Playwright - headless Chromium. Version pinned by the Microsoft.Playwright entry in
+# Directory.Packages.props, resolved by building a throwaway, source-file-free csproj.
+mkdir -p /tmp/playwright-install
+printf '%s' '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework><IsPackable>false</IsPackable><CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies></PropertyGroup><ItemGroup><PackageReference Include="Microsoft.Playwright" /></ItemGroup></Project>' > /tmp/playwright-install/PlaywrightInstall.csproj
+export PLAYWRIGHT_BROWSERS_PATH=/usr/local/share/ms-playwright
+dotnet build /tmp/playwright-install/PlaywrightInstall.csproj --configuration Release --output /tmp/playwright-install/bin
+pwsh /tmp/playwright-install/bin/playwright.ps1 install --with-deps chromium
+
+# Node Playwright driver - used by `eshop screenshot`'s generated Node script. Pinned
+# to the same version as the Microsoft.Playwright NuGet package above.
+playwright_npm_version="$(grep -oP 'Include="Microsoft\.Playwright" Version="\K[^"]+' /tmp/Directory.Packages.props)"
+npm install -g "playwright@${playwright_npm_version}"
+
+# Clean up
+rm -rf /tmp/* /var/lib/apt/lists/*
+EOF
+
+ENV HOME=/workspace/.cache/home \
+    SSL_CERT_DIR="/etc/ssl/certs:/workspace/.cache/home/.aspnet/dev-certs/trust" \
+    DOTNET_ROOT=/usr/local/share/dotnet \
+    DOTNET_NOLOGO=true \
+    DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    DOTNET_CLI_HOME=/workspace/.cache/home \
+    NUGET_PACKAGES=/workspace/.cache/nuget-packages \
+    NODE_PATH=/usr/local/share/nodejs/lib/node_modules \
+    PLAYWRIGHT_BROWSERS_PATH=/usr/local/share/ms-playwright \
+    COREPACK_HOME=/usr/local/share/corepack \
+    npm_config_cache=/workspace/.cache/npm-cache \
+    PNPM_CONFIG_STORE_DIR=/workspace/.cache/pnpm-store \
+    PNPM_HOME=/workspace/.cache/pnpm-home
+
+# Run as non-root by default. Every `docker run` invocation of this image should still
+# pass --user "$(id -u):$(id -g)" explicitly.
+USER ubuntu
+
+WORKDIR /workspace
