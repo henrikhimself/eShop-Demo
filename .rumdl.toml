@@ -1,0 +1,15 @@
+# rumdl (markdown linter) configuration. All rules use rumdl's defaults except:
+#
+# MD013 (line length) is disabled. This repo's prose docs are wrapped at ~80-88
+# characters by convention, and rumdl cannot auto-fix line-length violations (its
+# "fix" for this rule is a no-op in practice - confirmed by testing it directly
+# against this repo's own files), so enforcing it would require manually rewrapping
+# prose across most of doc/ with no tooling support.
+#
+# The cache directory is moved under tmp/ (already gitignored), instead of the
+# default .rumdl_cache at the repo root, so it doesn't need its own gitignore entry.
+[global]
+cache-dir = "tmp/.rumdl_cache"
+
+[MD013]
+enabled = false

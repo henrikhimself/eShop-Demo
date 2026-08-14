@@ -1,0 +1,15 @@
+* text=auto
+
+*.sh text eol=lf
+*.bash text eol=lf
+
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+*.sln text=auto eol=crlf
+*.slnx text=auto eol=crlf
+
+*.pfx binary
+*.jpg binary
+*.png binary
+*.gif binary
