@@ -35,18 +35,32 @@ internal sealed class RecordingServiceBusClient : ServiceBusClient
     // type (for example ServiceBusException) instead of this default.
     public Exception ExceptionToThrowOnSend { get; set; } = new InvalidOperationException("Simulated transient Service Bus send failure.");
 
+    // Distinct from ThrowOnSend (always fails): lets a test simulate a transient
+    // failure that resolves after N attempts, to exercise SubmissionEndpoints'
+    // SendWithRetryAsync retry-then-succeed path.
+    public int FailuresBeforeSuccess { get; set; }
+
     public override ServiceBusSender CreateSender(string queueOrTopicName)
     {
-        return new RecordingServiceBusSender(SentMessages, ThrowOnSend, ExceptionToThrowOnSend);
+        return new RecordingServiceBusSender(SentMessages, ThrowOnSend, FailuresBeforeSuccess, ExceptionToThrowOnSend);
     }
 }
 
-internal sealed class RecordingServiceBusSender(List<ServiceBusMessage> sentMessages, bool throwOnSend, Exception exceptionToThrowOnSend) : ServiceBusSender
+internal sealed class RecordingServiceBusSender(
+    List<ServiceBusMessage> sentMessages, bool throwOnSend, int failuresBeforeSuccess, Exception exceptionToThrowOnSend) : ServiceBusSender
 {
+    private int remainingFailures = failuresBeforeSuccess;
+
     public override Task SendMessagesAsync(IEnumerable<ServiceBusMessage> messages, CancellationToken cancellationToken = default)
     {
         if (throwOnSend)
         {
+            throw exceptionToThrowOnSend;
+        }
+
+        if (remainingFailures > 0)
+        {
+            remainingFailures--;
             throw exceptionToThrowOnSend;
         }
 

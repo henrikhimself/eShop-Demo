@@ -35,6 +35,9 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <!-- Direct reference: SubmissionEndpoints.cs uses Polly types directly for its
+         publish-retry pipeline, not just transitively through EShop.Messaging. -->
+    <PackageReference Include="Microsoft.Extensions.Resilience" />
   </ItemGroup>
 
   <ItemGroup>

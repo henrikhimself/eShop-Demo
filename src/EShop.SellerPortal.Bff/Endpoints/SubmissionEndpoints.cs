@@ -23,6 +23,8 @@ using Hj.EShop.SellerPortal.Bff.Data;
 using Hj.EShop.SellerPortal.Bff.Data.Entities;
 using Hj.EShop.SellerPortal.Bff.Notifications;
 using Microsoft.EntityFrameworkCore;
+using Polly;
+using Polly.Retry;
 
 namespace Hj.EShop.SellerPortal.Bff.Endpoints;
 
@@ -330,14 +332,15 @@ internal static class SubmissionEndpoints
         try
         {
             await using ServiceBusSender sender = serviceBusClient.CreateSender(KnownNames.ResourceSellerSubmissions);
-            await sender.SendMessagesAsync(
-                [new ServiceBusMessage(JsonSerializer.SerializeToUtf8Bytes(message))], cancellationToken);
+            await SendWithRetryAsync(
+                sender, new ServiceBusMessage(JsonSerializer.SerializeToUtf8Bytes(message)), logger, submissionId, cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            // Any transport exception must hit this log-and-500 path; the `when` clause
-            // only lets a genuine caller-initiated cancellation propagate normally. DB
-            // state above is already durable - no compensating transaction exists yet.
+            // Any transport exception that survives SendWithRetryAsync's bounded retries
+            // must hit this log-and-500 path; the `when` clause only lets a genuine
+            // caller-initiated cancellation propagate normally. DB state above is already
+            // durable - no compensating transaction exists yet for a persistent failure.
             logger.LogError(exception, "Failed to publish a submission request for submission {SubmissionId}.", submissionId);
             return Results.StatusCode(StatusCodes.Status500InternalServerError);
         }
@@ -357,8 +360,8 @@ internal static class SubmissionEndpoints
         {
             await using ServiceBusSender sender = serviceBusClient.CreateSender(KnownNames.ResourceSellerSubmissionsCancellations);
             SubmissionCancelledMessage message = new(submissionId);
-            await sender.SendMessagesAsync(
-                [new ServiceBusMessage(JsonSerializer.SerializeToUtf8Bytes(message))], cancellationToken);
+            await SendWithRetryAsync(
+                sender, new ServiceBusMessage(JsonSerializer.SerializeToUtf8Bytes(message)), logger, submissionId, cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
@@ -368,6 +371,44 @@ internal static class SubmissionEndpoints
         }
 
         return null;
+    }
+
+    // Shared by both publish helpers above: retries a transient broker failure (e.g.
+    // Service Bus briefly unreachable) a bounded number of times before letting the
+    // caller's catch turn a persistent failure into a 500. Same Polly idiom as
+    // ServiceBusQueueConsumer's startup retry (EShop.Messaging), but bounded since this
+    // runs inline inside an HTTP request instead of a background service.
+    private static async Task SendWithRetryAsync(
+        ServiceBusSender sender,
+        ServiceBusMessage message,
+        ILogger<Program> logger,
+        Guid submissionId,
+        CancellationToken cancellationToken)
+    {
+        ResiliencePipeline pipeline = new ResiliencePipelineBuilder()
+            .AddRetry(new RetryStrategyOptions
+            {
+                ShouldHandle = new PredicateBuilder().Handle<Exception>(exception => exception is not OperationCanceledException),
+                BackoffType = DelayBackoffType.Exponential,
+                UseJitter = true,
+                Delay = TimeSpan.FromMilliseconds(200),
+                MaxDelay = TimeSpan.FromSeconds(1),
+                MaxRetryAttempts = 2,
+                OnRetry = args =>
+                {
+                    logger.LogWarning(
+                        args.Outcome.Exception,
+                        "Retrying a submission-message publish for submission {SubmissionId} (attempt {AttemptNumber}).",
+                        submissionId,
+                        args.AttemptNumber + 1);
+                    return default;
+                },
+            })
+            .Build();
+
+        await pipeline.ExecuteAsync(
+            ct => new ValueTask(sender.SendMessagesAsync([message], ct)),
+            cancellationToken);
     }
 
     internal static SubmissionSummary ToSummary(Submission submission)

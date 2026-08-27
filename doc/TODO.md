@@ -65,11 +65,14 @@ prematurely.
   such as T-shirts with sizes.
 - Which CMS content types, if any, checkout needs. Checkout is deferred until the team
   designs that flow.
-- `SubmissionEndpoints.cs`'s submit route commits the Draft/Submission state before
-  publishing the `SubmissionRequestMessage`, then returns `500` if the publish itself
-  throws, logging the failure. The DB state is already durable and correct at that
-  point, but nothing retries the publish and the Seller only sees a generic submit
-  failure - no compensating-transaction or retry logic exists yet for this gap.
+- `SubmissionEndpoints.cs`'s submit and cancel-review routes commit the Draft/Submission
+  state before publishing to Service Bus, then return `500` if the publish still fails
+  after a bounded retry (`SendWithRetryAsync`), logging the failure. The bounded retry
+  absorbs a transient broker failure (for example a brief Service Bus reconnect). The DB
+  state is already durable and correct at that point, but a *persistent* broker outage
+  still has no compensating transaction - the Seller only sees a generic submit failure,
+  and nothing reconciles the already-committed DB state with the never-delivered
+  message.
 - Component (C3) diagrams still to create under [`doc/c4/components`](./c4/components),
   once the specification gives enough detail:
   - The Storefront catalog and campaign flow. Checkout is deferred.
