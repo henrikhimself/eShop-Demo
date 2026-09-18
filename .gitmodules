@@ -1,4 +1,4 @@
 [submodule "lib/DotNet-ReverseProxy"]
 	path = lib/DotNet-ReverseProxy
 	url = https://github.com/henrikhimself/DotNet-ReverseProxy.git
-	branch = develop
+	branch = feature/aspire-13-5-gateway-support
