@@ -2,96 +2,218 @@
   "realm": "eshop",
   "enabled": true,
   "sslRequired": "none",
+  "roles": {
+    "realm": [
+      {
+        "name": "Seller",
+        "description": "Seller Portal Seller"
+      },
+      {
+        "name": "ContentEditor",
+        "description": "Storefront Content Editor"
+      },
+      {
+        "name": "Marketer",
+        "description": "Storefront Marketer"
+      },
+      {
+        "name": "Merchandiser",
+        "description": "Storefront Merchandiser"
+      },
+      {
+        "name": "SiteAdministrator",
+        "description": "Storefront Site Administrator"
+      },
+      {
+        "name": "CustomerServiceAgent",
+        "description": "Storefront Customer Service Agent"
+      }
+    ]
+  },
   "users": [
     {
-      "username": "test-seller",
-      "email": "test-seller@example.com",
+      "username": "seller",
+      "email": "seller@example.com",
       "firstName": "Test",
       "lastName": "Seller",
       "enabled": true,
       "emailVerified": true,
+      "realmRoles": [
+        "Seller"
+      ],
       "credentials": [
         {
           "type": "password",
-          "value": "TestSeller123!",
+          "value": "Sell-1234",
           "temporary": false
         }
       ]
     },
     {
-      "username": "test-content-editor",
-      "email": "test-content-editor@example.com",
+      "username": "editor",
+      "email": "editor@example.com",
       "firstName": "Test",
       "lastName": "Content Editor",
       "enabled": true,
       "emailVerified": true,
+      "realmRoles": [
+        "ContentEditor"
+      ],
       "credentials": [
         {
           "type": "password",
-          "value": "TestContentEditor123!",
+          "value": "Edit-1234",
           "temporary": false
         }
       ]
     },
     {
-      "username": "test-marketer",
-      "email": "test-marketer@example.com",
+      "username": "marketer",
+      "email": "marketer@example.com",
       "firstName": "Test",
       "lastName": "Marketer",
       "enabled": true,
       "emailVerified": true,
+      "realmRoles": [
+        "Marketer"
+      ],
       "credentials": [
         {
           "type": "password",
-          "value": "TestMarketer123!",
+          "value": "Mark-1234",
           "temporary": false
         }
       ]
     },
     {
-      "username": "test-merchandiser",
-      "email": "test-merchandiser@example.com",
+      "username": "merchandiser",
+      "email": "merchandiser@example.com",
       "firstName": "Test",
       "lastName": "Merchandiser",
       "enabled": true,
       "emailVerified": true,
+      "realmRoles": [
+        "Merchandiser"
+      ],
       "credentials": [
         {
           "type": "password",
-          "value": "TestMerchandiser123!",
+          "value": "Merc-1234",
           "temporary": false
         }
       ]
     },
     {
-      "username": "test-customer-service-agent",
-      "email": "test-customer-service-agent@example.com",
+      "username": "customer-service-agent",
+      "email": "customer-service-agent@example.com",
       "firstName": "Test",
       "lastName": "Customer Service Agent",
       "enabled": true,
       "emailVerified": true,
+      "realmRoles": [
+        "CustomerServiceAgent"
+      ],
       "credentials": [
         {
           "type": "password",
-          "value": "TestCustomerServiceAgent123!",
+          "value": "Cust-1234",
           "temporary": false
         }
       ]
     },
     {
-      "username": "test-site-administrator",
-      "email": "test-site-administrator@example.com",
+      "username": "admin",
+      "email": "admin@example.com",
       "firstName": "Test",
       "lastName": "Site Administrator",
       "enabled": true,
       "emailVerified": true,
+      "realmRoles": [
+        "SiteAdministrator"
+      ],
       "credentials": [
         {
           "type": "password",
-          "value": "TestSiteAdministrator123!",
+          "value": "Admi-1234",
           "temporary": false
         }
       ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "seller-portal",
+      "name": "Seller Portal BFF",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "seller-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "https://seller.eshop.local:8443/bff/signin-oidc"
+      ],
+      "webOrigins": [
+        "https://seller.eshop.local:8443"
+      ],
+      "protocolMappers": [
+        {
+          "name": "seller-role-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "user.attribute": "foo",
+            "claim.name": "role",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "https://seller.eshop.local:8443/bff/signout-callback-oidc"
+      }
+    },
+    {
+      "clientId": "storefront",
+      "name": "Storefront",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "storefront-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "https://storefront.eshop.local:8443/signin-oidc"
+      ],
+      "webOrigins": [
+        "https://storefront.eshop.local:8443"
+      ],
+      "protocolMappers": [
+        {
+          "name": "storefront-role-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "user.attribute": "foo",
+            "claim.name": "role",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "https://storefront.eshop.local:8443/signout-callback-oidc"
+      }
     }
   ]
 }

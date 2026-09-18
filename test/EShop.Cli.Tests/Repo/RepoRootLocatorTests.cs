@@ -28,7 +28,7 @@ public sealed class RepoRootLocatorTests
 
         string root = locator.Find();
 
+        // Use the existence of EShop.slnx as an indicator of the solution's root path.
         Assert.True(File.Exists(Path.Combine(root, "EShop.slnx")));
-        Assert.True(Directory.Exists(Path.Combine(root, "src", "EShop.Cli")));
     }
 }

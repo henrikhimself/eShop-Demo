@@ -16,200 +16,180 @@
 
 using Aspire.Hosting.Azure;
 using Aspire.Hosting.JavaScript;
-using Hj.EShop.AppHost;
 using Hj.EShop.Common;
-using Microsoft.Extensions.DependencyInjection;
+using Hj.ReverseProxy.Aspire;
+using Projects;
 
 IDistributedApplicationBuilder builder = DistributedApplication.CreateBuilder(args);
 
-// ADR 0018: environment placement matters only when publishing.
-if (builder.ExecutionContext.IsPublishMode)
-{
-    builder.AddAzureContainerAppEnvironment(KnownNames.ResourceAcaEnvironment);
-}
-
-// ADR 0019: RunAsContainer does not affect the publish manifest.
+#region SQL server
 IResourceBuilder<AzureSqlServerResource> sql = builder.AddAzureSqlServer(KnownNames.ResourceSql)
     .RunAsContainer(container => container
         .WithDataVolume()
         .WithLifetime(ContainerLifetime.Persistent));
-
 IResourceBuilder<AzureSqlDatabaseResource> sellerDb = sql.AddDatabase(KnownNames.ResourceSellerDb);
-
-builder.AddProject<Projects.EShop_SellerPortal_MigrationRunner>(KnownNames.ResourceSellerDbMigrationRunner)
-    .WithReference(sellerDb);
-
 IResourceBuilder<AzureSqlDatabaseResource> storefrontCmsDb = sql.AddDatabase(KnownNames.ResourceStorefrontCmsDb);
 IResourceBuilder<AzureSqlDatabaseResource> storefrontCommerceDb = sql.AddDatabase(KnownNames.ResourceStorefrontCommerceDb);
+#endregion
 
-builder.AddProject<Projects.EShop_StoreFront_MigrationRunner>(KnownNames.ResourceStorefrontCmsMigrationRunner)
-    .WithReference(storefrontCmsDb)
-    .WithArgs("cms");
-builder.AddProject<Projects.EShop_StoreFront_MigrationRunner>(KnownNames.ResourceStorefrontCommerceMigrationRunner)
-    .WithReference(storefrontCommerceDb)
-    .WithArgs("commerce");
-
+#region Service bus
 IResourceBuilder<AzureServiceBusResource> serviceBus = builder.AddAzureServiceBus(KnownNames.ResourceServiceBus)
     .RunAsEmulator(emulator => emulator.WithLifetime(ContainerLifetime.Persistent));
 
 serviceBus.AddServiceBusQueue(KnownNames.ResourceSellerSubmissions);
 serviceBus.AddServiceBusQueue(KnownNames.ResourceSellerSubmissionsResult);
 serviceBus.AddServiceBusQueue(KnownNames.ResourceSellerSubmissionsCancellations);
-
-IResourceBuilder<AzureServiceBusQueueResource> submissionsImageDeletions =
-    serviceBus.AddServiceBusQueue(KnownNames.ResourceSellerSubmissionsImageDeletions);
-submissionsImageDeletions.Resource.MaxDeliveryCount = 3;
-
 serviceBus.AddServiceBusQueue(KnownNames.ResourceSellerInventories);
 serviceBus.AddServiceBusQueue(KnownNames.ResourceSellerInventoriesResult);
+serviceBus.AddServiceBusQueue(KnownNames.ResourceSellerSubmissionsImageDeletions).Resource.MaxDeliveryCount = 3;
+#endregion
 
+#region Storage
 IResourceBuilder<AzureStorageResource> storage = builder.AddAzureStorage(KnownNames.ResourceStorage)
     .RunAsEmulator(emulator => emulator
         .WithDataVolume()
         .WithLifetime(ContainerLifetime.Persistent));
 
-IResourceBuilder<AzureBlobStorageContainerResource> submissionsImageContainer =
-    storage.AddBlobContainer(KnownNames.ResourceSellerSubmissionsImage);
+IResourceBuilder<AzureBlobStorageResource> storageBlob = storage.AddBlobs(KnownNames.ResourceStorageBlob);
+IResourceBuilder<AzureBlobStorageContainerResource> submissionsImageContainer = storage.AddBlobContainer(KnownNames.ResourceSellerSubmissionsImage);
+_ = storage.AddBlobContainer(KnownNames.ResourceStorefrontStorageBlobContainer);
+#endregion
 
+#region Distributed cache
 IResourceBuilder<AzureManagedRedisResource> cache = builder.AddAzureManagedRedis(KnownNames.ResourceCache)
     .RunAsContainer(container => container
         .WithDataVolume()
         .WithLifetime(ContainerLifetime.Persistent));
+#endregion
 
-// Bff is internal-only behind the Seller Portal reverse proxy; readiness is via
-// /health (ADR 0018).
+#region Projects
+builder.AddProject<EShop_SellerPortal_MigrationRunner>(KnownNames.ResourceSellerDbMigrationRunner)
+    .WithReference(sellerDb);
 IResourceBuilder<ProjectResource> sellerPortalBff = builder
-    .AddProject<Projects.EShop_SellerPortal_Bff>(KnownNames.ResourceSellerPortalBff)
+    .AddProject<EShop_SellerPortal_Bff>(KnownNames.ResourceSellerPortalBff)
     .WithHttpEndpoint(name: "http")
     .WithHttpHealthCheck("/health")
     .WithReference(sellerDb)
     .WithReference(serviceBus)
     .WithReference(submissionsImageContainer)
     .WithReference(cache);
-
 #pragma warning disable ASPIREJAVASCRIPT001 // AddNextJsApp is experimental as of Aspire 13.4.
-
 IResourceBuilder<NextJsAppResource> sellerPortalWeb = builder
-    .AddNextJsApp(KnownNames.ResourceSellerPortalWeb, "../EShop.SellerPortal.Web")
+    .AddNextJsApp(KnownNames.ResourceSellerPortalWeb, "../apps/EShop.SellerPortal.Web")
     .WithPnpm()
     .WithReference(sellerPortalBff)
     .WithEnvironment("BFF_URL", sellerPortalBff.GetEndpoint("http"))
-    .WithExternalHttpEndpoints();
-
+    .WithEnvironment("NEXT_DIST_DIR", Environment.GetEnvironmentVariable("NEXT_DIST_DIR") ?? ".next");
 #pragma warning restore ASPIREJAVASCRIPT001
 
-if (!builder.ExecutionContext.IsPublishMode)
-{
-    builder.AddProject<Projects.EShop_DevTools>(KnownNames.ResourceDevTools)
-        .WithHttpEndpoint(name: "http")
-        .WithReference(serviceBus)
-        .WithReference(submissionsImageContainer)
-        .WithExternalHttpEndpoints();
-}
-
-// Optimizely expects these exact connection-string keys, not the Aspire resource names.
+builder.AddProject<EShop_StoreFront_MigrationRunner>(KnownNames.ResourceStorefrontCmsMigrationRunner)
+    .WithReference(storefrontCmsDb)
+    .WithArgs("cms");
+builder.AddProject<EShop_StoreFront_MigrationRunner>(KnownNames.ResourceStorefrontCommerceMigrationRunner)
+    .WithReference(storefrontCommerceDb)
+    .WithArgs("commerce");
 IResourceBuilder<ProjectResource> storefrontWeb = builder
-    .AddProject<Projects.EShop_StoreFront_Web>(KnownNames.ResourceStorefrontWeb)
+    .AddProject<EShop_StoreFront_Web>(KnownNames.ResourceStorefrontWeb)
     .WithHttpEndpoint(name: "http")
     .WithHttpHealthCheck("/health")
     .WithEnvironment("ConnectionStrings__EPiServerDB", storefrontCmsDb)
     .WithEnvironment("ConnectionStrings__EcfSqlConnection", storefrontCommerceDb)
-    .WithExternalHttpEndpoints();
+    .WithReference(storageBlob)
+    .WithReference(cache);
+#endregion
 
-// Keep build-output separation in sync with next.config.ts's NEXT_DIST_DIR handling.
-string? nextDistDir = Environment.GetEnvironmentVariable("NEXT_DIST_DIR");
-if (nextDistDir is not null)
-{
-    sellerPortalWeb.WithEnvironment("NEXT_DIST_DIR", nextDistDir);
-}
-
-// Split guard: Keycloak needs local resources (ADR 0010), Entra needs parameters only
-// (ADR 0020). Kept together because callbacks use sellerPortalWeb.
+#region Development environment
 if (!builder.ExecutionContext.IsPublishMode)
 {
-    // Keycloak has no persistent volume here; provision the client dynamically below.
+    #region Keycloak
     IResourceBuilder<ParameterResource> keycloakAdminUsername = builder.AddParameter(KnownNames.ResourceKeycloakAdminUsername, "admin");
     IResourceBuilder<ParameterResource> keycloakAdminPassword = builder.AddParameter(KnownNames.ResourceKeycloakAdminPassword, secret: true);
-    IResourceBuilder<KeycloakResource> keycloak = builder.AddKeycloak(KnownNames.ResourceKeycloak, adminUsername: keycloakAdminUsername, adminPassword: keycloakAdminPassword)
-        .WithRealmImport("./Realms");
 
-    IResourceBuilder<ParameterResource> sellerPortalOidcClientSecret = builder.AddParameter(
-        KnownNames.ResourceSellerPortalOidcClientSecret, secret: true);
-    IResourceBuilder<ParameterResource> storefrontOidcClientSecret = builder.AddParameter(
-        KnownNames.ResourceStorefrontOidcClientSecret, secret: true);
+    IResourceBuilder<KeycloakResource> keycloak = builder
+        .AddKeycloak(KnownNames.ResourceKeycloak, adminUsername: keycloakAdminUsername, adminPassword: keycloakAdminPassword)
+        .WithEnvironment("KC_HOSTNAME", KnownValues.KeycloakPublicOrigin)
+        .WithEnvironment("KC_PROXY_HEADERS", "xforwarded")
+        .WithRealmImport("./Realms")
 
+        // See doc/CHRONICLE.md — persistent lifetime without WithDataVolume() avoids stale Keycloak signing keys while keeping realm-import edits live.
+        .WithLifetime(ContainerLifetime.Persistent);
+
+    IResourceBuilder<ParameterResource> sellerPortalOidcClientSecret = builder.AddParameter(KnownNames.ResourceSellerPortalOidcClientSecret, secret: true);
     sellerPortalBff
-        .WithEnvironment("Identity__Provider", KnownNames.IdentityProviderKeycloak)
-        .WithEnvironment("Keycloak__ClientSecret", sellerPortalOidcClientSecret)
+        .WithEnvironment(KnownNames.IdentityProviderName, KnownNames.IdentityProviderKeycloakName)
+        .WithEnvironment(KnownNames.IdentityProviderKeycloakClientSecret, sellerPortalOidcClientSecret)
         .WithReference(keycloak);
 
+    IResourceBuilder<ParameterResource> storefrontOidcClientSecret = builder.AddParameter(KnownNames.ResourceStorefrontOidcClientSecret, secret: true);
     storefrontWeb
-        .WithEnvironment("Identity__Provider", KnownNames.IdentityProviderKeycloak)
-        .WithEnvironment("Keycloak__ClientSecret", storefrontOidcClientSecret)
+        .WithEnvironment(KnownNames.IdentityProviderName, KnownNames.IdentityProviderKeycloakName)
+        .WithEnvironment(KnownNames.IdentityProviderKeycloakClientSecret, storefrontOidcClientSecret)
         .WithReference(keycloak);
+    #endregion
 
-    // Provision Seller Portal Keycloak client once the real endpoint is allocated.
-    sellerPortalWeb.OnResourceReady(async (resource, @event, cancellationToken) =>
+    builder.AddProject<EShop_DevTools>(KnownNames.ResourceDevTools)
+        .WithHttpEndpoint(name: "http")
+        .WithReference(serviceBus)
+        .WithReference(submissionsImageContainer)
+        .WithExternalHttpEndpoints();
+
+    string reverseProxyHome = Environment.GetEnvironmentVariable(KnownNames.ReverseProxyHomeEnvVarName)
+        ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".reverseproxy");
+    try
     {
-        ResourceNotificationService resourceNotificationService =
-            @event.Services.GetRequiredService<ResourceNotificationService>();
-        await resourceNotificationService.WaitForResourceHealthyAsync(KnownNames.ResourceKeycloak, cancellationToken);
-
-        await KeycloakSellerPortalClientProvisioner.ProvisionAsync(
-            keycloak,
-            keycloakAdminUsername,
-            keycloakAdminPassword,
-            sellerPortalOidcClientSecret,
-            new Uri(resource.GetEndpoint("http").Url),
-            KnownNames.SellerPortalOidcClientId,
-            KnownNames.KeycloakRealmEShop,
-            cancellationToken);
-    });
-
-    // Same pattern for Storefront; independent client scope/roles.
-    storefrontWeb.OnResourceReady(async (resource, @event, cancellationToken) =>
+        Directory.CreateDirectory(reverseProxyHome);
+    }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
     {
-        ResourceNotificationService resourceNotificationService =
-            @event.Services.GetRequiredService<ResourceNotificationService>();
-        await resourceNotificationService.WaitForResourceHealthyAsync(KnownNames.ResourceKeycloak, cancellationToken);
+        throw new InvalidOperationException($"Cannot create or access the reverse-proxy CA directory '{reverseProxyHome}'.", ex);
+    }
 
-        await KeycloakStorefrontClientProvisioner.ProvisionAsync(
-            keycloak,
-            keycloakAdminUsername,
-            keycloakAdminPassword,
-            storefrontOidcClientSecret,
-            new Uri(resource.GetEndpoint("http").Url),
-            KnownNames.StorefrontOidcClientId,
-            KnownNames.KeycloakRealmEShop,
-            cancellationToken);
-    });
+    IResourceBuilder<ProjectResource> reverseProxy = builder
+        .AddProject<EShop_ReverseProxy>(KnownNames.ResourceDevReverseProxy)
+        .WithHttpsEndpoint(KnownNames.ReverseProxyHttpsPort);
+
+    // Separate plain-HTTP health endpoint: the AppHost's own health-check HttpClient doesn't trust the proxy's self-signed dev CA (PartialChain TLS errors).
+    reverseProxy.WithHttpEndpoint(name: "health")
+        .WithHttpHealthCheck(path: "/health", endpointName: "health")
+        .WithEnvironment(KnownNames.ReverseProxyHomeEnvVarName, reverseProxyHome)
+        .WaitFor(keycloak)
+        .WaitFor(sellerPortalWeb)
+        .WaitFor(storefrontWeb);
+
+    // forwardPublicOrigin: true on all three - each target's OIDC redirect_uri construction depends on X-Forwarded-Host/-Proto reflecting the public origin, not an internal address (PLAN-2.md §5).
+    reverseProxy
+        .WithReverseProxyReference(keycloak.GetEndpoint("http"), KnownNames.ReverseProxyIdentityHostName, true)
+        .WithReverseProxyReference(sellerPortalWeb.GetEndpoint("http"), KnownNames.ReverseProxySellerPortalHostName, true)
+        .WithReverseProxyReference(storefrontWeb.GetEndpoint("http"), KnownNames.ReverseProxyStorefrontHostName, true);
 }
-else
+#endregion
+
+#region Production environment
+if (builder.ExecutionContext.IsPublishMode)
 {
-    // See doc/adr/0020-entra-external-id-production-identity-provider.md — manual Entra
-    // setup; these three parameters have no default, so `aspire deploy` prompts for them.
+    builder.AddAzureContainerAppEnvironment(KnownNames.ResourceAcaEnvironment);
+
+    sellerPortalWeb.WithExternalHttpEndpoints();
+    storefrontWeb.WithExternalHttpEndpoints();
+
     IResourceBuilder<ParameterResource> entraTenantSubdomain = builder.AddParameter(KnownNames.ResourceEntraTenantSubdomain);
-    IResourceBuilder<ParameterResource> entraClientId = builder.AddParameter(KnownNames.ResourceEntraClientId);
-    IResourceBuilder<ParameterResource> entraClientSecret = builder.AddParameter(KnownNames.ResourceEntraClientSecret, secret: true);
 
+    IResourceBuilder<ParameterResource> sellerEntraClientId = builder.AddParameter(KnownNames.ResourceEntraClientId);
+    IResourceBuilder<ParameterResource> sellerEntraClientSecret = builder.AddParameter(KnownNames.ResourceEntraClientSecret, secret: true);
     sellerPortalBff
-        .WithEnvironment("Identity__Provider", KnownNames.IdentityProviderEntraExternalId)
-        .WithEnvironment("Identity__Entra__TenantSubdomain", entraTenantSubdomain)
-        .WithEnvironment("Identity__Entra__ClientId", entraClientId)
-        .WithEnvironment("Identity__Entra__ClientSecret", entraClientSecret);
+        .WithEnvironment(KnownNames.IdentityProviderName, KnownNames.IdentityProviderEntraExternalId)
+        .WithEnvironment(KnownNames.IdentityProviderEntraTenantSubdomain, entraTenantSubdomain)
+        .WithEnvironment(KnownNames.IdentityProviderEntraClientId, sellerEntraClientId)
+        .WithEnvironment(KnownNames.IdentityProviderEntraClientSecret, sellerEntraClientSecret);
 
-    // Storefront's staff actors are a separate Entra App Registration from the Seller
-    // Portal's Seller-facing one (different roles, different audience) - same tenant,
-    // its own client id/secret parameters.
     IResourceBuilder<ParameterResource> storefrontEntraClientId = builder.AddParameter(KnownNames.ResourceStorefrontEntraClientId);
-    IResourceBuilder<ParameterResource> storefrontEntraClientSecret =
-        builder.AddParameter(KnownNames.ResourceStorefrontEntraClientSecret, secret: true);
-
+    IResourceBuilder<ParameterResource> storefrontEntraClientSecret = builder.AddParameter(KnownNames.ResourceStorefrontEntraClientSecret, secret: true);
     storefrontWeb
-        .WithEnvironment("Identity__Provider", KnownNames.IdentityProviderEntraExternalId)
-        .WithEnvironment("Identity__Entra__TenantSubdomain", entraTenantSubdomain)
-        .WithEnvironment("Identity__Entra__ClientId", storefrontEntraClientId)
-        .WithEnvironment("Identity__Entra__ClientSecret", storefrontEntraClientSecret);
+        .WithEnvironment(KnownNames.IdentityProviderName, KnownNames.IdentityProviderEntraExternalId)
+        .WithEnvironment(KnownNames.IdentityProviderEntraTenantSubdomain, entraTenantSubdomain)
+        .WithEnvironment(KnownNames.IdentityProviderEntraClientId, storefrontEntraClientId)
+        .WithEnvironment(KnownNames.IdentityProviderEntraClientSecret, storefrontEntraClientSecret);
 }
+#endregion
 
 await builder.Build().RunAsync();

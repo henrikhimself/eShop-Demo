@@ -23,7 +23,7 @@ using Xunit;
 namespace Hj.EShop.Cli.Tests.Output;
 
 // Thin smoke tests only - no Spectre.Console.Testing package is cleared for use yet
-// (see doc/adr/0013-pinned-dependency-versions-and-40-day-quarantine.md), so these
+// (see doc/adr/0013-pinned-dependency-versions-and-7-day-quarantine.md), so these
 // can't assert on rendered spinner frames. They lock down the concurrency/lifecycle
 // contract instead: BeginStep is safe to call from several threads at once, a session
 // that's fully wound down lets the next BeginStep call start cleanly, and

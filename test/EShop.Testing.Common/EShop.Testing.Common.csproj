@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <!-- Referenced by other test projects, but not itself runnable - without this,
+         a solution-wide "dotnet test" treats it as a candidate test host (it
+         references an xunit package) and errors on it since its OutputType is
+         Library, not Exe. -->
+    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.Messaging.ServiceBus" />
+    <PackageReference Include="Azure.Storage.Blobs" />
+    <!-- Not xunit.v3.mtp-v2: that package requires OutputType Exe (a runnable test
+         host), which this library - referenced by, but not itself, a test project -
+         is not. Only Assert (for TestSqlConnectionString.RequireOrSkip's Assert.Skip)
+         is needed here. -->
+    <PackageReference Include="xunit.v3.assert" />
+  </ItemGroup>
+
+</Project>

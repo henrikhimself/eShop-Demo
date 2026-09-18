@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- Emitted for `eshop generate types` to feed into openapi-typescript - see
+         doc/adr/0014-bff-openapi-source-of-truth-for-frontend-types.md. -->
+    <OpenApiGenerateDocuments>true</OpenApiGenerateDocuments>
+    <OpenApiDocumentsDirectory>$(MSBuildProjectDirectory)/obj/openapi</OpenApiDocumentsDirectory>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Azure.Messaging.ServiceBus" />
+    <PackageReference Include="Aspire.Azure.Storage.Blobs" />
+    <PackageReference Include="Aspire.Microsoft.EntityFrameworkCore.SqlServer" />
+    <PackageReference Include="Aspire.StackExchange.Redis" />
+    <PackageReference Include="Aspire.StackExchange.Redis.DistributedCaching" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <!-- Direct reference so the pin in Directory.Packages.props actually overrides the
+         transitive version Microsoft.AspNetCore.OpenApi brings in - see that file. -->
+    <PackageReference Include="Microsoft.OpenApi" />
+    <PackageReference Include="Microsoft.Extensions.ApiDescription.Server">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <!-- Direct reference: SubmissionEndpoints.cs uses Polly types directly for its
+         publish-retry pipeline, not just transitively through EShop.Messaging. -->
+    <PackageReference Include="Microsoft.Extensions.Resilience" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../shared/EShop.Common/EShop.Common.csproj" />
+    <ProjectReference Include="../../shared/EShop.Messaging/EShop.Messaging.csproj" />
+    <ProjectReference Include="../../shared/EShop.TicketStore/EShop.TicketStore.csproj" />
+    <ProjectReference Include="../../migrations/EShop.Migrations.Common/EShop.Migrations.Common.csproj" />
+    <ProjectReference Include="../../migrations/EShop.Migrations.Orchestration/EShop.Migrations.Orchestration.csproj" />
+    <ProjectReference Include="../../EShop.ServiceDefaults/EShop.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="EShop.SellerPortal.Bff.Tests" />
+    <!-- EShop.SellerPortal.MigrationRunner needs the internal SellerPortalDbContext to
+         apply migrations - see doc/CHRONICLE.md. -->
+    <InternalsVisibleTo Include="EShop.SellerPortal.MigrationRunner" />
+    <InternalsVisibleTo Include="EShop.SellerPortal.MigrationRunner.Tests" />
+  </ItemGroup>
+
+</Project>

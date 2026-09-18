@@ -9,10 +9,11 @@ ADRs under `doc/adr/`, `doc/c4/`, and `doc/MEMORY.md`.
 This is a process document, like `doc/TODO.md` and `doc/MEMORY.md`. It is not written in
 ASD-STE100 and it is not part of the specification. It is append-only: add to it as new
 history happens, and do not delete an entry once written. **Exception**: this file was
-compressed on 2026-08-07 and again on 2026-08-12, both at explicit user request, to keep
-only knowledge that still affects future engineering work — see "Change summary" at the
-end. The append-only convention resumes from this point forward; use git history to
-recover the pre-compression text if an older entry's full detail is ever needed.
+compressed on 2026-08-07, again on 2026-08-12, and again on 2026-09-18, all at explicit
+user/consolidation-pass request, to keep only knowledge that still affects future
+engineering work — see "Change summary" at the end. The append-only convention resumes
+from this point forward; use git history to recover the pre-compression text if an older
+entry's full detail is ever needed.
 
 ## Architectural decisions and design reasoning
 
@@ -371,15 +372,17 @@ Re-adding Windows/macOS support later is a deliberate, tracked future task
 - **A Keycloak realm import's top-level `roles`/`clientScopes` lists are a *replace*, not
   a merge.** Adding an entry there deletes every one of Keycloak's own built-in
   roles/scopes not also listed (this broke every login realm-wide once, by deleting the
-  built-in `profile` scope). Anything realm-role- or client-scope-related must be created
-  *additively* through the admin API at runtime instead
-  (`KeycloakSellerPortalClientProvisioner`), never through `Realms/eshop-realm.json`'s
-  static lists.
+  built-in `profile` scope). `Realms/eshop-realm.json` is now the sole source of realm
+  data, including client definitions (ADR 0025 removed the runtime admin-API
+  provisioners that used to add roles/scopes additively) — anyone editing that file's
+  top-level `roles`/`clientScopes` lists directly must still list every built-in
+  role/scope they want to keep, not just the new one.
 - **Keycloak matches `redirectUris`/`post.logout.redirect.uris` by exact string,
   including path** — a bare origin does not match a `SignedOutCallbackPath`/
-  `signin-oidc` full path. Both are registered as full URLs by
-  `KeycloakSellerPortalClientProvisioner`, matching `Program.cs`'s actual OIDC callback
-  paths exactly.
+  `signin-oidc` full path. Both are hardcoded as full URLs in `Realms/eshop-realm.json`
+  for each client, matching `Program.cs`'s actual OIDC callback paths exactly — this only
+  works because the reverse proxy (ADR 0025) gives each app one fixed public origin, so
+  the realm file no longer needs a port patched in at runtime.
 - **Keycloak's `VERIFY_PROFILE` required action blocks login until a user has
   `firstName`/`lastName` set** — any seeded test user needs both, or login silently
   fails (invisible to any test that stops before completing a real login).
@@ -408,107 +411,59 @@ Re-adding Windows/macOS support later is a deliberate, tracked future task
   session/antiforgery cookies from earlier restarts still get sent, and accumulate in a
   long-lived browser session (recreatable as `HTTP 431`, request headers too large, from
   `seller-portal` cookie chunking). The actual restart-survival requirement is a
-  persisted ASP.NET Core Data Protection key ring (now backed by Valkey via
-  `HybridCache`, see ADR 0012) — without it, a fresh BFF process can't decrypt either
-  cookie after a restart. The `seller-portal` auth cookie itself holds only an opaque
-  `HybridCache` lookup key, never the ticket — deliberately, after the ticket's own size
-  (`SaveTokens = true` stashing Keycloak's raw tokens, never read back anywhere) pushed
-  it into ASP.NET Core's cookie chunking. Do not reintroduce `SaveTokens = true` or
-  otherwise grow the ticket without reconsidering this.
-- **Update to the rule above: `SaveTokens = true` is back, but paired with an
-  `OnTicketReceived` handler (`OidcTokenPruning.StripUnusedTokens`) that strips
-  `access_token`/`id_token` from the ticket before it's persisted, keeping only
-  `refresh_token` (plus `token_type`/`expires_at`).** Nothing in this app reads any of
-  these back yet, but a `refresh_token` is the one token a future silent-refresh or
-  RP-initiated-logout feature would actually need, and it alone is far smaller than all
-  three combined - reconsidered as a deliberate, narrower exception to the rule above,
-  not an oversigh.
-- **Correction to the entry above: stripping `id_token` broke `/bff/logout`.** The
-  entry's own reasoning had it backwards - `/bff/logout` already calls
-  `Results.SignOut` against the OpenIdConnect scheme, and `OpenIdConnectHandler`'s
-  sign-out flow reads `id_token` back from these same `AuthenticationProperties` to set
-  `id_token_hint` on the redirect to Keycloak's end-session endpoint, not
-  `refresh_token`. With `id_token` stripped, Keycloak rejected the redirect ("Missing
-  parameters: id_token_hint"), caught by an E2E test's logout assertion. Fixed by only
-  stripping `access_token`; `id_token` is kept.
-- **Follow-up: a kept `id_token` can still go stale enough for Keycloak to reject it as
-  `id_token_hint`, distinctly from the missing-parameter bug above.** Keycloak has no
-  persistent volume (see "Keycloak runs with no persistent volume" below), so a restart
-  wipes its signing keys and session state; the Bff's own auth ticket survives that
-  restart (the ticket store is persistent, ADR 0012/0021), including the `id_token` it
-  saved at login. Logging out after such a restart sent that now-unverifiable
-  `id_token_hint` to the new Keycloak instance, which returned "Invalid parameter:
-  id_token_hint" and never redirected back - the Seller's local session was already
-  cleared by that point, but the browser dead-ended on Keycloak's own error page with no
-  way back. Root-caused by decoding the `id_token_hint` from a live repro URL: its `iss`
-  claim pointed at a Keycloak port from a previous container instance. Fixed with
-  `OidcSignOutTokenRefresh`, wired into the Cookie scheme's `OnValidatePrincipal`
-  (`Program.cs`): every authenticated request checks the saved `id_token`'s expiry and,
-  if expired, tries a refresh-token grant against the identity provider's token
-  endpoint, persisting the (possibly rotated) tokens back into the ticket on success. If
-  the refresh also fails (a fully-forgotten session, not just an expired token), the
-  principal is rejected and the Cookie scheme signed out immediately, rather than
-  leaving a session only the Bff still believes in.
-  **`OnRedirectToIdentityProviderForSignOut` was tried first, then removed as both
-  redundant and subtly broken.** Decompiling `OpenIdConnectHandler.HandleSignOutAsync`
-  showed it reads `id_token` via `Context.GetTokenAsync(SignOutScheme, "id_token")`,
-  which reuses the *same* per-request authenticate result `OnValidatePrincipal` already
-  produced - `UseAuthentication()` runs the Cookie handler once per request regardless
-  of the endpoint, so by the time `/bff/logout` calls `Results.SignOut`, staleness has
-  already been resolved one way or the other. Worse, the redirect-time copy of this
-  check had its own bug: when `OnValidatePrincipal` had already rejected the principal,
-  `IdTokenHint` arrived as `null`, which its logic treated as "nothing to validate" (not
-  "rejected"), silently reproducing the original missing-`id_token_hint` bug instead of
-  preventing it. One correct check beats two, especially when the second one is wrong.
-- **Follow-up: the fix above still doesn't catch every stale-`id_token` case - confirmed
-  by a new E2E test, `SellerPortalStaleIdTokenLogoutTests`, reported failing as expected.**
-  `OidcSignOutTokenRefresh.IsExpired` only reads the `id_token`'s own `exp` claim. A
-  Keycloak restart happens to also wipe the token's issuer's memory of it, but doesn't
-  advance that claim - a still-not-expired `id_token` from before the restart passes
-  `ValidateAsync`'s check as `StillValid` without ever contacting Keycloak, and gets sent
-  as `id_token_hint` to the restarted instance regardless, reproducing the exact
-  "Invalid parameter: id_token_hint" dead end this section's fix was meant to prevent.
-  The test forces this deterministically by deleting Keycloak's own embedded H2 database
-  (`/opt/keycloak/data/h2`) before `docker restart`-ing the same container - a bare
-  restart alone reuses the container's writable filesystem and so preserves the realm's
-  keys/sessions/dynamically-provisioned client, silently *not* reproducing the bug (this
-  was confirmed the hard way: an earlier version of the test that only ran `docker
-  restart` passed). Not yet fixed - `IsExpired` would need to mean "still good enough to
-  present to the identity provider," not just "hasn't hit its own timestamp," which likely
-  means always validating against the identity provider rather than trusting a local
-  claim alone.
-- **Fixed the follow-up above, for Keycloak (development) only** - Microsoft Entra
-  External ID (production, ADR 0020) is assumed to have stable URLs/keys, so it doesn't
-  need this. `OidcSignOutTokenRefresh.ValidateAsync` gained an `alwaysConfirmWithProvider`
-  parameter: when true, it skips the `IsExpired` shortcut entirely and always takes the
-  existing refresh-token-grant branch, which already correctly returns `Rejected` when
-  the identity provider has forgotten the session (proven by the existing
-  `ValidateAsync_ReturnsRejected_WhenTheRefreshTokenIsRejected` test). `AuthConfiguration.cs`
-  sets it to true for Keycloak, on every authenticated request (not just `/bff/logout`),
-  since a fresh `id_token` is also needed elsewhere for upcoming Seller Portal profile
-  work - accepting an extra Keycloak round trip and `HybridCacheTicketStore.RenewAsync`
-  (Redis write) per request as a development-only cost. Persistent Keycloak data was
-  reconsidered as an alternative and rejected again: `KeycloakSellerPortalClientProvisioner.cs`
-  unconditionally `POST`s to create the realm role/client-scope/client every run, with no
-  get-or-create path, so it would hard-fail with 409 Conflict against a persisted realm
-  without a rewrite; it would also still need the client's `redirect_uri` patched every
-  run regardless (the Web app's own port isn't pinned either), which is exactly the
-  "patch redirect URI after the fact" design already superseded above because of
-  concurrent dev-session-vs-E2E-suite Keycloak sharing conflicts.
-  **This surfaced a second, distinct bug**: re-running `SellerPortalStaleIdTokenLogoutTests`
-  after the fix above still failed, now with Keycloak's "Missing parameters:
-  id_token_hint" instead of "Invalid parameter: id_token_hint" - same dead end, different
-  cause. `OnValidatePrincipal`'s `Rejected` branch calls
-  `SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme)` immediately, during
-  the authentication middleware phase, before `/bff/logout`'s own handler runs - clearing
-  the ticket (and its `id_token`) before `Results.SignOut([Cookie, OpenIdConnect])` could
-  read it back as a hint. There is no way to make the OpenIdConnect end-session round
-  trip through Keycloak succeed once it has genuinely forgotten the session, regardless
-  of what hint is or isn't sent - so `/bff/logout` (`AuthEndpoints.cs`) now checks
-  `context.User.Identity?.IsAuthenticated` (reflecting `OnValidatePrincipal`'s outcome for
-  this same request) and signs out of the Cookie scheme alone, skipping the doomed
-  OpenIdConnect round trip, when the session was already rejected (or never existed).
-  With both fixes in place, `SellerPortalStaleIdTokenLogoutTests` passes.
+  persisted ASP.NET Core Data Protection key ring (now backed by Redis via `HybridCache`,
+  ADR 0012/0021) — without it, a fresh BFF process can't decrypt either cookie after a
+  restart. The `seller-portal` auth cookie itself holds only an opaque `HybridCache`
+  lookup key, never the ticket.
+- **Auth-ticket token-retention saga — current state: `SaveTokens = true`, with only
+  `access_token` stripped before persisting; `refresh_token` and `id_token` are kept.**
+  Each step's reasoning still matters and is easy to get wrong again:
+  1. Originally `SaveTokens = true` stashed every raw Keycloak token, unread anywhere,
+     which grew the ticket into ASP.NET Core's cookie-chunking territory — fixed by
+     turning `SaveTokens` off.
+  2. Re-enabled later behind `OidcTokenPruning.StripUnusedTokens` (an `OnTicketReceived`
+     handler), stripping both `access_token` and `id_token` and keeping only
+     `refresh_token`. This broke `/bff/logout`: `OpenIdConnectHandler`'s sign-out flow
+     reads `id_token` (not `refresh_token`) from `AuthenticationProperties` to set
+     `id_token_hint` on the redirect to Keycloak's end-session endpoint — Keycloak
+     rejected the redirect ("Missing parameters: id_token_hint"), caught by an E2E
+     logout assertion. Fixed by stripping only `access_token`.
+  3. A kept `id_token` can still go stale enough for Keycloak to reject it as
+     `id_token_hint`, distinct from the missing-parameter bug — and not caught by
+     checking the token's own `exp` claim, since a Keycloak restart (no persistent
+     volume, see below) wipes its signing keys/sessions without advancing that claim, so
+     a still-not-expired local `id_token` gets sent to an instance that no longer
+     recognizes it ("Invalid parameter: id_token_hint"). Fixed with
+     `OidcSignOutTokenRefresh`, wired into the Cookie scheme's `OnValidatePrincipal`:
+     every authenticated request checks `id_token` expiry and, if expired, tries a
+     refresh-token grant, persisting rotated tokens back on success or signing out
+     immediately on failure. An `OnRedirectToIdentityProviderForSignOut` variant was
+     tried first and removed — redundant with the per-request `OnValidatePrincipal`
+     check (which already runs before `/bff/logout`'s handler), and it had its own bug:
+     a rejected principal's `null` `IdTokenHint` was treated as "nothing to validate"
+     instead of "rejected," silently reproducing the same dead end.
+  4. Checking only the local `exp` claim still wasn't enough — confirmed by an E2E test
+     that forces a Keycloak restart with its embedded H2 database deleted (a bare
+     `docker restart` alone preserves realm state and doesn't reproduce the bug). Fixed,
+     for Keycloak (development) only — Entra External ID (production, ADR 0020) is
+     assumed to have stable URLs/keys — with an `alwaysConfirmWithProvider` parameter on
+     `OidcSignOutTokenRefresh.ValidateAsync`: when true, it skips the `IsExpired`
+     shortcut and always takes the refresh-token-grant branch, which already correctly
+     returns `Rejected` once the identity provider has forgotten the session.
+     `AuthConfiguration.cs` sets it to true for Keycloak on every authenticated request
+     (a fresh `id_token` is also needed elsewhere, for upcoming Seller Portal profile
+     work), accepting an extra Keycloak round trip and Redis write per request as a
+     development-only cost. This surfaced one more bug: `OnValidatePrincipal`'s
+     `Rejected` branch signs the Cookie scheme out immediately, during the
+     authentication middleware phase, clearing the ticket's `id_token` before
+     `/bff/logout` could read it back as a hint ("Missing parameters: id_token_hint"
+     again, different cause). Fixed by having `/bff/logout` check
+     `context.User.Identity?.IsAuthenticated` and sign out of the Cookie scheme alone,
+     skipping the doomed OpenIdConnect round trip, whenever the session was already
+     rejected or never existed.
+  **Lesson**: stripping `id_token` breaks logout, and a kept `id_token`'s own `exp`
+  claim is not sufficient to know whether the identity provider still recognizes the
+  session — that requires actually asking it.
 - **Antiforgery failures return `400` with an `X-Antiforgery-Invalid` header, not a plain
   `403`.** A plain 403 is indistinguishable from a genuine "authenticated but not a
   Seller" access-denied response (which other routes already return as 403, for reasons
@@ -611,20 +566,21 @@ there, unchanged from before either persistence feature existed.
 - **`OnResourceEndpointsAllocatedEvent` shares one serial gate in `DcpExecutor` that
   blocks every executable resource's process start, not just the subscriber's own** —
   unsuitable for a handler that calls out to an external API (confirmed by decompiling
-  `Aspire.Hosting`/`Aspire.Hosting.Testing` 13.4.6). `KeycloakSellerPortalClientProvisioner`
-  uses `OnResourceReady` instead, which runs off that critical path in its own
-  `Task.Run`; `WaitForResourceHealthyAsync` already only resolves once every
-  `OnResourceReady` subscriber finishes (rethrowing on fault), giving
-  blocking-with-exception-propagation for free — confirmed identical under
-  `DistributedApplicationTestingBuilder` (it invokes the AppHost's real entry point via
-  reflection into the same inner `DistributedApplication`/`DcpExecutor`, no
-  mock/shortcut path).
+  `Aspire.Hosting`/`Aspire.Hosting.Testing` 13.4.6); use `OnResourceReady` instead, which
+  runs off that critical path in its own `Task.Run`, with `WaitForResourceHealthyAsync`
+  resolving only once every `OnResourceReady` subscriber finishes (rethrowing on fault) —
+  blocking-with-exception-propagation for free, confirmed identical under
+  `DistributedApplicationTestingBuilder`. (This was learned while building
+  `KeycloakSellerPortalClientProvisioner`, since removed — see "Reverse proxy adoption
+  complete" below — but the `OnResourceReady` API lesson still applies to any future
+  handler with the same shape.)
 - **Upgrading a Keycloak endpoint's protocol to https does not rename it from `"http"`
   to `"https"`.** `keycloak.GetEndpoint("https")` fails with "endpoint not allocated";
   the endpoint stays named `"http"` even though its URL is now `https://...`.
-- **Keycloak's dev-HTTPS-certificate source, on the Aspire version this repo currently
-  pins (13.4.6), is `DeveloperCertificateService` reading the OS/.NET `CurrentUser/My`
-  X509 store**, caching key material into `~/.aspire/dev-certs/https/` and feeding
+- **Keycloak's dev-HTTPS-certificate source, confirmed on Aspire 13.4.6 (not
+  reverified since), is `DeveloperCertificateService` reading the OS/.NET
+  `CurrentUser/My` X509 store**, caching key material into `~/.aspire/dev-certs/https/`
+  and feeding
   Keycloak's `KC_HTTPS_CERTIFICATE_FILE`/`KC_HTTPS_KEY_STORE_FILE` env vars from that
   cache — generic, no Keycloak-specific logic. This is unrelated to
   `~/.aspnet/dev-certs/trust/` or to this repo's own `tmp/`-redirected `$HOME`; the
@@ -636,19 +592,19 @@ there, unchanged from before either persistence feature existed.
   `--trust` to integrate with) and unrelated to whether the cert actually works.
   **Unresolved gap**: nothing currently guarantees a *native* dev cert exists at all on
   a machine that has never generated one.
-- **Keycloak runs with no persistent volume** (`.WithDataVolume()`/
-  `ContainerLifetime.Persistent` were tried and dropped) — every `aspire start`/
-  `eshop run` gets a fully fresh container, and the `seller-portal` OIDC client is
-  created dynamically at runtime (`KeycloakSellerPortalClientProvisioner`, via
-  `OnResourceReady`, once the Web resource's real port is known) rather than baked into
-  the realm import. Accepted cost: Keycloak's boot time is paid on every restart, not
-  just the first. This removed a whole class of previously open questions (realm-import
-  vs. existing-volume interaction, concurrent E2E-suite-vs-manual-dev-session Keycloak
-  sharing) and replaced an earlier, superseded design that patched a redirect URI onto
-  the client after the fact via the admin API — rejected once Keycloak's redirect-URI
-  matching turned out to have no port-wildcard support at all
+- **Superseded design (kept for the reasoning, not the current mechanism — see "Reverse
+  proxy adoption complete" below for what replaced it): Keycloak originally ran with no
+  persistent volume and got a fully fresh container on every `aspire start`/`eshop run`,
+  with the `seller-portal` OIDC client created dynamically at runtime
+  (`KeycloakSellerPortalClientProvisioner`, via `OnResourceReady`, once the Web
+  resource's real port was known) rather than baked into the realm import.** This
+  replaced an even earlier design that patched a redirect URI onto the client after the
+  fact via the admin API — rejected once Keycloak's redirect-URI matching turned out to
+  have no port-wildcard support at all
   ([keycloak/keycloak#39880](https://github.com/keycloak/keycloak/issues/39880) is still
-  open).
+  open). Dynamic provisioning was itself later deleted once a fixed reverse-proxy origin
+  (ADR 0025) made a static realm-imported client possible again; Keycloak still runs
+  with no data volume today, but now with `ContainerLifetime.Persistent`.
 - **From a clean NuGet cache, building `eShop.AppHost.csproj` only as a *transitive*
   `ProjectReference`** (e.g. from an E2E test project) **fails to resolve
   `Aspire.AppHost.Sdk`'s own types** — confirmed directly (standalone AppHost build
@@ -668,345 +624,123 @@ there, unchanged from before either persistence feature existed.
   pages need `IgnoreHTTPSErrors = true`, acceptable since it's always a known, local,
   dev-only cert.
 - **`Aspire.Hosting.EntityFrameworkCore` 13.4.6-preview.1's `AddEFMigrations` tool
-  resource is not usable yet against this project's shape** (tried, then reverted, while
-  resolving ADR 0018's `WaitFor` removal): its generated `DotnetToolResource` derives
-  `ASPNETCORE_URLS` from the target project's own endpoints assuming an `"https"` one
-  exists (the `AddProject<T>` default) — `sellerPortalBff` registers only `"http"`, so
-  the template substitution fails outright at startup (`portForServing` can't find a
-  service that doesn't exist). Working around that via `configureToolResource` (forcing
-  `ASPNETCORE_URLS` to an empty string) got past that failure, but exposed a second,
-  unworkaroundable one: the underlying `dotnet ef database update` invocation has no
-  retry of its own and reproducibly lost the race against SQL Server's own slow startup,
-  twice in a row, even with `.WaitFor(sellerDb)` on the migration resource itself
-  satisfied first. Reverted to the migration running inline in the Bff's own startup
-  (`Program.cs`), wrapped in the DbContext's own EF Core execution strategy instead - the
-  concurrent-multi-replica-migration risk `AddEFMigrations` would have also fixed is
-  still open (`doc/TODO.md`). ADR 0023 later chose a custom migration-resource model
-  rather than waiting for this package path to mature.
-- **ADR 0023 implemented for the Seller Portal database**: a new
-  `EShop.SellerPortal.MigrationRunner` project (a plain console AppHost resource, no
-  HTTP endpoint at all - sidesteps `AddEFMigrations`' first bug above by construction)
-  calls `Database.MigrateAsync()` programmatically, not `dotnet ef database update`, so
-  it gets the same retry behavior the Bff's old inline migration had, which that CLI
-  command has no equivalent for (the second, unworkaroundable bug above). A new shared
-  library, `EShop.SellerPortal.Migrations`, holds `SchemaMigrationLock`
-  (`sp_getapplock`/`sp_releaseapplock` - the repo's first raw ADO.NET, since EF Core's
-  `ExecuteSql*` has no way to read a stored procedure's return code) and
-  `SchemaMarkerStore` (a `SchemaMigrationMarkers` table, one row per component). The
-  Bff's `DbContextConfiguration.cs` no longer migrates anything; a new
-  `SchemaMarkerHealthCheck` (the repo's first custom `IHealthCheck`) reports the Bff
-  not-ready until the marker shows the current migration succeeded, tagged so it affects
-  `/health` but not `/alive`.
-- **Follow-up: the `EShop.SellerPortal.Migrations` library above, removed.** It had
-  shrunk to holding only `SellerPortalMigrationConstants` once `SchemaMigrationLock`/
-  `SchemaMarkerStore` were extracted into the shared, technology-agnostic
-  `EShop.Migrations.Orchestration` (see its own entry). A dedicated library for two string constants
-  was no longer earning its place as a separate project - they moved into
-  `EShop.Common`'s `KnownNames` (`MigrationsSellerPortalComponent`/
-  `.MigrationsSellerPortalLockName`), and the project/its test project were deleted. A
-  migrated component now needs only its runner project, not a runner plus a
-  constants-only library.
-- **Follow-up: the Storefront's `StorefrontMigrationConstants` (`EShop.Migrations.Optimizely`),
-  also moved into `KnownNames`.** Kept there initially since `EShop.Migrations.Optimizely`
-  is more than just constants (unlike the now-deleted `EShop.SellerPortal.Migrations`),
-  but a component's constants living in the same place regardless of which technology
-  migrates it is the more consistent rule - moved to `MigrationsStorefrontCmsComponent`/
-  `.MigrationsStorefrontCmsLockName`/`MigrationsStorefrontCommerceComponent`/
-  `.MigrationsStorefrontCommerceLockName`, alongside the Seller Portal's own.
-- **Follow-up: all 6 migration constants moved again, out of `EShop.Common`'s
-  `KnownNames` and into a new `EShop.Migrations.Common` project (`MigrationNames`,
-  prefix dropped - implied by the class name now), alongside a second extraction from
-  the same review.** `EShop.Common` is referenced by nearly every project in the repo,
-  most with nothing to do with migrations - migration naming belongs with the migration
-  primitives. Reading `EShop.Migrations.Optimizely` and `EShop.Migrations.Orchestration`
-  side by side (they have no duplicated business logic between them - confirmed by an
-  `Explore` agent) surfaced a lower-level duplication instead: both hand-rolled the same
-  `SqlCommand`-creation-then-execute and nullable-string-column round-trip shapes
-  independently (`SchemaMigrationLock`/`SchemaMarkerStore` in one, `OptimizelySqlScriptRunner`
-  in the other). `EShop.Migrations.Common` now also holds `SqlCommandExtensions`
-  (`ExecuteNonQueryAsync`/`ExecuteReaderAsync`, the latter taking a mapping delegate so
-  the command and reader are both disposed inside the extension rather than leaking a
-  `SqlCommand` back to the caller) and `SqlNullableValueExtensions`
-  (`GetNullableString`/`DbNullIfNull`), and both `EShop.Migrations.Optimizely` and
-  `EShop.Migrations.Orchestration` now depend on it. `SchemaMigrationLock.TryAcquireAsync`
-  deliberately stayed hand-rolled ADO.NET - it needs the `SqlCommand` alive after
-  execution to read back an output `ReturnValue` parameter, which an execute-and-discard
-  helper can't support, and generalizing it for that one caller wasn't worth it.
-  Behavior-preserving refactor, verified against a real SQL Server (same command text/
-  parameters/transactions as before, not just a clean build).
-  **`sp_getapplock`'s `LockOwner=Session` ties the lock to one specific SQL Server
-  session** - the runner acquires it and runs the migration on the exact same
-  already-open `SqlConnection` (`dbContext.Database.GetDbConnection()`), not a second
-  connection from EF's own pool, or the lock protects nothing.
-  **First live-run attempt crashed anyway, for the exact class of bug this whole change
-  exists to prevent**: both the runner's initial `Database.OpenConnectionAsync()` and
-  the health check's own connection-open were unwrapped, plain calls - a cold-starting
-  SQL Server's pre-login handshake reset (the same failure `SqlExceptionRetry`, moved
-  here unchanged from the Bff's old `RetryOnSqlExceptionAsync`, exists to retry) hit
-  them before either ever reached that retry logic, crashing the runner outright and
-  making the health check throw instead of reporting Unhealthy. Fixed by wrapping the
-  runner's own connection-open in the same `SqlExceptionRetry`, and by having the health
-  check catch `SqlException` around its connection-open and return a graceful Unhealthy
-  result - a health check must never throw, especially not during the exact transient
-  window it exists to detect. Verified against a genuinely fresh (never-migrated)
-  database via `eshop run`: the runner completes and writes a success marker, the Bff's
-  `/health` turns healthy right after, and a second `eshop run` against the
-  already-migrated database completes just as cleanly (EF's own migration check finds
-  nothing pending). Deployment automation (an Azure Container Apps job gating the Bff's
-  rollout) and Storefront extension are still open (`doc/TODO.md`).
-- **Follow-up: extending ADR 0023 to the Optimizely CMS and Commerce databases.**
-  Optimizely CMS/Commerce Connect has no EF Core migration API, so the Seller Portal's
-  `Database.MigrateAsync()` approach doesn't carry over directly. Two alternatives were
-  investigated and rejected before landing on a third:
-  - **Booting Optimizely's `InitializationEngine` in a headless console host**, to
-    trigger its automatic-schema-update pipeline (`DataAccessOptions.UpdateDatabaseSchema`)
-    outside a full web app. Optimizely's own docs describe the engine as "invoked when
-    `AddCmsHost()` is called on `IServiceCollection`... after DI configuration is
-    complete but before any HTTP requests are processed" - suggestive that it doesn't
-    strictly need Kestrel, but no documented example of running it in a plain console
-    host exists. Rejected as unverified rather than spiked, since a third option worked
-    without needing to answer the question at all.
-  - **Shelling out to `dotnet-episerver create-cms-database`/`update-database`**.
-    Installed the real tool (`EPiServer.Net.Cli` 2.0.0, from Optimizely's own NuGet feed,
-    in an isolated scratch directory) and decompiled it with `ilspycmd` to see exactly
-    what it does. `CreateDatabaseCms.RunAsync` only creates the database, a SQL login,
-    and the ASP.NET Identity tables (`AspNetUsers` etc., via plain EF Core - unrelated to
-    the CMS schema) - it never touches `tblContent` or any other CMS table.
-    `UpdateDatabase.RunAsync` only applies *incremental* upgrade scripts (walking the
-    project's NuGet lock file for every referenced `EPiServer.*` package, resolving the
-    NuGet global-packages cache via `dotnet nuget locals global-packages -l`, then
-    running each package's `tools/epiupdates*/sql/*.sql` files) - it never runs the
-    baseline full-schema script. So the CLI alone cannot provision a fresh database's
-    schema at all; the only supported paths for that are the site's own automatic
-    startup update, or manually running the baseline script - which is also what the
-    docs call the official manual-install method. Rejected anyway even for the
-    incremental-only case: it would need the .NET SDK and the tool inside the runner's
-    container image, which this repository's migration model already rules out for
-    production images (mirroring the EF `AddEFMigrations` CLI-subprocess rejection
-    above), and its own retry (`DatabaseHandler.ExecuteWithRetry`, 3 attempts) only
-    wraps the connection open, not each script - coarser than what we can do ourselves.
-  - **Chosen: run Optimizely's own shipped SQL scripts directly**, reimplementing the
-    decompiled `ScriptRunner`/`ScriptValidatorParser`/`SqlStatusCode` algorithm in raw
-    ADO.NET (`EShop.Migrations.Optimizely`) rather than shelling out to it. Every
-    `EPiServer.*` package's `tools/` folder ships a baseline full-schema script
-    (`EPiServer.Cms.Core.sql`, `EPiServer.Commerce.Core.sql`) and incremental scripts
-    under `tools/epiupdates/sql` (CMS) and `tools/epiupdates_Commerce/sql`/
-    `tools/epiupdates_CMS/sql` (Commerce - the latter folder targets the *CMS*
-    connection despite shipping inside the Commerce package, confirmed from the
-    decompiled `UpdateDatabase.RunAsync`). Every script opens with a
-    `--BEGINVALIDATINGQUERY`/`--ENDVALIDATINGQUERY` block whose query reports whether to
-    skip (`AlreadyIn`/0), run (`Valid`/1), or abort (`Invalid`/-1) - confirmed the
-    baseline script is just as self-guarding as the incremental ones, so a single
-    algorithm (always include the baseline first, then every incremental script still
-    ahead of the live version) handles both a fresh install and an upgrade uniformly.
-    `EShop.StoreFront.MigrationRunner` reuses `SchemaMigrationLock`/`SchemaMarkerStore`/
-    `SqlExceptionRetry` unchanged from the Seller Portal's runner (all three were already
-    technology-agnostic, extracted into a shared `EShop.Migrations.Orchestration` project as part of
-    this work) - one runner binary, parameterized by a `cms`/`commerce` argument rather
-    than duplicated, since only the connection string, script folders, and component/lock
-    names differ.
-  - **Verified end to end against a real SQL Server** (fresh install applies the
-    baseline and writes a success marker; an already-migrated database no-ops per file
-    via `AlreadyIn` but still writes a marker; two concurrent runners against the same
-    fresh database both succeed, proving the lock does something) using synthetic
-    fixture scripts shaped exactly like Optimizely's own (same validating-query block,
-    same `GO`-batch layout, a fake version-tracking stored procedure) - not the real
-    scripts, since restoring the actual `EPiServer.CMS.Core`/`EPiServer.Commerce.Core`
-    packages needs Optimizely's private NuGet feed
-    (`https://nuget.optimizely.com/feed/packages.svc/`) added to `NuGet.config`, and
-    `AGENTS.md` says not to change that file without being asked. Also still open for
-    the same reason: the MSBuild step that would copy those packages' real `tools/`
-    scripts into the runner's build output, and scaffolding `EShop.StoreFront.Web` itself
-    (needs the `epi-commerce-empty` template from the same feed). See `doc/TODO.md`.
-- **Follow-up: the NuGet feed was added, `EShop.StoreFront.Web` scaffolded, and its
-  hosting model verified by actually running it - several undocumented compatibility
-  issues found, none guessable from Optimizely's own docs.** `nuget.config` gained a
-  second source (`https://nuget.optimizely.com/feed/packages.svc/`), scoped via package
-  source mapping to `EPiServer`/`EPiServer.*`/`Optimizely.*` only, so every other
-  package still resolves from `nuget.org` exactly as before.
-  - **Package versions**: `EPiServer.CMS`/`EPiServer.Commerce` (the "meta" packages, not
-    the individual `.Core`/`.AspNetCore` sub-packages) at `13.0.2`/`15.1.0` - the NuGet
-    package major version really does match the marketing version (CMS 13, Commerce
-    Connect 15) once current releases are checked; an earlier assumption that these had
-    drifted apart was based on stale packages already sitting in the local NuGet cache
-    from an unrelated prior session, not the actual current feed. `EPiServer.CMS` must
-    stay at `13.0.2`, not the newer `13.1.1`: `13.1.1` restores against Commerce
-    `15.1.0` with *no* NuGet warning, but crashes at runtime - a stale
-    assembly-versioned reference inside `Mediachase.Commerce`/`Mediachase.Search`
-    (`EPiServer.Events.ChangeNotification, Version=13.0.2.0`) that only exists at the
-    13.0.2 line. Two more direct package references were needed purely to satisfy
-    runtime assembly loads neither meta-package pulls in transitively -
-    `EPiServer.Events.ChangeNotification` (found via the exact `FileNotFoundException`
-    above) and `EPiServer.OptimizelyIdentity` (found the same way, one level
-    later - `EPiServer.Commerce.UI.Admin.AddCommerceAdmin()` needs it). Neither NuGet
-    restore nor `dotnet build` surfaced either gap; only actually running the app did.
-  - **`AddCmsAspNetIdentity<ApplicationUser>()` (the `epi-commerce-empty` template's own
-    default) is dropped, not adapted.** Its package, `EPiServer.Cms.UI.AspNetIdentity`,
-    was never published past `12.34.x` - it doesn't exist for CMS 13 at all, so the
-    template's own generated code doesn't compile against current package versions.
-    This isn't a loss for this repository regardless: ADR 0002 already makes an
-    external OIDC provider the system of record for every identity, so a local
-    ASP.NET Identity user store was never wanted here.
+  resource was tried and reverted** while resolving ADR 0018's `WaitFor` removal: its
+  generated `DotnetToolResource` assumes the target project has an `"https"` endpoint
+  (`sellerPortalBff` has only `"http"`, so template substitution fails at startup), and
+  working around that exposed a second, unworkaroundable gap — the underlying
+  `dotnet ef database update` invocation has no retry of its own and reproducibly lost
+  the race against SQL Server's own slow startup. Reverted to the migration running
+  inline in the Bff's own startup, wrapped in EF Core's execution strategy. ADR 0023
+  later chose a custom migration-resource model rather than waiting for this package
+  path to mature.
+- **ADR 0023 implemented for the Seller Portal database**: `EShop.SellerPortal.MigrationRunner`
+  (a plain console AppHost resource, no HTTP endpoint) calls `Database.MigrateAsync()`
+  programmatically rather than `dotnet ef database update`, so it gets real retry
+  behavior. The lock (`SchemaMigrationLock`, `sp_getapplock`/`sp_releaseapplock` — this
+  repo's first raw ADO.NET, since EF Core's `ExecuteSql*` can't read a stored
+  procedure's return code) and marker (`SchemaMarkerStore`, a `SchemaMigrationMarkers`
+  table) primitives were extracted, after three rounds of consolidation, into a shared,
+  technology-agnostic `EShop.Migrations.Orchestration` project, with shared naming
+  constants in `EShop.Migrations.Common`'s `MigrationNames` (moved there, not
+  `EShop.Common`'s `KnownNames`, since `EShop.Common` is referenced by nearly every
+  project regardless of whether it migrates anything). `EShop.Migrations.Common` also
+  holds `SqlCommandExtensions`/`SqlNullableValueExtensions`, factored out once the
+  Seller Portal and Optimizely runners were found to have independently hand-rolled the
+  same `SqlCommand`-creation/execute and nullable-column-read shapes.
+  `SchemaMigrationLock.TryAcquireAsync` deliberately stayed hand-rolled ADO.NET — it
+  needs the `SqlCommand` alive after execution to read back an output `ReturnValue`
+  parameter. **`sp_getapplock`'s `LockOwner=Session` ties the lock to one specific SQL
+  Server session** — the runner must acquire it and run the migration on the same
+  already-open `SqlConnection`, not a second connection from EF's own pool, or the lock
+  protects nothing. The Bff's `DbContextConfiguration.cs` no longer migrates anything;
+  `SchemaMarkerHealthCheck` (part of `/health`, not `/alive`) reports not-ready until the
+  marker shows the current migration succeeded.
+  **First live-run attempt crashed anyway, for the exact class of bug this change exists
+  to prevent**: the runner's and health check's own connection-opens were unwrapped
+  plain calls, so a cold-starting SQL Server's pre-login handshake reset hit them before
+  `SqlExceptionRetry` ever got a chance, crashing the runner and making the health check
+  throw instead of reporting Unhealthy. Fixed by wrapping both connection-opens in
+  `SqlExceptionRetry` — **a health check must never throw, especially not during the
+  exact transient window it exists to detect.**
+- **Extending ADR 0023 to Optimizely CMS/Commerce**: Optimizely has no EF Core migration
+  API, so the Seller Portal's approach doesn't carry over directly. Two alternatives
+  were rejected first: booting Optimizely's `InitializationEngine` in a headless console
+  host (no documented example of running it outside Kestrel — rejected as unverified,
+  not spiked); and shelling out to `dotnet-episerver create-cms-database`/
+  `update-database` (decompiled with `ilspycmd`: it only creates ASP.NET Identity
+  tables, never `tblContent`, and only applies *incremental* upgrade scripts, never the
+  baseline — it cannot provision a fresh schema at all, and would need the .NET SDK
+  inside the runner's container image, which this repo's model already rules out).
+  **Chosen**: reimplement Optimizely's own decompiled `ScriptRunner`/
+  `ScriptValidatorParser` algorithm in raw ADO.NET (`EShop.Migrations.Optimizely`).
+  Every `EPiServer.*` package's `tools/` folder ships a baseline full-schema script plus
+  incremental scripts (the Commerce package's `tools/epiupdates_CMS/sql` folder targets
+  the *CMS* connection despite shipping inside the Commerce package); every script opens
+  with a validating query reporting skip/run/abort, so one algorithm — baseline first,
+  then every incremental script still ahead of the live version — handles both a fresh
+  install and an upgrade. `EShop.StoreFront.MigrationRunner` is one binary parameterized
+  by a `cms`/`commerce` argument, reusing `SchemaMigrationLock`/`SchemaMarkerStore`/
+  `SqlExceptionRetry` unchanged.
+  - **Package-version gotchas found only by running the app**, not by restore or build:
+    `EPiServer.CMS` and `EPiServer.Commerce` (the "meta" packages) must move together as
+    one release train — `EPiServer.CMS` `13.1.1` paired with Commerce still on `15.1.0`
+    restored with no NuGet warning but crashed at runtime, via a stale
+    assembly-versioned reference inside `Mediachase.Commerce`/`Mediachase.Search` that
+    only exists at the `13.0.2` line. (Later resolved: see the 2026-09-16 coordinated
+    upgrade to `13.1.3`/`15.2.0` in the Archived Historical Summary.) Two extra direct
+    package references (`EPiServer.Events.ChangeNotification`, `EPiServer.OptimizelyIdentity`)
+    were needed purely to satisfy runtime assembly loads neither meta-package pulls in
+    transitively. `AddCmsAspNetIdentity()` (the `epi-commerce-empty` template's own
+    default) was dropped, not adapted — its package was never published past `12.34.x`,
+    and ADR 0002 already makes external OIDC the identity system of record here anyway.
   - **Minimal hosting (`WebApplication.CreateBuilder`) does not work with
-    `AddCms()`/`AddCommerce()`** - confirmed by actually building and running both
-    shapes side by side, not by inference from a plain `IServiceCollection` extension
-    method signature (the earlier, wrong assumption). Under minimal hosting,
-    `AddCommerce()`'s internal `AddCommerceConnectionString` callback (invoked lazily,
-    from `Host.StartAsync`, the first time `IOptions<DataAccessOptions>.Value` is
-    requested) throws `InvalidOperationException: No service for type
-    'Microsoft.Extensions.Configuration.IConfiguration' has been registered` -
-    `IConfiguration` genuinely is registered in the app's real `IServiceProvider` by
-    then, and explicitly re-registering it (`builder.Services.AddSingleton(builder
-    .Configuration)`) before calling `AddCms()` didn't help, so this is some
-    EPiServer-internal service-provider snapshot taken before the callback's closure
-    captures a usable one - not a simple registration-ordering fix from the call site.
-    The classic model (`Host.CreateDefaultBuilder(args).ConfigureCmsDefaults()
-    .ConfigureWebHostDefaults(webBuilder => webBuilder.UseStartup<Startup>())`) has no
-    such problem and reaches all the way to a real database connection attempt.
-    `EShop.StoreFront.Web` uses the classic model; every other project in this
-    repository keeps using minimal hosting (`EShop.ServiceDefaults` now supports both -
-    see the next point).
-  - **`EShop.ServiceDefaults/Extensions.cs` was refactored to support both hosting
-    models from one implementation**, rather than duplicating its logic into a
-    Startup.cs-specific copy. The existing `IHostApplicationBuilder`-generic public
-    methods (`AddServiceDefaults<TBuilder>`, `ConfigureOpenTelemetry<TBuilder>`,
-    `AddDefaultHealthChecks<TBuilder>`) are unchanged in behavior - every other
-    project's call sites needed no changes - but now delegate to new private/public
-    helpers taking plain `IServiceCollection`/`IConfiguration`/`ILoggingBuilder`
-    directly. Two gaps the classic model doesn't have a single object for, unlike
-    `IHostApplicationBuilder`: `ILoggingBuilder` (only reachable via `IHostBuilder
-    .ConfigureLogging(...)` at the `Program.cs` level, not from inside `Startup` -
-    handled by the new public `ConfigureOpenTelemetryLogging(this ILoggingBuilder)`),
-    and mapping health-check endpoints without a combined
-    `IApplicationBuilder`/`IEndpointRouteBuilder` object like `WebApplication` (handled
-    by splitting `MapDefaultEndpoints(this WebApplication)` into
-    `UseDefaultEndpointsMiddleware(this IApplicationBuilder)` (call before
-    `UseEndpoints`) and a new `MapDefaultEndpoints(this IEndpointRouteBuilder)` overload
-    (call inside it, alongside the project's own endpoint mapping) - one `UseEndpoints`
-    call, not two).
-  - **Optimizely's own `DatabaseSchemaHost` (a required hosted service, part of
-    `AddCms()`) throws and crashes the entire host at startup if the database schema
-    doesn't exist yet** (`NotSupportedException: The database schema for 'CMS' is not
-    installed`), confirmed by pointing the app at a real, empty SQL Server database
-    with `DataAccessOptions.CreateDatabaseSchema = false` set (per ADR 0023, deliberately
-    disabled here - see the ISchemaValidator/DataAccessOptions wiring in `Startup.cs`).
-    This is a materially different resilience shape than the Seller Portal's: the Bff
-    starts up fine on a schema-less database and reports `Unhealthy` via
-    `SchemaMarkerHealthCheck` until the marker exists, because EF Core itself never
-    validates schema existence at startup. Optimizely's own compatibility-level check
-    does, unconditionally, as a hosted service - there's no working equivalent to "start
-    anyway, report not ready" available from configuration alone. Readiness gating for
-    `EShop.StoreFront.Web` (not yet built) will need to account for this: most likely a
-    crash-loop-and-restart story (relying on the orchestrator's own restart policy)
-    rather than an in-process `IHealthCheck`, unless a still-unexplored option (e.g. an
-    `IHostedService` startup order override, or catching this specific exception) turns
-    out to work - still open, not decided.
-- **Follow-up: the real Optimizely scripts wired in, the readiness question resolved,
-  and `AppHost.cs` wired - all verified against real SQL Server and a real `eshop run`
-  session, not just synthetic fixtures.**
-  - **The MSBuild copy step exists**: `EShop.StoreFront.MigrationRunner.csproj`'s
-    `CopyOptimizelySchemaScripts` target copies `episerver.cms.core`'s and
-    `episerver.commerce.core`'s real `tools/` folders into the runner's build output,
-    merging `episerver.commerce.core`'s `tools/epiupdates_CMS/sql` into the *Cms*
-    destination (confirmed targeting the CMS connection, not Commerce - see the earlier
-    entry above). Getting the package version at MSBuild time turned out not to work via
-    `@(PackageReference)`'s `%(Version)` metadata under central package management (empty
-    at the point this target runs) - `@(PackageVersion)` (the item group
-    `Directory.Packages.props` itself populates) works reliably instead. Two real
-    `Directory.Packages.props` conflicts surfaced while wiring this, both fixed with
-    ADR 0013 security-exception-style direct pins: `EPiServer.CMS.Core`/
-    `EPiServer.Commerce.Core`'s declared `Microsoft.Data.SqlClient < 7.0.0` upper bound
-    (this repo pins `7.0.1`) - suppressed per-project (`NoWarn=NU1608`), not repo-wide,
-    since only the runner and `EShop.StoreFront.Web` need a direct `Microsoft.Data
-    .SqlClient` reference at all; and a transitive `System.Security.Cryptography.Xml`
-    vulnerability the EPiServer graph pulls in on its own, fixed with a direct pin
-    (`10.0.10` - `10.0.9` still tripped the same advisories, unlike the unrelated
-    `Microsoft.AspNetCore.DataProtection.StackExchangeRedis` case where `10.0.9` was
-    enough). Central package management doesn't override a purely transitive
-    dependency's version unless some project directly references it - both the runner
-    and its test project needed their own direct `System.Security.Cryptography.Xml`
-    reference for the pin to actually take effect.
-  - **Verified against real, empty SQL Server databases, for real** (not synthetic
-    fixtures): `dotnet run -- cms` and `dotnet run -- commerce` each applied their full
-    real schema (80 real CMS tables, `sp_DatabaseVersion` landing at `21001`; 145 real
-    Commerce tables, `SchemaVersion` recording the full historical version sequence up
-    to `12.2.0`), wrote a success marker, and no-opped cleanly on a second run against
-    the now-migrated databases. `test/EShop.StoreFront.MigrationRunner.Tests/
-    RealOptimizelyScriptsTests.cs` (a new integration test, with its own copy of the same
-    MSBuild copy step) runs the same real scripts in CI, so a future version bump has a
-    real test to fail against, not just the synthetic-fixture mechanics test.
-  - **The readiness question is resolved**: not `.WaitFor` (rejected - it has no effect
-    once deployed to Azure Container Apps, so relying on it would make local behavior
-    diverge from production instead of matching it), and not catching
-    `DatabaseSchemaHost`'s `NotSupportedException` reactively either. Instead,
-    `EShop.StoreFront.Web/Program.cs` checks `SchemaMarkerStore` for both components
-    itself (`StorefrontMigrationPreflight.cs`), polling with a 10-second delay up to 30
-    attempts, *before* ever building the real CMS/Commerce host - reusing the exact
-    marker table both migration runners already write to, rather than adding a new
-    mechanism. This is pure in-process C#, so it behaves identically regardless of
-    orchestrator (Aspire locally, Azure Container Apps once deployed).
-  - **Verified end to end, live**: started `EShop.StoreFront.Web` against two freshly
-    created, unmigrated databases - it logged "Waiting for migration ... (attempt
-    N/30)..." repeatedly without crashing. Ran both migrations in parallel while it was
-    still waiting. The app then logged "Migration for '...' has completed" for both
-    components, proceeded to build the real host, and `EPiServer.Data.DatabaseSchemaHost`
-    succeeded this time (no crash) - CMS/Commerce initialization completed, real content
-    types were created (`BundleContent`, `CatalogContent`, `ProductContent`,
-    `RootContent`, etc.), and the app reached "Application started. Press Ctrl+C to shut
-    down." - the full chain, proven.
-  - **`AppHost.cs` wiring**: the CMS/Commerce SQL databases, both migration runner
-    resources (`.WithArgs("cms")`/`.WithArgs("commerce")` - one project, two resource
-    instances, matching the "one binary, argument-selected" design), and the Storefront
-    web resource all added - no `.WaitFor` on either runner, per the readiness decision
-    above. `EPiServer.Data`'s own connection-string convention expects exactly
-    `EPiServerDB`/`EcfSqlConnection` (not this repo's usual kebab-case Aspire resource
-    names) - bridged explicitly via `.WithEnvironment("ConnectionStrings__EPiServerDB",
-    storefrontCmsDb)` rather than `.WithReference`, which would have exposed the
-    connection string under the resource's own name instead (`storefront-cms-db`),
-    which nothing in `EShop.StoreFront.Web` actually looks up.
-  - **Verified inside a real `eshop run` session** - not just the standalone manual runs
-    above, but Aspire itself starting and orchestrating every piece via the `AppHost.cs`
-    wiring: `storefront-cms-db-migration-runner` and
-    `storefront-commerce-db-migration-runner` both reached `Running -> Finished` within
-    seconds of the session starting (reusing the same persistent `sql` container the
-    Seller Portal's own database lives in), `storefront-web` reached `Running`, and once
-    both migrations had finished, its own `/health` and `/alive` endpoints returned `200
-    Healthy` - queried directly against the port Aspire assigned it, since the AppHost's
-    own log file doesn't capture child-resource stdout (that goes to the dashboard's
-    OTLP log stream instead, not inspected here). This is the complete chain, proven with
-    the same code path a real `eshop run`/deployed instance would actually take, not a
-    hand-assembled approximation of it.
-- **Follow-up: `StorefrontMigrationPreflight` only checked `marker.Succeeded`, not the
-  marker's version - a real gap, caught by comparing it against
-  `SchemaMarkerHealthCheck` (`EShop.SellerPortal.Bff`), which compares against the
-  current build's expected EF migration id.** A marker from an older Optimizely version
-  (a package bump not yet re-migrated here) would have been wrongly treated as "ready."
-  Fixed by comparing `marker.SchemaVersion` against an expected version, matching
-  `SchemaMarkerHealthCheck`'s own pattern - but where does "expected version" come from,
-  with no EF migration id to ask? The first attempt added a third copy of the pinned
-  version number as a literal in `EShop.StoreFront.Web`'s own `appsettings.json`
-  (`Directory.Packages.props`'s pin, the migration runner's own `appsettings.json`
-  `TargetVersion`, and now this - three places to keep in sync by hand). Replaced
-  instead, on the observation that `EShop.StoreFront.Web`/`EShop.StoreFront.MigrationRunner`
-  already reference the real `EPiServer.CMS`/`EPiServer.CMS.Core` and
-  `EPiServer.Commerce`/`EPiServer.Commerce.Core` packages directly - so the installed
-  version doesn't need to be told to the app at all, it can be read from the actual
-  referenced assembly. Confirmed empirically (not assumed) that every assembly in one
-  Optimizely release train ships the exact same version number as the package itself:
-  pinning `EPiServer.CMS` to `13.0.2` resolves `EPiServer.Data`, `EPiServer.Events`,
-  `EPiServer.ApplicationModules`, and every other CMS-train package to exactly `13.0.2`
-  too (their own NU1608 messages listed dozens, all at that version); `Mediachase
-  .Commerce.dll`'s own `AssemblyVersion` is literally `15.1.0.0` for the pinned
-  `EPiServer.Commerce.Core` `15.1.0`. `EShop.Migrations.Optimizely`' new
-  `OptimizelyInstalledVersion.Get(assemblyName)` (`Assembly.Load(name).GetName()
-  .Version`, dropping the always-zero fourth component to match the three-part NuGet
-  version string) replaced both the new `ExpectedVersion` config value and the existing
-  `TargetVersion` one - one less duplicated literal than before this fix, not one more.
-  `EShop.StoreFront.MigrationRunner`'s `appsettings.json` now only has
-  `ToolsDirectory`/`BaselineScriptFileName`/`IncrementalFolderNames` left as literals (no
-  version at all). Re-verified against a real SQL Server after the change: the runner
-  still writes `13.0.2`/`15.1.0` markers correctly, derived from the assembly rather than
-  typed by hand.
+    `AddCms()`/`AddCommerce()`** — confirmed by running both shapes side by side, not by
+    inference. Under minimal hosting, `AddCommerce()`'s lazily-invoked connection-string
+    callback throws `InvalidOperationException` for `IConfiguration`, even though
+    `IConfiguration` genuinely is registered by then — some EPiServer-internal
+    service-provider snapshot taken too early, not a registration-ordering fix from the
+    call site. `EShop.StoreFront.Web` uses the classic `Host.CreateDefaultBuilder(...)
+    .ConfigureCmsDefaults().ConfigureWebHostDefaults(... UseStartup<Startup>())` model
+    instead; every other project keeps minimal hosting.
+    `EShop.ServiceDefaults/Extensions.cs` was refactored to support both hosting models
+    from one implementation — existing generic call sites (`AddServiceDefaults<TBuilder>`
+    etc.) are unchanged, but now delegate to helpers taking plain
+    `IServiceCollection`/`IConfiguration`/`ILoggingBuilder` directly, covering two gaps
+    the classic model lacks a single object for (`ILoggingBuilder`, and mapping
+    health-check endpoints without a combined `WebApplication`-like object).
+  - **Optimizely's own `DatabaseSchemaHost` throws and crashes the whole host at startup
+    if the schema doesn't exist yet** (`NotSupportedException`) — there is no working
+    "start anyway, report not ready" option from configuration alone, unlike EF Core.
+    Resolved by `StorefrontMigrationPreflight.cs` polling `SchemaMarkerStore` for both
+    components itself, before ever building the real CMS/Commerce host (not `.WaitFor`,
+    which has no effect once deployed to Azure Container Apps).
+  - The MSBuild `CopyOptimizelySchemaScripts` target copies the real packages' `tools/`
+    folders into the runner's build output; getting the package version at MSBuild time
+    needs `@(PackageVersion)` (the item group `Directory.Packages.props` populates), not
+    `@(PackageReference)`'s `%(Version)` metadata (empty under central package
+    management at that point). Two ADR 0013 security-exception-style pins were needed
+    alongside this: `Microsoft.Data.SqlClient` (EPiServer's `< 7.0.0` upper bound
+    suppressed per-project against this repo's `7.0.1`) and a transitive
+    `System.Security.Cryptography.Xml` CVE fix — central package management doesn't
+    override a purely transitive dependency's version unless some project references it
+    directly, so both the runner and its test project needed their own direct reference
+    for the pin to take effect.
+  - `StorefrontMigrationPreflight` originally checked only `marker.Succeeded`, not the
+    marker's schema version — a real gap: a marker from an older Optimizely version (a
+    package bump not yet re-migrated) would have been wrongly treated as ready. Fixed by
+    comparing `marker.SchemaVersion` against a version read directly off the referenced
+    `EPiServer.*` assembly (`OptimizelyInstalledVersion.Get`), confirmed empirically that
+    every assembly in one Optimizely release train ships the package's own version
+    number — avoiding a third hand-typed copy of the pinned version (alongside
+    `Directory.Packages.props` and the runner's own `appsettings.json`).
+  - Verified end to end against real SQL Server and a real `eshop run` session: both
+    migration runners reach `Running -> Finished`, `EShop.StoreFront.Web` polls and
+    waits without crashing, then reaches `/health`/`/alive` `200 Healthy` once both
+    finish — the full chain, with real EPiServer packages and content types created, not
+    synthetic fixtures. `EPiServer.Data`'s connection-string convention needs exactly
+    `EPiServerDB`/`EcfSqlConnection` (not this repo's kebab-case Aspire resource names),
+    bridged in `AppHost.cs` via `.WithEnvironment("ConnectionStrings__EPiServerDB", ...)`
+    rather than `.WithReference`.
 
 ### Next.js dev-server build state is not shareable across native and containerized runs
 
@@ -1123,9 +857,9 @@ major the moment it is published. No `package.json` change was made as part of
 recording this - see the pinned version in `package.json` itself, which remains
 the source of truth.
 
-### ADR 0013's 40-day quarantine audit surfaced two real vulnerabilities, not just noise
+### ADR 0013's 7-day quarantine audit surfaced two real vulnerabilities, not just noise
 
-A full audit of every pin in `Directory.Packages.props` against ADR 0013's 40-day rule
+A full audit of every pin in `Directory.Packages.props` against ADR 0013's 7-day rule
 found 14 packages, across 5 release trains, published too recently, and downgraded them
 to the newest compliant version. Two of those downgrades were wrong and got reverted:
 `SQLitePCLRaw.bundle_e_sqlite3` 2.1.11 (the "compliant" version) has a disclosed
@@ -1142,9 +876,11 @@ declares `System.Security.Cryptography.Xml` pinpointed `Microsoft.AspNetCore.Dat
 (itself a transitive dependency, never directly pinned) as the sole path in - meaning
 only `Microsoft.AspNetCore.DataProtection.StackExchangeRedis` needed reverting to 10.0.10,
 not the whole 10.0.10 release train it happened to share a version number with. Both
-reverted pins now carry their own comment invoking ADR 0013's documented exception for a
-security fix, kept newer than 40 days on purpose - see the "Non-obvious current
-constraints" section of `doc/MEMORY.md`.
+reverted pins carried their own comment invoking ADR 0013's documented exception for a
+security fix. **This exception was later closed**: the 2026-09-16 .NET 10 servicing
+package upgrade (Archived Historical Summary) moved both packages onto quarantined
+10.0.12 releases; `SQLitePCLRaw.bundle_e_sqlite3` remains the only current ADR 0013
+exception — see `doc/MEMORY.md`'s "Non-obvious Current Constraints".
 
 ## Domain / business context
 
@@ -1180,55 +916,28 @@ constraints" section of `doc/MEMORY.md`.
   actions that are not suitable for Merchandisers, or cannot be expressed through CMS
   approval sequences. The Storefront replaces DevTools only where real Commerce Connect
   behavior is required.
-- Adding "Cancel review" introduced a race: `SubmissionResultConsumer` used to apply
-  whatever Approve/Reject result it found to whatever `Submission` row matched by id,
-  with no check that the submission was still `Pending`. A late in-flight result for a
-  since-cancelled submission would have corrupted a Draft no longer under review. The
-  consumer now checks `submission.Status == Pending` before applying anything; anything
-  else (including `Cancelled`) is logged and treated as `Handled` - a safe no-op, not
-  `UnknownRecord` (which dead-letters, the wrong semantic for an expected race).
-  `CancelReviewAsync` publishes a `SubmissionCancelledMessage` after committing the
-  cancellation; `eShop.DevTools`' `SellerSubmissionCancellationConsumer` removes the row
-  from its store and fires the simulator's SignalR change event, mirroring the existing
-  Approve/Reject consumer pattern. `CancelReviewAsync` also broadcasts over the Seller
-  Portal's existing per-Seller SSE stream, so a second open tab learns about a
-  cancellation live - the portal's toast component deliberately does not also toast on
-  this event, since the Seller who clicked Cancel already got a synchronous toast from
-  that click.
-- The drafts list page and the two per-draft edit pages used to fetch data once on
-  mount and never again, so a Merchandiser decision or a second-tab cancellation left a
-  stale status showing until the next full reload; separately, "Submit for review" used
-  to submit whatever was last *persisted*, not what was on screen. Both are fixed:
-  "Submit for review" now auto-saves (a PUT) then submits (a POST) as one user-visible
-  action; the submit-readiness gates read live, on-screen state; and all three pages
-  keep an `EventSource` open and refetch on *any* event, unfiltered - safe because a
-  Seller has at most one Pending submission per draft at a time, and the edit pages'
-  form fields are already disabled while a submission is pending, so a refetch can
-  never clobber an in-progress edit.
-- DevTools' two SignalR hub routes and its Seller-Portal-only types were renamed for
-  naming consistency with the `seller-*` Service Bus queue names already in use
-  (`SubmissionsHub` -> `SellerSubmissionsHub`, `InventoryHub` -> `SellerInventoryHub`,
-  and their backing stores/consumers/folders to match) - a pure naming change, not a
-  behavior change. Convention: prefix a top-level identifier with `Seller` only when
-  not already qualified by a containing `Seller`-prefixed type; a nested member is left
-  unprefixed to avoid stuttering.
-- The Submissions and Inventory pages' own submit/report routes did not broadcast over
-  SSE (only the async consumer side did), so a second open tab missed a Seller's own
-  just-submitted/just-reported action until the next full reload. Fixed by broadcasting
-  from both the write route and the consumer, for both Submissions and the newly added
-  Inventory SSE channel (`InventoryNotificationBroadcaster`, mirroring
-  `SubmissionNotificationBroadcaster`).
-- An Approved draft with images is not removed immediately: `SubmissionResultConsumer`
-  marks it `PendingImageCleanup` and broadcasts once, then
-  `SubmissionImageDeletionConsumer` asynchronously deletes each blob and only removes
-  the `Draft` row once none remain, broadcasting the Approved outcome again at that
-  point. The edit pages' SSE effect must stay open through `PendingImageCleanup`, not
-  just `PendingReview`, to catch that second broadcast and show the "Approved and
-  removed" panel on the resulting 404. That second broadcast also caused a duplicate
-  toast (`SubmissionEvents` now dedupes on the `id:status` pair — safe, since a
-  resubmission always gets a brand new `Submission` id) and was missing from the
-  Inventory SSE channel entirely (a fresh approval should make its SKU immediately
-  reportable - fixed by also broadcasting an `InventorySummary` for it on approval).
+- **Cancel review's race condition**: `SubmissionResultConsumer` now checks
+  `submission.Status == Pending` before applying an Approve/Reject result — a late
+  in-flight result for an already-cancelled submission is logged and treated as
+  `Handled` (a safe no-op), not `UnknownRecord` (which dead-letters; the wrong semantic
+  for an expected race). Without this check, a late result could corrupt a Draft no
+  longer under review.
+- All three Seller Portal pages (drafts list, both edit pages) keep an SSE connection
+  open and refetch on *any* event, unfiltered — safe because a Seller has at most one
+  Pending submission per draft, and the edit pages' fields are disabled while a
+  submission is pending, so a refetch can never clobber an in-progress edit. "Submit for
+  review" auto-saves (PUT) then submits (POST) as one action, so it always submits
+  on-screen state, not last-persisted state. Both the write route and the async consumer
+  broadcast over SSE (for Submissions and Inventory alike), so a second open tab sees
+  the Seller's own action immediately, not just external decisions.
+  An approved draft with images isn't removed until blob cleanup finishes: it sits in
+  `PendingImageCleanup`, broadcasting once on approval and again once cleanup completes
+  — SSE listeners must stay open through `PendingImageCleanup`, not just `PendingReview`,
+  and toasts dedupe on the `id:status` pair (a resubmission always gets a new
+  `Submission` id, so this stays safe).
+- Naming convention: a DevTools identifier is prefixed `Seller` only when not already
+  qualified by a containing `Seller`-prefixed type (matching the `seller-*` Service Bus
+  queue names) — a nested member stays unprefixed to avoid stuttering.
 
 ## Testing-strategy lessons
 
@@ -1283,6 +992,13 @@ proxy) caught them:
   `ReferenceError` after the test has already reported pass/fail. Wrapping the
   triggering `fireEvent.click` in `await act(async () => { ... })` forces React to
   flush that passive effect before the `act()` call resolves, closing the race.
+- **A test click that races React hydration can look like a database race.** Two Seller
+  Portal draft-creation E2E failures initially looked like a `SellerProvisioner`
+  concurrent-insert race (SQL Server unique-key exceptions were indeed happening and
+  recovering correctly), but the actual cause was the test clicking a server-rendered
+  button before React hydrated its client event handler. Fixed by waiting for the
+  initial empty-drafts state (rendered only post-hydration) before clicking — not by
+  adding any database or process lock.
 
 ## Archived Historical Summary
 
@@ -1370,6 +1086,110 @@ proxy) caught them:
   project files. The `eshop` CLI command name, its scripts, and Docker
   image/label names stayed lowercase - those are tool/product names, not .NET project
   names, and were never part of the mismatch.
+- **2026-09-11: Storefront unit-test baseline added.** Added
+  `test/EShop.StoreFront.Web.Tests` to the solution and covered
+  `Hj.EShop.StoreFront.Web.Foundation.Operations.OperationExtensions` end to end:
+  request creation from `HttpContext`/`Controller`, `Ok`/`Fail` response helpers, and
+  the `OperationContext` authentication convenience properties. While wiring that test
+  project, two dormant compile blockers in the Storefront scaffold had to be removed:
+  `FrontPage.cs` still referenced the old `Foundation.Settings` namespace instead of the
+  current `Foundation.SiteSettings`, and `Views/Shared/Layout.cshtml` still contained
+  unresolved template-only `Cms.*` site-settings types that do not exist in this repo.
+  The layout was reduced to a minimal valid shell so the Storefront project can build
+  and unit-test again until real Storefront layout/settings blocks are implemented.
+- **E2E fixture-sharing experiment (2026-09-15), reverted.** Sharing one sequential
+  AppHost across the normal Seller Portal E2E workflows (each test still owning its own
+  browser) cut suite time from 4m54s to 2m40s on its first run, but a second run exposed
+  cross-test interference — fresh browsers alone don't isolate the AppHost's database,
+  cache, identity, messaging, or background-consumer state (a stale logout redirect, a
+  lost live-push edit). Reverted: every E2E test again owns and disposes a complete
+  AppHost/Playwright driver/browser. The optimization stays deferred until an explicit,
+  infrastructure-wide isolation/reset design can prove repeatability.
+- **2026-09-16 dependency upgrade wave**, all under ADR 0013's quarantine rule, each
+  verified with a full build, the unit-test suite, and the containerized E2E suite: CMS/
+  Commerce Connect coordinated to `13.1.3`/`15.2.0` (user-approved ahead of Commerce's
+  own quarantine window, specifically to retest the CMS/Commerce version-train mismatch
+  above — the retest passed); Aspire to `13.5.3` (`AspireUseCliBundle=true` is required
+  from this version on, or `ASPIRE010` fails the build under `TreatWarningsAsErrors`);
+  .NET 10 servicing packages to `10.0.12` (closes the `DataProtection.StackExchangeRedis`
+  ADR 0013 exception — `SQLitePCLRaw.bundle_e_sqlite3` remains the only current one);
+  Microsoft.Extensions resilience/service-discovery/OpenTelemetry, Azure.Messaging.ServiceBus,
+  Microsoft.Playwright, and Spectre.Console to their latest quarantine-cleared versions.
+
+## Storefront OIDC/login hardening (2026-09-14)
+
+- **Root cause of a live `/ui/cms` crash**: Optimizely CMS 13.0.2's
+  `SynchronizeUsersDB.FindUsersAsync` unconditionally calls `DbDataReader.GetString` on
+  `Email`/`GivenName`/`Surname`, but the CMS schema allows all three columns to be null;
+  synchronized `admin`/`editor` rows had a null `Surname`. The Storefront's OIDC callback
+  added fallback `given_name`/`email` claims but no fallback `family_name`.
+- **Fix chosen: strict validation, not another fallback.** Keycloak's Storefront client
+  already had complete `profile`/`email` scopes and the `editor` user had complete
+  profile data, so inventing a `family_name` fallback would hide an identity-provider
+  contract failure instead of surfacing it. `AuthConfiguration`'s OIDC `OnTicketReceived`
+  now requires non-empty `preferred_username`/`email`/`given_name`/`family_name` claims
+  before calling Optimizely synchronization; a missing/whitespace claim fails
+  authentication (naming the missing claim) and never synthesizes profile data. Unit
+  tests cover each missing/whitespace claim; the Storefront browser test now visits
+  `/ui/cms` after login so this failure class is caught going forward.
+- **`ClaimTypeOptions`'s custom claim-name mapping must be registered during service
+  registration, before DI is built** — registering it from the deferred OpenID Connect
+  options callback instead was tried and was a real defect (Optimizely kept default
+  claim names and synchronized null profile columns even though Keycloak supplied the
+  mapped claims).
+- **`eshop screenshot --login` generalized**: it was hard-coded to the Seller Portal's
+  `/bff/login` route, unusable for the Storefront's `/ui/cms`-triggered OIDC challenge
+  (no `/login` endpoint there). It now takes a caller-provided, same-origin
+  `--login-path` plus `--username`/`--password`, and waits for the redirect chain to
+  return to the target origin — avoiding a CLI resource registry that would duplicate
+  application-owned routing. Screenshot storage-state keys off a SHA-256 of (origin,
+  login path, username), since cookies don't scope by port and more than one
+  authenticated resource/user now exists.
+- **Seller Portal OIDC callback origin bug found via the generalized screenshot login**:
+  the Keycloak client registration used the BFF's direct URL, but the Next.js proxy
+  carries the browser-facing OIDC callback on its own origin — contradicting the
+  intended topology (the frontend owns OIDC redirects/the session cookie). Fixed by
+  registering the Seller Portal Keycloak client from the `seller-portal-web` resource's
+  allocated URL instead of the BFF's.
+
+## Reverse proxy adoption complete (ADR 0025, 2026-09-18)
+
+- Dynamic Keycloak OIDC client provisioning (`KeycloakSellerPortalClientProvisioner`,
+  `KeycloakStorefrontClientProvisioner`, `KeycloakAdminApiClient`, their tests, and the
+  already-deactivated `OnResourceReady` hooks) was deleted once a real E2E login/logout
+  round trip passed through the reverse-proxy hosts using only the static realm import.
+- Keycloak got `ContainerLifetime.Persistent` with deliberately no `WithDataVolume()` —
+  closes the common trigger where an ordinary restart minted a fresh container/signing
+  keys under an already-valid Bff auth ticket (logout failure via Keycloak's
+  `Invalid parameter: id_token_hint`), without freezing `eshop-realm.json` edits (a data
+  volume would stop `--import-realm` from ever re-importing again). See `doc/TODO.md`
+  for the narrower remaining trigger (an actual data loss, not just a restart).
+- New E2E coverage: `KeycloakDiscoveryTests`, `CrossAppSsoAuthorizationTests` (a
+  Storefront SSO session must not grant Seller Portal `SellerOnly` access), and
+  `ForwardedOriginTrustTests` (a spoofed `X-Forwarded-Host`/`-Proto` cannot move the OIDC
+  `redirect_uri` off the real origin).
+- **Non-obvious build gotcha**: `CopyOptimizelySchemaScripts.targets` concatenated
+  `$(NuGetPackageRoot)` directly with a package folder name; the container's
+  `NUGET_PACKAGES` env var has no trailing slash (unlike a native restore's default), so
+  the two merged into one broken path string — undetected because `eshop test e2e` had
+  not run in-container since the target was added. Fixed with
+  `$([MSBuild]::EnsureTrailingSlash(...))`.
+
+## PLAN-1.md upstream reverse-proxy contribution (in progress)
+
+- `lib/DotNet-ReverseProxy` submodule branch `feature/aspire-13-5-gateway-support`
+  (based on upstream `develop`) upgrades that project's own Aspire hosting/example
+  AppHost to `13.5.3` (also needing `AspireUseCliBundle=true` for `ASPIRE010`) and
+  implements the approved opt-in forwarded-origin mode: a required `forwardPublicOrigin`
+  argument that strips and replaces client `X-Forwarded-For`/`-Host`/`-Proto`, sends no
+  client IP, and preserves no original public Host origin — verified against real HTTPS
+  targets receiving the correct host/`:8443` port regardless of hostile forwarded
+  headers.
+- StyleCop's location-less `SA1516` warnings from generated Aspire reference source were
+  left unsuppressed by deliberate choice, not fixed.
+- No local commits are pushed until `PLAN-1.md` is complete and the user has finished
+  code review — see `PLAN-1.md` itself for remaining work (upstream PR, merge, NuGet
+  publication, eShop release-history, automated forwarding tests, docs).
 
 ## Change summary
 
@@ -1394,3 +1214,18 @@ code comments. No facts were changed, no new decisions were introduced, and ever
 invariant, rejected alternative, and vendor/integration quirk referenced by a code
 comment elsewhere in the repository was preserved. See git history for the
 pre-compression text.
+
+This file was compressed a third time on 2026-09-18, as part of a repository-wide
+documentation-consolidation pass (Phase 3, following code-comment consolidation and a
+`doc/MEMORY.md` compression). The auth-ticket token-retention saga and the ADR
+0023-to-Optimizely migration saga (both under "System invariants and constraints"/
+"Non-obvious implementation context") were compressed to their current correct state
+plus the reasoning chain that led there, without dropping any still-relevant lesson;
+routine package-upgrade logs, a reverted E2E-fixture experiment, and several bug-fix
+narratives with no lasting lesson beyond their fix were merged into "Archived Historical
+Summary" or folded into "Testing-strategy lessons"; four same-day 2026-09-14 entries
+about Storefront OIDC/login hardening were merged into one section, and the two
+2026-09-18 PLAN-1.md/PLAN-2.md status entries were compressed to their decision-relevant
+content. No facts were changed, no new decisions were introduced, and every invariant,
+rejected alternative, and unresolved risk referenced elsewhere in the repository was
+preserved. See git history for the pre-compression text.

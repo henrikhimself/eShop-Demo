@@ -16,7 +16,9 @@
 
 using Azure.Messaging.ServiceBus;
 using Azure.Storage.Blobs;
+using Hj.EShop.Common;
 using Hj.EShop.DevTools.Services;
+using Hj.EShop.Testing.Common;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,7 +26,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Hj.EShop.DevTools.Tests;
 
 // Runs the real Program.cs, but swaps Service Bus for a recording test double and skips
-// the hosted queue consumer - see Program.cs's "Testing" environment check - so these
+// the hosted queue consumer - see Program.cs's "Fake" environment check - so these
 // tests exercise the actual Razor Pages handlers with no real broker. Program.cs
 // registers SellerPendingSubmissionStore unconditionally (nothing environment-dependent
 // about it), so tests read it back via Services rather than swapping it out.
@@ -40,7 +42,7 @@ internal sealed class DevToolsWebApplicationFactory : WebApplicationFactory<Prog
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Testing");
+        builder.UseEnvironment(KnownNames.FakeEnvironmentName);
 
         builder.ConfigureServices(services =>
         {

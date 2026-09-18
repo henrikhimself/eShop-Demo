@@ -1,0 +1,41 @@
+// <copyright file="DbContextConfiguration.cs" company="Henrik Jensen">
+// Copyright 2026 Henrik Jensen
+//
+// Licensed under the Apache License, Version 2.0 (the "License")
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// </copyright>
+
+using Hj.EShop.Common;
+using Hj.EShop.ServiceDefaults;
+using Microsoft.EntityFrameworkCore;
+
+namespace Hj.EShop.SellerPortal.Bff.Data;
+
+internal static class DbContextConfiguration
+{
+    // Skipped in "Fake" (SellerPortalWebApplicationFactory registers its own
+    // SQLite-backed context with no real SQL Server) - real vs. fake below only matters
+    // outside that environment.
+    public static void AddDbContextConfiguration(this WebApplicationBuilder builder)
+    {
+        if (builder.Environment.ShouldUseRealInfrastructure())
+        {
+            builder.AddSqlServerDbContext<SellerPortalDbContext>(connectionName: KnownNames.ResourceSellerDb);
+        }
+        else if (EnvironmentChecks.IsBuildTimeOpenApiGeneration())
+        {
+            // See doc/MEMORY.md - this stand-in only needs to exist, never connect.
+            builder.Services.AddDbContext<SellerPortalDbContext>(options =>
+                options.UseSqlServer(TestingDefaults.FakeSqlServerConnectionString));
+        }
+    }
+}

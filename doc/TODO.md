@@ -102,12 +102,49 @@ prematurely.
   replica race this used to track locally. What's left is deployment automation: ADR
   0018's Azure Container Apps target has no built-in way to run that migration runner
   as a gating job before a Bff revision activates - see the ADR 0023 items above.
-- Two `Directory.Packages.props` pins currently sit ahead of
-  [ADR 0013](./adr/0013-pinned-dependency-versions-and-40-day-quarantine.md)'s 40-day
+- The local reverse proxy's own `/health` (and `/alive`) endpoint, from
+  `EShop.ServiceDefaults`' `MapDefaultEndpoints`, has no host restriction. ASP.NET
+  Core's routing gives a literal route segment priority over YARP's catch-all proxy
+  route, regardless of the proxy route's own `RequireHost` constraint, so
+  `https://storefront.eshop.local:8443/health` (for example) hits the reverse proxy's
+  own health check instead of being forwarded to the Storefront's `/health` (see
+  [ADR 0025](./adr/0025-local-development-reverse-proxy.md)). Needs a decision on
+  where the reverse proxy's own health endpoint should live instead (for example a
+  dedicated internal-only port/host), then a `RequireHost` restriction on the proxy
+  routes so no public hostname can shadow a target's own health endpoint this way.
+- Keycloak's AppHost resource now has `ContainerLifetime.Persistent` (see
+  [ADR 0025](./adr/0025-local-development-reverse-proxy.md)), so an ordinary `aspire
+  start`/`eshop run` restart reuses the same container and no longer rotates its
+  signing keys - the common trigger for the stale `id_token_hint` logout bug below is
+  fixed. The trade-off: Keycloak's own `--import-realm` only imports a realm that does
+  not already exist, so an edit to `src/EShop.AppHost/Realms/eshop-realm.json` (a new
+  user, role, or client change) no longer takes effect on the next restart by itself -
+  a developer must first stop and remove the persisted `keycloak` container so the next
+  start reimports from a clean state. Not yet documented in `DEVELOP.md`.
+- The stale `id_token_hint` logout bug (`doc/CHRONICLE.md`'s "Auth-ticket
+  token-retention saga", step 3: "A kept id_token can still go stale enough for
+  Keycloak to reject it as id_token_hint") still
+  reproduces for its narrower remaining trigger: a real Keycloak data loss (a lost or
+  force-recreated container, not just a restart - see the persistence bullet above).
+  `OidcSignOutTokenRefresh` still only checks the saved id_token's own `exp` claim,
+  never re-validating against Keycloak. `SellerPortalStaleIdTokenLogoutTests`
+  (`test/EShop.AppHost.E2ETests`) reproduces this narrower case and has no passing
+  assertion yet - fixing it needs `OidcSignOutTokenRefresh` to also handle Keycloak
+  rejecting the id_token_hint itself, not just an expired `exp` claim.
+- The Storefront's later phases are identified but not started: a custom Optimizely
+  Shell tool for Merchandiser submission review (amends
+  [ADR 0008](./adr/0008-submission-content-with-native-approval.md) - native approval
+  alone can't handle SKU deduplication before approve/reject), then the Commerce/CMS
+  content types (MovieProduct/MovieVariant, MerchandiseProduct/MerchandiseVariant -
+  checkout content types stay deferred) and Storefront shell pages.
+- Scaffold the search microservice first with a basic API and health checks; defer
+  indexing and query endpoints until the Storefront search document shape is decided.
+  Also scaffold the Profile microservice.
+- Extend `eshop build`/`restore`/`format` coverage notes if `EShop.StoreFront.Web` ever
+  gains its own frontend build step (it has none yet - no separate JS/TS build).
+- `SQLitePCLRaw.bundle_e_sqlite3` (2.1.12) currently sits ahead of
+  [ADR 0013](./adr/0013-pinned-dependency-versions-and-7-day-quarantine.md)'s 7-day
   quarantine on purpose, as a documented security exception (see `doc/CHRONICLE.md`
-  and `doc/MEMORY.md`'s "Non-obvious current constraints"): `Microsoft.AspNetCore.DataProtection.StackExchangeRedis`
-  (10.0.10, since the quarantine-compliant 10.0.9 transitively pulls in a
-  `System.Security.Cryptography.Xml` version with five disclosed high-severity CVEs)
-  and `SQLitePCLRaw.bundle_e_sqlite3` (2.1.12, since the quarantine-compliant 2.1.11 has
-  a disclosed high-severity CVE, GHSA-2m69-gcr7-jv3q). Revisit each once a version
-  exists that both fixes the vulnerability and clears the 40-day quarantine.
+  and `doc/MEMORY.md`'s "Non-obvious current constraints"). The quarantine-compliant
+  2.1.11 has a disclosed high-severity CVE, GHSA-2m69-gcr7-jv3q. Revisit it once a
+  version exists that both fixes the vulnerability and clears the 7-day quarantine.

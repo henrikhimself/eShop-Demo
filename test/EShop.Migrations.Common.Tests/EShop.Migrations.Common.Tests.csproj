@@ -12,7 +12,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../src/EShop.Migrations.Common/EShop.Migrations.Common.csproj" />
+    <ProjectReference Include="../../src/migrations/EShop.Migrations.Common/EShop.Migrations.Common.csproj" />
+    <ProjectReference Include="../EShop.Testing.Common/EShop.Testing.Common.csproj" />
   </ItemGroup>
 
 </Project>

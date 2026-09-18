@@ -27,7 +27,7 @@ and the result of the decision.
 - [0010 - Keycloak as the identity provider product](./0010-keycloak-identity-provider.md)
 - [0011 - Playwright as the browser end-to-end testing tool](./0011-playwright-for-browser-e2e-tests.md)
 - [0012 - Valkey for the Seller Portal's auth ticket store and Data Protection key ring](./0012-valkey-for-ticket-store-and-data-protection.md)
-- [0013 - Pinned dependency versions, updated only with a 40-day quarantine](./0013-pinned-dependency-versions-and-40-day-quarantine.md)
+- [0013 - Pinned dependency versions, updated only with a 7-day quarantine](./0013-pinned-dependency-versions-and-7-day-quarantine.md)
 - [0014 - The Bff's OpenAPI document as the source of truth for frontend types](./0014-bff-openapi-source-of-truth-for-frontend-types.md)
 - [0015 - SignalR for live updates on the Seller Draft Approval Simulator page](./0015-signalr-for-devtools-live-updates.md)
 - [0016 - EShop.Cli replaces the Bash developer scripts](./0016-eshop-cli-replaces-bash-scripts.md)
@@ -39,3 +39,4 @@ and the result of the decision.
 - [0022 - Storefront search service](./0022-storefront-search-service.md)
 - [0023 - Explicit database schema migration resources](./0023-explicit-database-schema-migration-resources.md)
 - [0024 - Search microservice boundary](./0024-search-microservice-boundary.md)
+- [0025 - Local-development reverse proxy for stable browser hosts](./0025-local-development-reverse-proxy.md)

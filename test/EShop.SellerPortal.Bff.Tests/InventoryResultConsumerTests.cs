@@ -30,10 +30,13 @@ using Xunit;
 
 namespace Hj.EShop.SellerPortal.Bff.Tests;
 
-// Calls HandleMessageAsync directly (internal, not protected - see
-// ServiceBusQueueConsumer): ProcessMessageEventArgs has no testable constructor
-// without a live broker, but the dead-letter-vs-complete decision is a pure function
-// of the return value this exercises.
+// Calls HandleMessageAsync directly (public override - see ServiceBusQueueConsumer):
+// constructing a real ProcessMessageEventArgs to exercise the dead-letter-vs-complete
+// decision needs a ServiceBusReceiver built via its "for mocking" constructor, which
+// intermittently throws inside Azure.Messaging.ServiceBus's own internals (see
+// EShop.Messaging.Tests.ServiceBusQueueConsumerTests) - not worth a workaround for an
+// SDK bug, and HandleMessageAsync's return value is what actually drives that decision
+// anyway.
 public sealed class InventoryResultConsumerTests : IAsyncLifetime
 {
     private readonly SqliteConnection connection = new("DataSource=:memory:");

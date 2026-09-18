@@ -4,8 +4,6 @@
     <TargetFramework>net10.0</TargetFramework>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,7 +13,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../src/EShop.DevTools/EShop.DevTools.csproj" />
+    <ProjectReference Include="../../src/dev/EShop.DevTools/EShop.DevTools.csproj" />
+    <ProjectReference Include="../EShop.Testing.Common/EShop.Testing.Common.csproj" />
   </ItemGroup>
 
 </Project>

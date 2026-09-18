@@ -17,6 +17,7 @@
 using Hj.EShop.Migrations.Common;
 using Hj.EShop.Migrations.Orchestration;
 using Hj.EShop.SellerPortal.Bff.Data;
+using Hj.EShop.Testing.Common;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;

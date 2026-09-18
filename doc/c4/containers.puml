@@ -15,6 +15,7 @@ Person(devOps, "Developer/Operator")
 System_Ext(idp, "External Identity Provider", "Keycloak (local dev) / Microsoft Entra External ID (production)")
 
 System_Boundary(eshop, "eShop") {
+    Container(reverseProxy, "Reverse Proxy", "Development-only HTTPS ingress")
     Container(storefront, "Storefront", "Optimizely CMS + Commerce Connect")
     Container(searchSvc, "Storefront search microservice", "Microservice")
     Container(sellerPortal, "Seller Portal", "Web application")
@@ -42,6 +43,9 @@ Rel(devOps, profileSvc, "Runs and monitors")
 Rel(devOps, devTools, "Uses developer tools")
 
 Rel(seller, sellerPortal, "Submits product data")
+Rel(reverseProxy, storefront, "Routes browser HTTPS by host name (local development)")
+Rel(reverseProxy, sellerPortal, "Routes browser HTTPS by host name (local development)")
+Rel(reverseProxy, idp, "Routes browser HTTPS by host name (local development)")
 Rel(storefront, storefrontCmsDb, "Reads/writes CMS data")
 Rel(storefront, storefrontCommerceDb, "Reads/writes Commerce data")
 Rel(storefront, searchSvc, "Uses catalog search API")

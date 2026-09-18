@@ -1,0 +1,60 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- EPiServer.CMS.Core/EPiServer.Commerce.Core 13.1.3/15.2.0 each declare an upper
+         bound of Microsoft.Data.SqlClient < 7.0.0, predating this repo's 7.0.1 pin
+         (ADR 0013). This project only uses EPiServer.CMS.Core/Commerce.Core for their
+         tools/ folder, never their C# API surface, and the actual migration runner code
+         (raw SqlConnection/SqlCommand) is verified end to end against a real SQL Server
+         with 7.0.1 - see doc/CHRONICLE.md. -->
+    <NoWarn>NU1608</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <!-- Referenced purely to make NuGet restore these packages and expose their
+         resolved version to CopyOptimizelySchemaScripts below - no C# API from either
+         is used. The "Core" packages, not the "meta" ones EShop.StoreFront.Web
+         references: this project only needs their tools/ folder (the shipped SQL
+         scripts), not the UI/Shell/Commerce-UI dependency tree the meta packages carry. -->
+    <PackageReference Include="EPiServer.CMS.Core" />
+    <PackageReference Include="EPiServer.Commerce.Core" />
+    <!-- Direct reference so the Directory.Packages.props security-fix pin actually
+         applies: central package management doesn't override a purely transitive
+         dependency's version unless something in this project references it directly. -->
+    <PackageReference Include="System.Security.Cryptography.Xml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../shared/EShop.Common/EShop.Common.csproj" />
+    <ProjectReference Include="../../migrations/EShop.Migrations.Common/EShop.Migrations.Common.csproj" />
+    <ProjectReference Include="../../migrations/EShop.Migrations.Orchestration/EShop.Migrations.Orchestration.csproj" />
+    <ProjectReference Include="../../migrations/EShop.Migrations.Optimizely/EShop.Migrations.Optimizely.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="EShop.StoreFront.MigrationRunner.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Microsoft.NET.Sdk (a plain console app, not Sdk.Web) doesn't copy this to
+         output by default the way Sdk.Web does. -->
+    <None Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OptimizelySchemaScriptsDestinationName>OptimizelySchemaScripts</OptimizelySchemaScriptsDestinationName>
+  </PropertyGroup>
+
+  <!-- Copies the real Optimizely SQL scripts into this project's build output, so the
+       runner ships them without needing the NuGet cache present at runtime - see
+       CopyOptimizelySchemaScripts.targets for details, shared with
+       EShop.StoreFront.MigrationRunner.Tests.csproj. -->
+  <Import Project="../../migrations/EShop.Migrations.Optimizely/CopyOptimizelySchemaScripts.targets" />
+
+</Project>

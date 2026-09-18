@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../EShop.Common/EShop.Common.csproj" />
+    <ProjectReference Include="../shared/EShop.Common/EShop.Common.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,61 @@
+# Reverse Proxy API Examples (port can be changed in AppHost)
+# The "/reverse-proxy-api" is the base path for the reverse proxy API, which is configured when adding
+# the reverse proxy API to the application builder.
+@Test_HostAddress = https://localhost:8443
+
+# Get clusters
+# View the current clusters configured in the reverse proxy.
+GET {{Test_HostAddress}}/reverse-proxy-api/cluster
+
+###
+# Add cluster
+# Add a cluster that points to the catfact.ninja API. This cluster will be used in the route configuration
+# to forward requests to the catfact API.
+POST {{Test_HostAddress}}/reverse-proxy-api/cluster
+Content-Type: application/json
+
+{
+  "Clusters": [
+    {
+      "ClusterId": "catfact-from-api",
+      "Destinations": {
+        "destination1": {
+          "Address": "https://catfact.ninja/fact"
+        }
+      }
+    }
+  ],
+  "AllowOverwrite": true
+}
+
+###
+# Get routes
+# View the current routes configured in the reverse proxy. After adding the route, you should see
+# the new route in the response.
+GET {{Test_HostAddress}}/reverse-proxy-api/route
+
+###
+# Add route
+# Add a route that matches requests to /catfact-from-api and forwards them to the catfact cluster. The route also
+# includes a transform to remove the /catfact-from-api prefix before forwarding the request to the destination.
+POST {{Test_HostAddress}}/reverse-proxy-api/route
+Content-Type: application/json
+
+{
+  "Routes": [
+    {
+      "RouteId": "catfact-from-api",
+      "ClusterId": "catfact-from-api",
+      "Order": 100,
+      "Match": {
+        "Path": "/catfact-from-api/{**catch-all}"
+      },
+      "Transforms": [
+        {
+          "PathRemovePrefix": "/catfact-from-api"
+        }
+      ]
+    }
+  ],
+  "AllowOverwrite": true
+}

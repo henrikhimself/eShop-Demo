@@ -1,3 +1,4 @@
+using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Testing;
 using Hj.EShop.Common;
@@ -35,6 +36,81 @@ public sealed class AppHostResourceTests
         Assert.Contains(KnownNames.ResourceStorefrontCmsMigrationRunner, resourceNames);
         Assert.Contains(KnownNames.ResourceStorefrontCommerceMigrationRunner, resourceNames);
         Assert.Contains(KnownNames.ResourceStorefrontWeb, resourceNames);
+        Assert.Contains(KnownNames.ResourceDevReverseProxy, resourceNames);
+    }
+
+    [Fact]
+    public async Task AppHost_PublishMode_OmitsReverseProxy()
+    {
+        IDistributedApplicationTestingBuilder builder = await DistributedApplicationTestingBuilder
+            .CreateAsync<Projects.EShop_AppHost>(["--operation", "publish"], cancellationToken: TestContext.Current.CancellationToken);
+
+        string[] resourceNames = [.. builder.Resources.Select(resource => resource.Name)];
+
+        // PLAN-2.md §3/§6.1: the local reverse proxy is dev-only - Azure Container Apps
+        // ingress is the production browser edge.
+        Assert.DoesNotContain(KnownNames.ResourceDevReverseProxy, resourceNames);
+    }
+
+    [Fact]
+    public async Task AppHost_RunMode_SellerPortalWebAndStorefrontWebHaveNoExternalHttpEndpoint()
+    {
+        IDistributedApplicationTestingBuilder builder = await DistributedApplicationTestingBuilder
+            .CreateAsync<Projects.EShop_AppHost>(cancellationToken: TestContext.Current.CancellationToken);
+
+        // PLAN-2.md §3: the reverse proxy is now the only local browser ingress for
+        // these two resources - neither should call WithExternalHttpEndpoints() itself
+        // in run mode any more.
+        IResource sellerPortalWeb = builder.Resources.Single(resource => resource.Name == KnownNames.ResourceSellerPortalWeb);
+        IResource storefrontWeb = builder.Resources.Single(resource => resource.Name == KnownNames.ResourceStorefrontWeb);
+
+        Assert.All(sellerPortalWeb.Annotations.OfType<EndpointAnnotation>(), endpoint => Assert.False(endpoint.IsExternal));
+        Assert.All(storefrontWeb.Annotations.OfType<EndpointAnnotation>(), endpoint => Assert.False(endpoint.IsExternal));
+    }
+
+    [Fact]
+    public async Task AppHost_ReverseProxy_HasFixedHttps8443Endpoint()
+    {
+        IDistributedApplicationTestingBuilder builder = await DistributedApplicationTestingBuilder
+            .CreateAsync<Projects.EShop_AppHost>(cancellationToken: TestContext.Current.CancellationToken);
+
+        IResource reverseProxy = builder.Resources.Single(resource => resource.Name == KnownNames.ResourceDevReverseProxy);
+        EndpointAnnotation httpsEndpoint = reverseProxy.Annotations.OfType<EndpointAnnotation>().Single(endpoint => endpoint.Name == "https");
+
+        Assert.Equal(KnownNames.ReverseProxyHttpsPort, httpsEndpoint.Port);
+    }
+
+    [Fact]
+    public async Task AppHost_ReverseProxy_RoutesKeycloakSellerPortalAndStorefrontHostNames()
+    {
+        IDistributedApplicationTestingBuilder builder = await DistributedApplicationTestingBuilder
+            .CreateAsync<Projects.EShop_AppHost>(cancellationToken: TestContext.Current.CancellationToken);
+
+        await using DistributedApplication app = await builder.BuildAsync(TestContext.Current.CancellationToken);
+        IResource reverseProxy = builder.Resources.Single(resource => resource.Name == KnownNames.ResourceDevReverseProxy);
+
+        IExecutionConfigurationResult configuration = await ExecutionConfigurationBuilder
+            .Create(reverseProxy)
+            .WithEnvironmentVariablesConfig()
+            .BuildAsync(builder.ExecutionContext, cancellationToken: TestContext.Current.CancellationToken);
+
+        // "reverseproxy"/"reverseproxyforwardedorigin" are Hj.ReverseProxy.Aspire's own
+        // internal env var prefixes (WithReverseProxyReference, ResourceBuilderExtensions.cs)
+        // - a fixed external contract the package reads verbatim, not something eShop
+        // code centralizes a constant for.
+        AssertRoutesTo(configuration, KnownNames.ResourceKeycloak, KnownNames.ReverseProxyIdentityHostName);
+        AssertRoutesTo(configuration, KnownNames.ResourceSellerPortalWeb, KnownNames.ReverseProxySellerPortalHostName);
+        AssertRoutesTo(configuration, KnownNames.ResourceStorefrontWeb, KnownNames.ReverseProxyStorefrontHostName);
+
+        static void AssertRoutesTo(IExecutionConfigurationResult configuration, string targetResourceName, string expectedHostName)
+        {
+            Assert.Contains(
+                configuration.EnvironmentVariables,
+                pair => pair.Key == $"reverseproxy__{targetResourceName}" && pair.Value == expectedHostName);
+            Assert.Contains(
+                configuration.EnvironmentVariables,
+                pair => pair.Key == $"reverseproxyforwardedorigin__{targetResourceName}" && pair.Value == bool.TrueString);
+        }
     }
 
     // ADR 0023, extended to Optimizely (see doc/CHRONICLE.md): Optimizely's own
@@ -51,6 +127,25 @@ public sealed class AppHostResourceTests
         IResource storefrontWeb = builder.Resources.Single(resource => resource.Name == KnownNames.ResourceStorefrontWeb);
 
         Assert.Empty(storefrontWeb.Annotations.OfType<WaitAnnotation>());
+    }
+
+    [Fact]
+    public async Task AppHost_ReverseProxy_HasReverseProxyHomeEnvironmentVariable()
+    {
+        IDistributedApplicationTestingBuilder builder = await DistributedApplicationTestingBuilder
+            .CreateAsync<Projects.EShop_AppHost>(cancellationToken: TestContext.Current.CancellationToken);
+
+        await using DistributedApplication app = await builder.BuildAsync(TestContext.Current.CancellationToken);
+        IResource reverseProxy = builder.Resources.Single(resource => resource.Name == KnownNames.ResourceDevReverseProxy);
+
+        IExecutionConfigurationResult configuration = await ExecutionConfigurationBuilder
+            .Create(reverseProxy)
+            .WithEnvironmentVariablesConfig()
+            .BuildAsync(builder.ExecutionContext, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Contains(
+            configuration.EnvironmentVariables,
+            pair => pair.Key == KnownNames.ReverseProxyHomeEnvVarName && !string.IsNullOrWhiteSpace(pair.Value));
     }
 
     [Fact]

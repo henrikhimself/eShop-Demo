@@ -1,0 +1,30 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "run tests",
+      "type": "shell",
+      "command": "${workspaceFolder}/Update-TestCoverage.ps1",
+      "problemMatcher": "$msCompile",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "view test report",
+      "command": "",
+      "type": "process",
+      "windows": {
+        "command": "explorer"
+      },
+      "osx": {
+        "command": "open"
+      },
+      "args": [
+        "${workspaceFolder}/TestReport/index.html"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}

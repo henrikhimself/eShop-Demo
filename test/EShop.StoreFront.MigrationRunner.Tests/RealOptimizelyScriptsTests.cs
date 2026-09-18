@@ -15,6 +15,7 @@
 // </copyright>
 
 using Hj.EShop.Migrations.Orchestration;
+using Hj.EShop.Testing.Common;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -22,11 +23,11 @@ using Xunit;
 namespace Hj.EShop.StoreFront.MigrationRunner.Tests;
 
 // Runs the *real* EPiServer.CMS.Core/EPiServer.Commerce.Core shipped scripts (via
-// CopyRealOptimizelySchemaScripts in this project's own .csproj), not the synthetic
-// fixture ones StorefrontSchemaMigratorTests uses - so a future version bump of either
-// package has a real test to fail against, not just the mechanics. Needs a real SQL
-// Server - see TestSqlConnectionString. Excluded from the default `eshop test` run via
-// --filter-not-trait "Category=Integration".
+// CopyOptimizelySchemaScripts.targets, imported by this project's own .csproj), not the
+// synthetic fixture ones StorefrontSchemaMigratorTests uses - so a future version bump
+// of either package has a real test to fail against, not just the mechanics. Needs a
+// real SQL Server - see TestSqlConnectionString. Excluded from the default `eshop test`
+// run via --filter-not-trait "Category=Integration".
 [Trait("Category", "Integration")]
 public sealed class RealOptimizelyScriptsTests : IAsyncLifetime
 {
@@ -67,7 +68,7 @@ public sealed class RealOptimizelyScriptsTests : IAsyncLifetime
     [Fact]
     public async Task RunAsync_RealCmsScripts_AppliesFullSchema()
     {
-        StorefrontMigrationOptions options = CreateOptions(StorefrontComponent.Cms, _cmsDatabaseName, "Cms", "EPiServer.Cms.Core.sql", "13.0.2", "epiupdates", "epiupdates_CMS");
+        StorefrontMigrationOptions options = CreateOptions(StorefrontComponent.Cms, _cmsDatabaseName, "Cms", "EPiServer.Cms.Core.sql", "13.1.3", "epiupdates", "epiupdates_CMS");
 
         int exitCode = await StorefrontSchemaMigrator.RunAsync(options, NullLogger.Instance, TestContext.Current.CancellationToken);
 
@@ -84,7 +85,7 @@ public sealed class RealOptimizelyScriptsTests : IAsyncLifetime
     public async Task RunAsync_RealCommerceScripts_AppliesFullSchema()
     {
         StorefrontMigrationOptions options = CreateOptions(
-            StorefrontComponent.Commerce, _commerceDatabaseName, "Commerce", "EPiServer.Commerce.Core.sql", "15.1.0", "epiupdates_commerce");
+            StorefrontComponent.Commerce, _commerceDatabaseName, "Commerce", "EPiServer.Commerce.Core.sql", "15.2.0", "epiupdates_commerce");
 
         int exitCode = await StorefrontSchemaMigrator.RunAsync(options, NullLogger.Instance, TestContext.Current.CancellationToken);
 

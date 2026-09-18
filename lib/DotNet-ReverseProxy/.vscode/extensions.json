@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "editorconfig.editorconfig",
+    "github.vscode-github-actions",
+    "humao.rest-client",
+    "ms-vscode.powershell",
+    "ms-dotnettools.csdevkit",
+    "microsoft-aspire.aspire-vscode"
+  ]
+}

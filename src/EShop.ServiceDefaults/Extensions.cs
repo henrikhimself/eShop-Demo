@@ -30,24 +30,20 @@ namespace Hj.EShop.ServiceDefaults;
 
 public static class Extensions
 {
-    // Standard path for minimal hosting. StoreFront uses Startup because AddCms/
-    // AddCommerce fail under WebApplication.CreateBuilder; service registration stays
-    // shared, but the entry point differs.
+    // See doc/MEMORY.md — StoreFront uses the Startup.cs overload below instead of this minimal-hosting one.
     public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder)
         where TBuilder : IHostApplicationBuilder
     {
-        // Do not call builder.ConfigureOpenTelemetry() here; that would duplicate
-        // ConfigureOpenTelemetryServices and can register UseOtlpExporter twice.
+        // Do not also call ConfigureOpenTelemetry() here - it would duplicate ConfigureOpenTelemetryServices and could register UseOtlpExporter twice.
         builder.Logging.ConfigureOpenTelemetryLogging();
 
-        AddServiceDefaults(builder.Services, builder.Configuration, builder.Environment.ApplicationName);
+        AddServiceDefaults(builder.Services, builder.Configuration, builder.Environment.ApplicationName, builder.Environment);
 
         return builder;
     }
 
-    // Startup.cs hosting entry point: call from ConfigureServices. Logging is configured
-    // separately via ConfigureOpenTelemetryLogging from Program.cs.
-    public static void AddServiceDefaults(IServiceCollection services, IConfiguration configuration, string applicationName)
+    // Startup.cs hosting: call from ConfigureServices; call ConfigureOpenTelemetryLogging separately from Program.cs.
+    public static void AddServiceDefaults(IServiceCollection services, IConfiguration configuration, string applicationName, IHostEnvironment environment)
     {
         ConfigureOpenTelemetryServices(services, configuration, applicationName);
 
@@ -55,9 +51,7 @@ public static class Extensions
 
         services.AddServiceDiscovery();
 
-        // Enriches every resilience pipeline's telemetry (e.g. ServiceBusQueueConsumer's
-        // retry pipeline in EShop.Messaging, not just the HttpClient one below) with
-        // exception summaries and metadata.
+        // Enriches every resilience pipeline's telemetry, not just the HttpClient one below (e.g. EShop.Messaging's ServiceBusQueueConsumer retry pipeline).
         services.AddResilienceEnricher();
 
         services.ConfigureHttpClientDefaults(http =>
@@ -65,6 +59,13 @@ public static class Extensions
             http.AddStandardResilienceHandler();
 
             http.AddServiceDiscovery();
+
+            // Every HttpClientFactory client needs the OIDC handler's relaxed TLS validation too (see TestingDefaults).
+            // Gated on non-Production, not IsFakeEnvironment(): Aspire launches Bff/Storefront under "Development" regardless of native vs. containerized e2e runs.
+            if (!environment.IsProduction())
+            {
+                http.ConfigurePrimaryHttpMessageHandler(TestingDefaults.CreateLenientHttpHandler);
+            }
         });
     }
 

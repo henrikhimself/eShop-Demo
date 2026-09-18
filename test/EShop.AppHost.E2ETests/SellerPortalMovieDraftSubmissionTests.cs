@@ -9,10 +9,10 @@ namespace Hj.EShop.AppHost.E2ETests;
 
 // Exercises the whole Movie draft loop for real: starts the AppHost (BFF, Web,
 // DevTools, Keycloak, SQL Server, the Service Bus/Storage emulators), drives the
-// Seller Portal UI as test-seller to create/fill/submit a draft, then drives the
-// DevTools "Seller Draft Approval Simulator" (a second, independent browser page) to
-// approve it, and confirms the Seller Portal side sees the Approved outcome with a
-// SKU. Also keeps idle, never-reloaded observer tabs open on the Submissions page,
+// Seller Portal UI to create/fill/submit a draft, then drives the DevTools
+// "Seller Draft Approval Simulator" (a second, independent browser page) to approve
+// it, and confirms the Seller Portal side sees the Approved outcome with a SKU.
+// Also keeps idle, never-reloaded observer tabs open on the Submissions page,
 // the Inventory page, and this same draft's edit page throughout, proving each one's
 // own SSE connection - not a REST re-fetch - is what makes it reflect the submit and
 // the eventual approval outcome live. Not part of EShop.slnx - run via
@@ -27,13 +27,8 @@ public sealed class SellerPortalMovieDraftSubmissionTests
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
         string title = $"E2E Movie {Guid.NewGuid():N}";
 
-        // Waiting for the BFF also waits for SQL Server, Service Bus, Storage, and
-        // Keycloak: the BFF's own /health check (its Aspire resource health check,
-        // AppHost.cs) aggregates each dependency's Aspire-registered health check, so
-        // it isn't Running/healthy until they all are. The Web and DevTools resources
-        // have no such dependency wiring of their own, so they're awaited separately.
         await using E2ETestSession session = await E2ETestHarness.StartAsync(
-            [KnownNames.ResourceSellerPortalBff, KnownNames.ResourceSellerPortalWeb, KnownNames.ResourceDevTools],
+            [KnownNames.ResourceSellerPortalBff, KnownNames.ResourceSellerPortalWeb, KnownNames.ResourceDevTools, KnownNames.ResourceDevReverseProxy],
             cancellationToken);
 
         Uri webBaseAddress = session.GetBaseAddress(KnownNames.ResourceSellerPortalWeb);
@@ -47,9 +42,13 @@ public sealed class SellerPortalMovieDraftSubmissionTests
         IPage sellerPage = await sellerContext.NewPageAsync();
         E2ETestHarness.ApplyDefaultTimeouts(sellerPage);
 
-        // Lands directly on /drafts - AuthEndpoints.cs's /bff/login challenge redirects
-        // there on success, not to the landing page.
-        await E2ETestHarness.LogInAsTestSellerAsync(sellerPage, webBaseAddress);
+        await E2ETestHarness.LogInAsync(
+            sellerPage,
+            webBaseAddress,
+            TestCredentials.SellerPortalSeller.LoginPath,
+            TestCredentials.SellerPortalSeller.Username,
+            TestCredentials.SellerPortalSeller.Password);
+        await E2ETestHarness.WaitForDraftsPageReadyAsync(sellerPage);
 
         // Captured once, right after login, so the observer tabs below can each get
         // their own IBrowserContext pre-authenticated with the same Seller session -

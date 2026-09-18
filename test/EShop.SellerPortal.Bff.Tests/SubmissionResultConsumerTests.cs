@@ -22,6 +22,7 @@ using Hj.EShop.SellerPortal.Bff.Data;
 using Hj.EShop.SellerPortal.Bff.Data.Entities;
 using Hj.EShop.SellerPortal.Bff.Messaging;
 using Hj.EShop.SellerPortal.Bff.Notifications;
+using Hj.EShop.Testing.Common;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json.schemastore.org/launch.json",
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Attach",
+      "type": "coreclr",
+      "request": "attach",
+      "processId": "${command:pickProcess}"
+    },
+    {
+      "name": "Launch: EShop CLI",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "eShop: Build",
+      "program": "${workspaceFolder}/src/dev/EShop.Cli/bin/Debug/net10.0/EShop.Cli.dll",
+      "args": "${input:eshopCliArguments}",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "eshopCliArguments",
+      "type": "promptString",
+      "description": "Arguments for EShop CLI",
+      "default": "--help"
+    }
+  ]
+}

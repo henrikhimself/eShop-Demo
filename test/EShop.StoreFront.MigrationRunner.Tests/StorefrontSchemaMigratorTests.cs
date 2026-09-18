@@ -15,6 +15,7 @@
 // </copyright>
 
 using Hj.EShop.Migrations.Orchestration;
+using Hj.EShop.Testing.Common;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;

@@ -13,6 +13,9 @@ If a developer uses an agent coding harness that stores its configuration or sta
 
 Read `README.md` first for the project overview, technology stack and architecture context.
 
+Read `DEVELOP.md` for developer environment prerequisites, including the hosts-file
+entries and one-time CA trust action the local reverse proxy needs.
+
 ## Business Requirements and Architecture Decisions
 
 Before proposing or implementing functionality, architecture, or system landscape changes, read `doc/SPEC.md`, `doc/System landscape.md`, `doc/c4/`, `doc/TODO.md`, `doc/MEMORY.md`, `doc/CHRONICLE.md`, and the ADRs under `doc/adr/`.
@@ -35,7 +38,7 @@ Before proposing or implementing functionality, architecture, or system landscap
 
 ## Common Commands
 
-`EShop.Cli` (`src/EShop.Cli/`) is the developer CLI for this repository, and the entry point for every command below (ADR 0016). Always add `--agent`: it switches output to a stable, ANSI-free, agent-friendly format, with no color, emoji, or spinners.
+`EShop.Cli` (`src/dev/EShop.Cli/`) is the developer CLI for this repository, and the entry point for every command below (ADR 0016). Always add `--agent`: it switches output to a stable, ANSI-free, agent-friendly format, with no color, emoji, or spinners.
 
 A bootstrap script builds and runs the CLI:
 
@@ -85,9 +88,18 @@ A bootstrap script builds and runs the CLI:
 ```
 
 ```bash
-# Run the browser end-to-end test suite (always containerized)
+# Run the browser end-to-end test suite (always containerized and never native such that the tested e2e environment remains consistent)
 ./scripts/eshop.sh test e2e --agent
+
+# Run one focused E2E test class
+./scripts/eshop.sh test e2e --filter-class Hj.EShop.AppHost.E2ETests.StorefrontLoginTests --agent
+
+# Run one focused E2E test method
+./scripts/eshop.sh test e2e --filter-method Hj.EShop.AppHost.E2ETests.StorefrontLoginTests.LoggingInAsAStorefrontStaffActorCanLoadCms --agent
 ```
+
+Use either `--filter-class` or `--filter-method`, not both. Do not use a generic
+`--filter` option: this test project uses xUnit's Microsoft Testing Platform runner.
 
 ### Diagrams
 
@@ -106,13 +118,27 @@ Use screenshots to visually verify UI changes. Start the target frontend/server,
 
 Read the resulting `tmp/screenshot.png` to inspect it. `--output`, `--width`, and `--height` override the defaults (`tmp/screenshot.png`, `1440x900`).
 
-For login-gated pages, add `--login`:
+For login-gated pages, add `--login`, the resource's same-origin login-start path,
+and the development user credentials. Seller Portal Web, Storefront, and Keycloak are
+only reachable through the local reverse proxy's stable hosts (`DEVELOP.md`), not a
+per-run `localhost` port - screenshot URLs use those hosts too. The Seller Portal
+starts login through its proxy:
 
 ```bash
-./scripts/eshop.sh screenshot http://localhost:<port>/drafts --login --agent
+./scripts/eshop.sh screenshot https://seller.eshop.local:8443/drafts --login --login-path /bff/login --username seller --password Sell-1234 --agent
 ```
 
-With `--login`, session state is saved to `tmp/screenshot-profile/state.json` (gitignored), so later login-gated screenshots can reuse the session until it expires. Delete `tmp/screenshot-profile` to force a fresh login.
+The Storefront starts login by navigating to its protected CMS page:
+
+```bash
+./scripts/eshop.sh screenshot https://storefront.eshop.local:8443/ui/cms --login --login-path /ui/cms --username editor --password Edit-1234 --agent
+```
+
+With `--login`, session state is saved under a gitignored
+`tmp/screenshot-profile/<session-key>/state.json`. The key derives from the target
+origin, login path, and username, so resource and user sessions do not mix. Repeat the
+same login options to reuse that session. Delete `tmp/screenshot-profile` to force a
+fresh login.
 
 Use `./scripts/eshop.sh screenshot -h` for available options such as output size, output path, and login credentials.
 

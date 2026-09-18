@@ -54,14 +54,14 @@ X_IMAGE_STORED_HASH="$(
 )"
 if [ "${X_IMAGE_STORED_HASH}" != "${X_IMAGE_SOURCE_HASH}" ]; then
   echo "Building utility image '${X_IMAGE_TAG}'..."
-  docker build --label "eshop.source-hash=${X_IMAGE_SOURCE_HASH}" -t "${X_IMAGE_TAG}" -f scripts/Containerfile .
+  docker build --label "eshop.source-hash=${X_IMAGE_SOURCE_HASH}" --progress=plain -t "${X_IMAGE_TAG}" -f scripts/Containerfile .
 fi
 
 X_SOURCE_HASH_FILE="${X_PUBLISH_DIR}/.source-hash"
 
 # A content hash, not file mtimes, decides staleness.
 X_CURRENT_HASH="$(
-  find src/EShop.Cli \( -name obj -o -name bin \) -prune -o \( -name '*.cs' -o -name '*.csproj' \) -type f -print \
+  find src/dev/EShop.Cli \( -name obj -o -name bin \) -prune -o \( -name '*.cs' -o -name '*.csproj' \) -type f -print \
     | LC_ALL=C sort \
     | xargs sha256sum \
     | sha256sum \
@@ -96,7 +96,7 @@ if [ "${X_NEEDS_PUBLISH}" -eq 1 ]; then
       -v "${X_DOCKER_SOCKET}:${X_DOCKER_SOCKET}" \
       --env-file scripts/container.env \
       "${X_IMAGE_TAG}" \
-      dotnet publish src/EShop.Cli/EShop.Cli.csproj -r "${X_RID}" --self-contained true -o "${X_PUBLISH_DIR}"
+      dotnet publish src/dev/EShop.Cli/EShop.Cli.csproj -r "${X_RID}" --self-contained true -o "${X_PUBLISH_DIR}"
   else
     X_UID="$(id -u)"
     X_GID="$(id -g)"
@@ -106,7 +106,7 @@ if [ "${X_NEEDS_PUBLISH}" -eq 1 ]; then
       -v "${X_DOCKER_SOCKET}:${X_DOCKER_SOCKET}" \
       --env-file scripts/container.env \
       "${X_IMAGE_TAG}" \
-      dotnet publish src/EShop.Cli/EShop.Cli.csproj -r "${X_RID}" --self-contained true -o "${X_PUBLISH_DIR}"
+      dotnet publish src/dev/EShop.Cli/EShop.Cli.csproj -r "${X_RID}" --self-contained true -o "${X_PUBLISH_DIR}"
   fi
   echo "${X_CURRENT_HASH}" > "${X_SOURCE_HASH_FILE}"
 fi

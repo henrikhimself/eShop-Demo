@@ -22,13 +22,8 @@ public sealed class SellerDraftApprovalSimulatorLivePushTests
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
         string title = $"E2E Live Push Movie {Guid.NewGuid():N}";
 
-        // Waiting for the BFF also waits for SQL Server, Service Bus, Storage, and
-        // Keycloak: the BFF's own /health check (its Aspire resource health check,
-        // AppHost.cs) aggregates each dependency's Aspire-registered health check, so
-        // it isn't Running/healthy until they all are. The Web and DevTools resources
-        // have no such dependency wiring of their own, so they're awaited separately.
         await using E2ETestSession session = await E2ETestHarness.StartAsync(
-            [KnownNames.ResourceSellerPortalBff, KnownNames.ResourceSellerPortalWeb, KnownNames.ResourceDevTools],
+            [KnownNames.ResourceSellerPortalBff, KnownNames.ResourceSellerPortalWeb, KnownNames.ResourceDevTools, KnownNames.ResourceDevReverseProxy],
             cancellationToken);
 
         Uri webBaseAddress = session.GetBaseAddress(KnownNames.ResourceSellerPortalWeb);
@@ -44,8 +39,19 @@ public sealed class SellerDraftApprovalSimulatorLivePushTests
 
         IPage sellerPage = await session.NewPageAsync();
 
-        await E2ETestHarness.LogInAsTestSellerAsync(sellerPage, webBaseAddress);
-        await sellerPage.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "New movie draft" }).ClickAsync();
+        await E2ETestHarness.LogInAsync(
+            sellerPage,
+            webBaseAddress,
+            TestCredentials.SellerPortalSeller.LoginPath,
+            TestCredentials.SellerPortalSeller.Username,
+            TestCredentials.SellerPortalSeller.Password);
+        await E2ETestHarness.WaitForDraftsPageReadyAsync(sellerPage);
+
+        IResponse createDraftResponse = await E2ETestHarness.ClickAndWaitForDraftCreationResponseAsync(
+            sellerPage,
+            "/bff/api/drafts/movies",
+            async () => await sellerPage.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "New movie draft" }).ClickAsync());
+        Assert.True(createDraftResponse.Ok, $"Expected movie draft creation to succeed, got {createDraftResponse.Status}.");
         await Expect(sellerPage).ToHaveURLAsync(new Regex(@"/drafts/movies/[0-9a-fA-F-]+$"));
 
         await sellerPage.Locator("#title").FillAsync(title);

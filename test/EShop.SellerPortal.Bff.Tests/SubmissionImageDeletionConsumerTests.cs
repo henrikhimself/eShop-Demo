@@ -14,11 +14,9 @@
 // limitations under the License.
 // </copyright>
 
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Threading.Channels;
 using Azure;
-using Azure.Core;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Hj.EShop.Messaging;
@@ -27,6 +25,7 @@ using Hj.EShop.SellerPortal.Bff.Data;
 using Hj.EShop.SellerPortal.Bff.Data.Entities;
 using Hj.EShop.SellerPortal.Bff.Messaging;
 using Hj.EShop.SellerPortal.Bff.Notifications;
+using Hj.EShop.Testing.Common;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -270,46 +269,6 @@ public sealed class SubmissionImageDeletionConsumerTests : IAsyncLifetime
 
             owner.DeletedBlobNames.Add(name);
             return Task.FromResult(Response.FromValue(true, new NoOpResponse()));
-        }
-    }
-
-    // Minimal Response stand-in: only Dispose is ever called by the test's own
-    // Response.FromValue wrapper, none of the other members are exercised.
-    [SuppressMessage("Design", "CA1063", Justification = "Trivial test double; no unmanaged resources to release.")]
-    private sealed class NoOpResponse : Response
-    {
-        public override int Status => 200;
-
-        public override string ReasonPhrase => "OK";
-
-        public override Stream? ContentStream { get; set; }
-
-        public override string ClientRequestId { get; set; } = string.Empty;
-
-        public override void Dispose()
-        {
-        }
-
-        protected override bool ContainsHeader(string name)
-        {
-            return false;
-        }
-
-        protected override IEnumerable<HttpHeader> EnumerateHeaders()
-        {
-            return [];
-        }
-
-        protected override bool TryGetHeader(string name, [NotNullWhen(true)] out string? value)
-        {
-            value = null;
-            return false;
-        }
-
-        protected override bool TryGetHeaderValues(string name, [NotNullWhen(true)] out IEnumerable<string>? values)
-        {
-            values = null;
-            return false;
         }
     }
 }

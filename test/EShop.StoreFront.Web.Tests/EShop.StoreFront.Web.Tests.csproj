@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Direct reference needed so the Directory.Packages.props security-fix pin to
+         System.Security.Cryptography.Xml 10.0.10 applies here too; the referenced
+         StoreFront.Web/Optimizely dependency graph otherwise restores 10.0.6 and the
+         repo's audit-as-error gate fails. -->
+    <PackageReference Include="System.Security.Cryptography.Xml" />
+    <PackageReference Include="xunit.v3.mtp-v2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/apps/EShop.StoreFront.Web/EShop.StoreFront.Web.csproj" />
+  </ItemGroup>
+
+</Project>

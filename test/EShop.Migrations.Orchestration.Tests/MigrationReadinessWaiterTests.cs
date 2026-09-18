@@ -14,6 +14,7 @@
 // limitations under the License.
 // </copyright>
 
+using Hj.EShop.Testing.Common;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -41,8 +42,10 @@ public sealed class MigrationReadinessWaiterTests
 
         // A single attempt with no delay is enough to prove it returns on the first
         // check, rather than exhausting maxAttempts.
-        await MigrationReadinessWaiter.WaitForMigrationAsync(
-            connectionString, component, "1.0.0", NullLogger.Instance, TestContext.Current.CancellationToken, maxAttempts: 1);
+        Exception? exception = await Record.ExceptionAsync(() => MigrationReadinessWaiter.WaitForMigrationAsync(
+            connectionString, component, "1.0.0", NullLogger.Instance, TestContext.Current.CancellationToken, maxAttempts: 1));
+
+        Assert.Null(exception);
     }
 
     [Fact]

@@ -1,10 +1,9 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.4.6">
+<Project Sdk="Aspire.AppHost.Sdk/13.5.3">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+    <AspireUseCliBundle>true</AspireUseCliBundle>
     <UserSecretsId>602c428e-fc18-4962-afe6-6465b7708636</UserSecretsId>
   </PropertyGroup>
 
@@ -17,15 +16,18 @@
     <PackageReference Include="Aspire.Hosting.JavaScript" />
     <PackageReference Include="Aspire.Hosting.Keycloak" />
     <PackageReference Include="Aspire.Hosting.SqlServer" />
+    <PackageReference Include="Microsoft.Extensions.Resilience" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../EShop.Common/EShop.Common.csproj" IsAspireProjectResource="false" />
-    <ProjectReference Include="../EShop.DevTools/EShop.DevTools.csproj" />
-    <ProjectReference Include="../EShop.SellerPortal.Bff/EShop.SellerPortal.Bff.csproj" />
-    <ProjectReference Include="../EShop.SellerPortal.MigrationRunner/EShop.SellerPortal.MigrationRunner.csproj" />
-    <ProjectReference Include="../EShop.StoreFront.MigrationRunner/EShop.StoreFront.MigrationRunner.csproj" />
-    <ProjectReference Include="../EShop.StoreFront.Web/EShop.StoreFront.Web.csproj" />
+    <ProjectReference Include="../../lib/DotNet-ReverseProxy/src/ReverseProxy.Aspire/ReverseProxy.Aspire.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="../shared/EShop.Common/EShop.Common.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="../dev/EShop.DevTools/EShop.DevTools.csproj" />
+    <ProjectReference Include="../dev/EShop.ReverseProxy/EShop.ReverseProxy.csproj" />
+    <ProjectReference Include="../apps/EShop.SellerPortal.Bff/EShop.SellerPortal.Bff.csproj" />
+    <ProjectReference Include="../apps/EShop.SellerPortal.MigrationRunner/EShop.SellerPortal.MigrationRunner.csproj" />
+    <ProjectReference Include="../apps/EShop.StoreFront.MigrationRunner/EShop.StoreFront.MigrationRunner.csproj" />
+    <ProjectReference Include="../apps/EShop.StoreFront.Web/EShop.StoreFront.Web.csproj" />
   </ItemGroup>
 
   <ItemGroup>

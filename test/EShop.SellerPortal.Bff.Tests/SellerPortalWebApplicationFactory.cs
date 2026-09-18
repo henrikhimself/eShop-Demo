@@ -16,7 +16,9 @@
 
 using Azure.Messaging.ServiceBus;
 using Azure.Storage.Blobs;
+using Hj.EShop.Common;
 using Hj.EShop.SellerPortal.Bff.Data;
+using Hj.EShop.Testing.Common;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -43,7 +45,7 @@ internal sealed class SellerPortalWebApplicationFactory : WebApplicationFactory<
     {
         connection.Open();
 
-        builder.UseEnvironment("Testing");
+        builder.UseEnvironment(KnownNames.FakeEnvironmentName);
 
         builder.ConfigureAppConfiguration((_, config) =>
         {
@@ -57,7 +59,7 @@ internal sealed class SellerPortalWebApplicationFactory : WebApplicationFactory<
         builder.ConfigureServices(services =>
         {
             // Program.cs skips Aspire's own AddSqlServerDbContext/AddAzureServiceBusClient/
-            // AddAzureBlobContainerClient in the "Testing" environment, so there is
+            // AddAzureBlobContainerClient in the "Fake" environment, so there is
             // nothing to remove here - just register the fakes the draft image and
             // submission endpoints resolve from DI.
             services.AddDbContext<SellerPortalDbContext>(options => options.UseSqlite(connection));

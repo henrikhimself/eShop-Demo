@@ -23,18 +23,10 @@ This demo combines:
 - API-based communication.
 - Resiliency and fault tolerance.
 
-## Prerequisites
+## Development
 
-- x86-64 (amd64) CPU
-- Docker
-
-## Developer CLI
-
-The `./scripts/eshop.sh` script installs and exposes commands for building, testing, and managing the development environment. Run `./scripts/eshop.sh -h` for usage instructions.
-
-The eShop CLI formalizes development workflows, automates routine tasks, and enforces strict quality gates to ensure consistency and reliability.
-
-It provides an AI-friendly developer experience with terminal output designed to be easily understood by AI coding agents. It also acts as a guardrail against common AI coding failure modes, helping detect when agents take shortcuts, skip validation, or otherwise drift from the project's required quality standards.
+See [`DEVELOP.md`](./DEVELOP.md) for developer environment prerequisites, one-time
+local-machine setup (hosts file, TLS trust), and the developer CLI.
 
 ## AI Development Knowledge System
 
@@ -99,12 +91,6 @@ This does mean some rules will feel more rigid or verbose than what many human d
 Stricter does not mean unconventional. The configuration is built on top of, not instead of, idiomatic C#: standard .NET naming and formatting conventions, modern language features (pattern matching, `nameof`, file-scoped namespaces, primary constructors, etc.), and the framework's own recommended analyzer rules. Where a rule would conflict with idiomatic usage of a core framework in this stack (e.g. Optimizely CMS, Entity Framework Core, or `System.Text.Json`), it has been deliberately relaxed rather than forced.
 
 Runtime performance and allocation efficiency are also explicit priorities: the ruleset enables analyzers that favor concrete types over interfaces where safe, span-based and allocation-free APIs, and avoidance of unnecessary allocations in hot paths. In short: prefer the idiomatic, performant C# convention - and where more than one idiomatic option exists, prefer whichever option is more explicit and unambiguous.
-
-## Agent Coding Harness
-
-The `.agents` and `.claude` directories, as well as `.mcp.json`, are intentionally not committed. This lets each developer choose their own agent coding tools and configuration without imposing them on others.
-
-The `AGENTS.md` contains common instructions. You can add `AGENTS.local.md` for your own instructions and to override common agent instructions.
 
 ## Disclaimer
 

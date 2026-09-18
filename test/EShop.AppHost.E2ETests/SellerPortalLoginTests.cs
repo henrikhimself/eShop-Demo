@@ -1,8 +1,6 @@
-using System.Text.RegularExpressions;
 using Hj.EShop.Common;
 using Microsoft.Playwright;
 using Xunit;
-using static Microsoft.Playwright.Assertions;
 
 namespace Hj.EShop.AppHost.E2ETests;
 
@@ -16,24 +14,18 @@ public sealed class SellerPortalLoginTests
     public async Task LoggingInAsASellerReachesAnAuthenticatedDraftsEndpoint()
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
-
-        // Waiting for the BFF also waits for SQL Server, Service Bus, Storage, and
-        // Keycloak: the BFF's own /health check (its Aspire resource health check,
-        // AppHost.cs) aggregates each dependency's Aspire-registered health check, so
-        // it isn't Running/healthy until they all are - transitively. The Web resource
-        // has no such dependency wiring of its own, so it's awaited separately.
         await using E2ETestSession session = await E2ETestHarness.StartAsync(
-            [KnownNames.ResourceSellerPortalBff, KnownNames.ResourceSellerPortalWeb], cancellationToken);
+            [KnownNames.ResourceSellerPortalBff, KnownNames.ResourceSellerPortalWeb, KnownNames.ResourceDevReverseProxy], cancellationToken);
 
         Uri webBaseAddress = session.GetBaseAddress(KnownNames.ResourceSellerPortalWeb);
         IPage page = await session.NewPageAsync();
 
-        // Lands directly on /drafts - AuthEndpoints.cs's /bff/login challenge redirects
-        // there on success, not to the landing page. "test-seller" is seeded in
-        // Realms/eshop-realm.json with the "Seller" realm role already assigned - the
-        // Site Administrator-in-Keycloak approval this login exercises (see
-        // Program.cs's "SellerOnly" policy).
-        await E2ETestHarness.LogInAsTestSellerAsync(page, webBaseAddress);
+        await E2ETestHarness.LogInAsync(
+            page,
+            webBaseAddress,
+            TestCredentials.SellerPortalSeller.LoginPath,
+            TestCredentials.SellerPortalSeller.Username,
+            TestCredentials.SellerPortalSeller.Password);
 
         // The auth ticket lives in HybridCache/Valkey, so the cookie should be short
         // and opaque, and the old seller-portalC1/C2 chunk cookies must be absent.
@@ -56,11 +48,7 @@ public sealed class SellerPortalLoginTests
         // Navigates directly rather than clicking a "Log out" link - /bff/logout is a
         // Route Handler that redirects, same reasoning as the login link above, and
         // this way the assertion doesn't depend on which page happens to render the nav.
-        await page.GotoAsync(new Uri(webBaseAddress, "bff/logout").ToString());
-
-        // Confirms the round trip through Keycloak's logout endpoint and back
-        // completed and landed on the Web origin, not an error page on Keycloak itself.
-        await Expect(page).ToHaveURLAsync(new Regex($"^{Regex.Escape(webBaseAddress.ToString())}"));
+        await E2ETestHarness.LogOutAsync(page, webBaseAddress);
 
         IAPIResponse draftsAfterLogoutResponse = await page.APIRequest.GetAsync(
             new Uri(webBaseAddress, "bff/api/drafts").ToString(),

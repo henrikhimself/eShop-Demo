@@ -22,6 +22,13 @@ internal static class E2ETestHarness
 
     public static async Task<E2ETestSession> StartAsync(IReadOnlyList<string> resourcesToWaitFor, CancellationToken cancellationToken)
     {
+        // DistributedApplicationTestingBuilder randomizes every resource's port by
+        // default (DcpOptions.RandomizePorts) - harmless for most resources here, but
+        // the reverse proxy's fixed 8443 is baked into the static Keycloak realm
+        // client's redirect URIs (eshop-realm.json) and the Bff's/Storefront's OIDC
+        // authority (PLAN-2.md §4), so it must keep the same port under test that it
+        // uses under a real `aspire run`/`eshop run`.
+        Environment.SetEnvironmentVariable("DcpPublisher__RandomizePorts", "false");
         IDistributedApplicationTestingBuilder appHostBuilder = await DistributedApplicationTestingBuilder
             .CreateAsync<Projects.EShop_AppHost>(cancellationToken: cancellationToken);
 
@@ -55,6 +62,41 @@ internal static class E2ETestHarness
         }
     }
 
+    private static void RecordConsoleError(List<string> events, IConsoleMessage message)
+    {
+        if (message.Type == "error")
+        {
+            events.Add($"console error: {SanitizeBrowserDiagnostic(message.Text)}");
+        }
+    }
+
+    private static void RecordRequest(List<string> events, string eventName, IRequest request)
+    {
+        Uri uri = new(request.Url);
+        if (uri.AbsolutePath.StartsWith("/bff/", StringComparison.Ordinal))
+        {
+            events.Add($"{eventName}: {request.Method} {uri.AbsolutePath}");
+        }
+    }
+
+    private static string SanitizeBrowserDiagnostic(string message)
+    {
+        return message.Contains("token", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("secret", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("password", StringComparison.OrdinalIgnoreCase)
+            ? "[redacted]"
+            : message;
+    }
+
+    private static void RecordResponse(List<string> events, IResponse response)
+    {
+        Uri uri = new(response.Url);
+        if (uri.AbsolutePath.StartsWith("/bff/", StringComparison.Ordinal))
+        {
+            events.Add($"response: {response.Status} {response.Request.Method} {uri.AbsolutePath}");
+        }
+    }
+
     public static void ApplyDefaultTimeouts(IPage page)
     {
         // Playwright's own default timeouts (30s action, 5s assertion) are too tight
@@ -64,47 +106,103 @@ internal static class E2ETestHarness
         SetDefaultExpectTimeout((float)DefaultTimeout.TotalMilliseconds);
     }
 
-    // Single source of truth for the seeded-Seller login steps.
-    public static async Task LogInAsTestSellerAsync(IPage page, Uri webBaseAddress)
-    {
-        await page.GotoAsync(webBaseAddress.ToString());
-        await page.GetByRole(AriaRole.Link, new PageGetByRoleOptions { Name = "Log in" }).ClickAsync();
-
-        // The eshop realm uses Keycloak's default login theme (no custom branding, see
-        // Realms/eshop-realm.json), so its standard username field is a reliable,
-        // theme-default thing to assert the redirect chain actually landed on.
-        await Expect(page.Locator("#username")).ToBeVisibleAsync();
-
-        // "test-seller" is seeded in Realms/eshop-realm.json with the "Seller" realm
-        // role already assigned.
-        await page.Locator("#username").FillAsync("test-seller");
-        await page.Locator("#password").FillAsync("TestSeller123!");
-        await page.Locator("#kc-login").ClickAsync();
-
-        // Confirms the OIDC callback completed and landed back on the Web origin, not
-        // still on Keycloak (e.g. after a rejected login).
-        await Expect(page).ToHaveURLAsync(new Regex($"^{Regex.Escape(webBaseAddress.ToString())}"));
-    }
-
-    // Generic version of LogInAsTestSellerAsync above, for apps with no landing-page
-    // "Log in" link to click (e.g. EShop.StoreFront.Web, which has no shell pages yet -
-    // STOREFRONT-PLAN.md) - navigates straight to the app's own login-challenge route.
     public static async Task LogInAsync(IPage page, Uri webBaseAddress, string loginPath, string username, string password)
     {
         await page.GotoAsync(new Uri(webBaseAddress, loginPath).ToString());
 
-        // Same reasoning as LogInAsTestSellerAsync - the eshop realm uses Keycloak's
-        // default login theme, so its standard username field is a reliable,
-        // theme-default thing to assert the redirect chain actually landed on.
         await Expect(page.Locator("#username")).ToBeVisibleAsync();
 
         await page.Locator("#username").FillAsync(username);
         await page.Locator("#password").FillAsync(password);
         await page.Locator("#kc-login").ClickAsync();
 
-        // Confirms the OIDC callback completed and landed back on the app's own origin,
-        // not still on Keycloak (e.g. after a rejected login).
         await Expect(page).ToHaveURLAsync(new Regex($"^{Regex.Escape(webBaseAddress.ToString())}"));
+    }
+
+    // For a browser that already holds a Keycloak SSO session cookie (from an earlier
+    // LogInAsync at a different application, same identity.eshop.local host) - Keycloak
+    // approves the new client's authorization request silently, with no login form to
+    // fill in.
+    public static async Task SsoLoginAsync(IPage page, Uri webBaseAddress, string loginPath)
+    {
+        await page.GotoAsync(new Uri(webBaseAddress, loginPath).ToString());
+
+        await Expect(page).ToHaveURLAsync(new Regex($"^{Regex.Escape(webBaseAddress.ToString())}"));
+    }
+
+    public static async Task LogOutAsync(IPage page, Uri webBaseAddress)
+    {
+        try
+        {
+            await page.GotoAsync(new Uri(webBaseAddress, "bff/logout").ToString());
+        }
+        catch (PlaywrightException exception) when (exception.Message.Contains("net::ERR_ABORTED", StringComparison.Ordinal))
+        {
+            // The OIDC redirect chain can replace the direct navigation before
+            // Playwright observes its load event. The final browser origin remains the
+            // behavior this test must prove.
+        }
+
+        try
+        {
+            await Expect(page).ToHaveURLAsync(new Regex($"^{Regex.Escape(webBaseAddress.ToString())}"));
+        }
+        catch (PlaywrightException)
+        {
+            Uri finalUri = new(page.Url);
+            Console.WriteLine($"Logout did not return to the Seller Portal Web origin. Final location: {finalUri.GetLeftPart(UriPartial.Path)}");
+            throw;
+        }
+    }
+
+    public static Task WaitForDraftsPageReadyAsync(IPage page)
+    {
+        return Expect(page.GetByTestId("draft-list")).ToHaveAttributeAsync(
+            "data-loaded",
+            "true",
+            new LocatorAssertionsToHaveAttributeOptions { Timeout = 30_000 });
+    }
+
+    public static async Task<IResponse> ClickAndWaitForDraftCreationResponseAsync(
+        IPage page,
+        string expectedPath,
+        Func<Task> action)
+    {
+        List<string> events = [];
+        EventHandler<IRequest> requestHandler = (_, request) => RecordRequest(events, "request", request);
+        EventHandler<IResponse> responseHandler = (_, response) => RecordResponse(events, response);
+        EventHandler<IRequest> requestFailedHandler = (_, request) => RecordRequest(events, $"failed ({request.Failure})", request);
+        EventHandler<IConsoleMessage> consoleHandler = (_, message) => RecordConsoleError(events, message);
+
+        page.Request += requestHandler;
+        page.Response += responseHandler;
+        page.RequestFailed += requestFailedHandler;
+        page.Console += consoleHandler;
+        try
+        {
+            return await page.RunAndWaitForResponseAsync(
+                async () =>
+                {
+                    events.Add("action: click started");
+                    await action();
+                    events.Add("action: click completed");
+                },
+                response => response.Request.Method == "POST"
+                    && new Uri(response.Url).AbsolutePath == expectedPath,
+                new PageRunAndWaitForResponseOptions { Timeout = 30_000 });
+        }
+        catch (TimeoutException)
+        {
+            Console.WriteLine($"Timed out waiting for POST {expectedPath}. Browser BFF request sequence:\n{string.Join(Environment.NewLine, events)}");
+            throw;
+        }
+        finally
+        {
+            page.Request -= requestHandler;
+            page.Response -= responseHandler;
+            page.RequestFailed -= requestFailedHandler;
+            page.Console -= consoleHandler;
+        }
     }
 
     public static async Task WaitUntilAsync(Func<Task<bool>> probe, CancellationToken cancellationToken)
@@ -122,25 +220,36 @@ internal static class E2ETestHarness
     }
 }
 
-// One AppHost + one Playwright browser per [Fact]. Dispose order mirrors the original
-// per-test using/await-using stacking: browser, then the Playwright driver, then the
-// AppHost.
 internal sealed class E2ETestSession(DistributedApplication app, IPlaywright playwright, IBrowser browser) : IAsyncDisposable
 {
     public IBrowser Browser => browser;
 
     public Uri GetBaseAddress(string resourceName, string? endpointName = null)
     {
+        // Seller Portal Web/Storefront are no longer reachable through a direct
+        // external Aspire endpoint in local development (PLAN-2.md §3) - their OIDC
+        // clients are also only registered for the reverse-proxy host (§4.1), so
+        // Playwright must start there instead of the internal endpoint.
+        if (endpointName is null && KnownValues.ReverseProxyHostNames.TryGetValue(resourceName, out string? hostName))
+        {
+            return new Uri($"https://{hostName}:{KnownNames.ReverseProxyHttpsPort}/");
+        }
+
         using HttpClient client = app.CreateHttpClient(resourceName, endpointName);
         Uri? baseAddress = client.BaseAddress;
         Assert.NotNull(baseAddress);
         return baseAddress;
     }
 
-    // Simulates the real-world trigger for the stale-id_token bug (doc/CHRONICLE.md):
-    // Keycloak has no persistent volume, so a restart rotates its signing keys and
-    // drops the dynamically-provisioned "seller-portal" client, while the Bff's own
-    // (persistent) auth ticket - including the id_token saved at login - is untouched.
+    // Simulates the narrow remaining trigger for the stale-id_token bug
+    // (doc/CHRONICLE.md): Keycloak's AppHost resource is ContainerLifetime.Persistent
+    // (PLAN-2.md §6.2 item 7), so an ordinary restart alone no longer rotates its
+    // signing keys - this method force-deletes Keycloak's own embedded database first
+    // to still reach the case a real, rarer full data loss (a lost/recreated container)
+    // would cause, while the Bff's own (persistent) auth ticket - including the id_token
+    // saved at login - is untouched. The "seller-portal" client itself survives, since
+    // it comes back through the static realm import (PLAN-2.md §4.1) on every Keycloak
+    // boot.
     public async Task RestartKeycloakAsync(CancellationToken cancellationToken)
     {
         string containerId = (await RunDockerAsync(
@@ -149,12 +258,12 @@ internal sealed class E2ETestSession(DistributedApplication app, IPlaywright pla
 
         // `docker restart` alone reuses the container's existing writable filesystem,
         // including Keycloak's own embedded H2 database
-        // (/opt/keycloak/data/h2/keycloakdb.mv.db) - the realm's signing keys, sessions,
-        // and the dynamically-provisioned client would all survive a bare restart,
-        // unlike the real "no persistent volume" restart this is meant to simulate (a
-        // full container recreation with no filesystem carried over). Deleting it first
-        // forces Keycloak to reimport the realm and mint fresh keys on the next boot,
-        // while keeping the same container/port so no re-provisioning race is needed.
+        // (/opt/keycloak/data/h2/keycloakdb.mv.db) - the realm's signing keys and
+        // sessions would all survive a bare restart, unlike the real "no persistent
+        // volume" restart this is meant to simulate (a full container recreation with
+        // no filesystem carried over). Deleting it first forces Keycloak to reimport
+        // the realm and mint fresh keys on the next boot, while keeping the same
+        // container/port so no re-import race is needed.
         await RunDockerAsync(["exec", containerId, "rm", "-rf", "/opt/keycloak/data/h2"], cancellationToken);
         await RunDockerAsync(["restart", containerId], cancellationToken);
 

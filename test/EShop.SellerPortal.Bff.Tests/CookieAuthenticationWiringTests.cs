@@ -14,7 +14,7 @@
 // limitations under the License.
 // </copyright>
 
-using Hj.EShop.SellerPortal.Bff.Authentication;
+using Hj.EShop.TicketStore;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;

@@ -4,8 +4,6 @@
     <TargetFramework>net10.0</TargetFramework>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,9 +15,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../src/EShop.Migrations.Common/EShop.Migrations.Common.csproj" />
-    <ProjectReference Include="../../src/EShop.Migrations.Orchestration/EShop.Migrations.Orchestration.csproj" />
-    <ProjectReference Include="../../src/EShop.SellerPortal.Bff/EShop.SellerPortal.Bff.csproj" />
+    <ProjectReference Include="../../src/migrations/EShop.Migrations.Common/EShop.Migrations.Common.csproj" />
+    <ProjectReference Include="../../src/migrations/EShop.Migrations.Orchestration/EShop.Migrations.Orchestration.csproj" />
+    <ProjectReference Include="../../src/apps/EShop.SellerPortal.Bff/EShop.SellerPortal.Bff.csproj" />
+    <ProjectReference Include="../EShop.Testing.Common/EShop.Testing.Common.csproj" />
   </ItemGroup>
 
 </Project>

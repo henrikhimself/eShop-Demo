@@ -25,13 +25,8 @@ public sealed class SellerPortalMerchandiseDraftSubmissionTests
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
         string productName = $"E2E Merch {Guid.NewGuid():N}";
 
-        // Waiting for the BFF also waits for SQL Server, Service Bus, Storage, and
-        // Keycloak: the BFF's own /health check (its Aspire resource health check,
-        // AppHost.cs) aggregates each dependency's Aspire-registered health check, so
-        // it isn't Running/healthy until they all are. The Web and DevTools resources
-        // have no such dependency wiring of their own, so they're awaited separately.
         await using E2ETestSession session = await E2ETestHarness.StartAsync(
-            [KnownNames.ResourceSellerPortalBff, KnownNames.ResourceSellerPortalWeb, KnownNames.ResourceDevTools],
+            [KnownNames.ResourceSellerPortalBff, KnownNames.ResourceSellerPortalWeb, KnownNames.ResourceDevTools, KnownNames.ResourceDevReverseProxy],
             cancellationToken);
 
         Uri webBaseAddress = session.GetBaseAddress(KnownNames.ResourceSellerPortalWeb);
@@ -39,10 +34,19 @@ public sealed class SellerPortalMerchandiseDraftSubmissionTests
 
         IPage sellerPage = await session.NewPageAsync();
 
-        // Lands directly on /drafts - AuthEndpoints.cs's /bff/login challenge redirects
-        // there on success, not to the landing page.
-        await E2ETestHarness.LogInAsTestSellerAsync(sellerPage, webBaseAddress);
-        await sellerPage.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "New merchandise draft" }).ClickAsync();
+        await E2ETestHarness.LogInAsync(
+            sellerPage,
+            webBaseAddress,
+            TestCredentials.SellerPortalSeller.LoginPath,
+            TestCredentials.SellerPortalSeller.Username,
+            TestCredentials.SellerPortalSeller.Password);
+        await E2ETestHarness.WaitForDraftsPageReadyAsync(sellerPage);
+
+        IResponse createDraftResponse = await E2ETestHarness.ClickAndWaitForDraftCreationResponseAsync(
+            sellerPage,
+            "/bff/api/drafts/merchandise",
+            async () => await sellerPage.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "New merchandise draft" }).ClickAsync());
+        Assert.True(createDraftResponse.Ok, $"Expected merchandise draft creation to succeed, got {createDraftResponse.Status}.");
         await Expect(sellerPage).ToHaveURLAsync(new Regex(@"/drafts/merchandise/[0-9a-fA-F-]+$"));
 
         await sellerPage.Locator("#productName").FillAsync(productName);

@@ -28,6 +28,35 @@ A deployed instance uses Microsoft Entra External ID instead. See
 [ADR 0020](./adr/0020-entra-external-id-production-identity-provider.md) for this
 decision.
 
+## Local development ingress
+
+One local development reverse proxy is the single browser entry point for the Seller
+Portal, the Storefront, and Keycloak in local development. The reverse proxy
+terminates HTTPS. The reverse proxy routes each request to the correct application by
+the request host name.
+
+The reverse proxy uses a stable host name for each application:
+
+- `seller.eshop.local` for the Seller Portal.
+- `storefront.eshop.local` for the Storefront.
+- `identity.eshop.local` for Keycloak.
+
+The reverse proxy uses one fixed port, `8443`, for every host name. A stable host name
+per application gives each application its own browser cookie scope. A shared
+`localhost` host name with a different port per application does not give each
+application its own cookie scope. The `.local` top-level domain is also a requirement
+for the Optimizely paid license in local development.
+
+The reverse proxy is a local-development-only component. A deployed instance does not
+use the reverse proxy. A deployed instance uses Azure Container Apps ingress instead.
+See [ADR 0018](./adr/0018-azure-container-apps-deployment-target.md) for this
+decision.
+
+The team is still moving the Seller Portal's and the Storefront's browser entry point
+from a direct connection to this reverse proxy. Keycloak client configuration is still
+dynamic; the team is still moving it to a static configuration that matches the
+reverse proxy host names.
+
 ## Storefront (CMS + Commerce Connect)
 
 One combined Optimizely CMS and Commerce Connect site serves the Shopper. The Content
@@ -37,8 +66,9 @@ The Storefront needs two SQL Server databases. One database stores CMS data. One
 database stores Commerce Connect data. See
 [ADR 0001](./adr/0001-single-combined-cms-commerce-site.md) for this decision.
 
-The team has not yet added these databases to the Aspire AppHost. The team adds them
-when the team scaffolds the Storefront project.
+The Aspire AppHost hosts both databases. A deployed instance uses Azure SQL Database
+for each database instead of a plain SQL Server container. See
+[ADR 0019](./adr/0019-azure-sql-database-managed-sql-service.md) for this decision.
 
 The Storefront does not change database schema from normal application startup.
 Explicit migration resources own schema changes for both databases. Services use
@@ -104,9 +134,11 @@ document, instead of a Seller Portal developer defining the same contract twice.
 decision.
 
 The Seller Portal frontend never calls the backend-for-frontend directly. The frontend
-forwards every `/bff/*` request through its own server. This reverse proxy keeps the
-browser on one origin. The proxy also carries the OIDC login and callback redirects and
-the session cookie.
+forwards every `/bff/*` request through its own server. This is a separate, internal
+forwarding proxy inside the Seller Portal frontend - not the local development reverse
+proxy described under [Local development ingress](#local-development-ingress). This
+internal proxy keeps the browser on one origin. The proxy also carries the OIDC login
+and callback redirects and the session cookie.
 
 ## DevTools
 

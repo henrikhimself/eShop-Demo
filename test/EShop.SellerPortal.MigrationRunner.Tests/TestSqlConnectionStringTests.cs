@@ -14,6 +14,7 @@
 // limitations under the License.
 // </copyright>
 
+using Hj.EShop.Testing.Common;
 using Xunit;
 
 namespace Hj.EShop.SellerPortal.MigrationRunner.Tests;
