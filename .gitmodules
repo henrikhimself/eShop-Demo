@@ -2,3 +2,7 @@
 	path = lib/DotNet-ReverseProxy
 	url = https://github.com/henrikhimself/DotNet-ReverseProxy.git
 	branch = feature/aspire-13-5-gateway-support
+[submodule "lib/Aspire-RemoteContainers"]
+	path = lib/Aspire-RemoteContainers
+	url = https://github.com/henrikhimself/Aspire-RemoteContainers.git
+	branch = aspire-13-5-remotecontainers-support
