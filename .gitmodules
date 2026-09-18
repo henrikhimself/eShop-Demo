@@ -1,4 +1,0 @@
-[submodule "lib/DotNet-ReverseProxy"]
-	path = lib/DotNet-ReverseProxy
-	url = https://github.com/henrikhimself/DotNet-ReverseProxy.git
-	branch = develop
