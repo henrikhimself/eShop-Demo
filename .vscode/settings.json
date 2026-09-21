@@ -1,7 +1,7 @@
 {
     "dotnet.defaultSolution": "EShop.slnx",
     "editor.minimap.enabled": false,
-    "editor.hover.delay": 1000,
+    "editor.hover.delay": 2000,
     "editor.codeLens": false,
     "files.exclude": {
       ".agents": true,

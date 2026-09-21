@@ -30,7 +30,7 @@ namespace Hj.EShop.ServiceDefaults;
 
 public static class Extensions
 {
-    // See doc/MEMORY.md — StoreFront uses the Startup.cs overload below instead of this minimal-hosting one.
+    // StoreFront uses the Startup.cs overload below instead of this minimal-hosting one.
     public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder)
         where TBuilder : IHostApplicationBuilder
     {

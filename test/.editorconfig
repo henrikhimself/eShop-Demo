@@ -4,6 +4,10 @@ root = false
 # IDE0073: File header
 dotnet_diagnostic.IDE0073.severity = none
 
+# CA1515: Consider making public types internal.
+# Test classes must be public (xUnit1000)
+dotnet_diagnostic.CA1515.severity = none
+
 # CA1707: Test method names intentionally use underscores (Subject_Scenario_Expectation convention)
 dotnet_diagnostic.CA1707.severity = none
 

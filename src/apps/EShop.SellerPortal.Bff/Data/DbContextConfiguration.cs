@@ -33,7 +33,7 @@ internal static class DbContextConfiguration
         }
         else if (EnvironmentChecks.IsBuildTimeOpenApiGeneration())
         {
-            // See doc/MEMORY.md - this stand-in only needs to exist, never connect.
+            // this stand-in only needs to exist, never connect.
             builder.Services.AddDbContext<SellerPortalDbContext>(options =>
                 options.UseSqlServer(TestingDefaults.FakeSqlServerConnectionString));
         }

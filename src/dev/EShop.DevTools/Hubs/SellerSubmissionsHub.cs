@@ -18,7 +18,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace Hj.EShop.DevTools.Hubs;
 
-// Push-only broadcast hub. See doc/MEMORY.md - EShop.DevTools has no authentication.
+// Push-only broadcast hub. EShop.DevTools has no authentication.
 internal sealed class SellerSubmissionsHub : Hub
 {
     // Shared by the server broadcast calls, the Razor page's client script, and the

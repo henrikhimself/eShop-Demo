@@ -26,7 +26,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Hj.EShop.SellerPortal.Bff.Messaging;
 
-internal sealed class InventoryResultConsumer(
+internal partial class InventoryResultConsumer(
     ServiceBusClient client,
     IServiceScopeFactory scopeFactory,
     InventoryNotificationBroadcaster broadcaster,
@@ -47,8 +47,7 @@ internal sealed class InventoryResultConsumer(
 
         if (inventory is null)
         {
-            logger.LogWarning(
-                "Received an inventory result for unknown seller/SKU {SellerId}/{Sku}.", message.SellerId, message.Sku);
+            LogReceivedInventoryResultForUnknownSellerSku(logger, message.SellerId, message.Sku);
             return MessageHandlingResult.UnknownRecord;
         }
 
@@ -76,4 +75,9 @@ internal sealed class InventoryResultConsumer(
 
         return MessageHandlingResult.Handled;
     }
+
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "Received an inventory result for unknown seller/SKU {SellerId}/{Sku}.")]
+    private static partial void LogReceivedInventoryResultForUnknownSellerSku(ILogger logger, Guid sellerId, string sku);
 }

@@ -19,8 +19,7 @@ using Microsoft.AspNetCore.SignalR;
 namespace Hj.EShop.DevTools.Hubs;
 
 // Push-only broadcast hub, separate from SellerSubmissionsHub since it fires an
-// unrelated event for a different tool page. See doc/MEMORY.md - EShop.DevTools has no
-// authentication.
+// unrelated event for a different tool page. EShop.DevTools has no authentication.
 internal sealed class SellerInventoryHub : Hub
 {
     public const string InventoryChangedEvent = "inventoryChanged";

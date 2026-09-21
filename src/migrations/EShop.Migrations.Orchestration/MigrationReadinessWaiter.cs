@@ -70,17 +70,13 @@ public static partial class MigrationReadinessWaiter
 
             if (!marker.Succeeded)
             {
-                logger.LogWarning("Last migration attempt for '{Component}' failed: {FailureMessage}", component, marker.FailureMessage);
+                LogLastAttempt(logger, component, marker.FailureMessage);
                 return false;
             }
 
             if (marker.SchemaVersion != expectedVersion)
             {
-                logger.LogWarning(
-                    "Schema marker version '{ActualVersion}' for '{Component}' does not match this build's expected version '{ExpectedVersion}'.",
-                    marker.SchemaVersion,
-                    component,
-                    expectedVersion);
+                LogBuildNotMatching(logger, marker.SchemaVersion, component, expectedVersion);
                 return false;
             }
 
@@ -88,17 +84,33 @@ public static partial class MigrationReadinessWaiter
         }
         catch (SqlException ex)
         {
-            logger.LogWarning(ex, "Could not check migration status for '{Component}' yet.", component);
+            LogCouldNotCheck(logger, component, ex);
             return false;
         }
     }
 
-    // LoggerMessage source-generated methods avoid evaluating/formatting arguments when the log level is disabled - the proper fix for CA1873, not a suppression.
-    [LoggerMessage(Level = LogLevel.Information, Message = "Migration for '{Component}' has completed.")]
+    [LoggerMessage(
+        Level = LogLevel.Information,
+        Message = "Migration for '{Component}' has completed.")]
     private static partial void LogMigrationCompleted(ILogger logger, string component);
 
     [LoggerMessage(
         Level = LogLevel.Information,
         Message = "Waiting for migration '{Component}' to complete (attempt {Attempt}/{MaxAttempts})...")]
     private static partial void LogWaitingForMigration(ILogger logger, string component, int attempt, int maxAttempts);
+
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "Last migration attempt for '{Component}' failed: {FailureMessage}")]
+    private static partial void LogLastAttempt(ILogger logger, string component, string? failureMessage);
+
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "Schema marker version '{ActualVersion}' for '{Component}' does not match this build's expected version '{ExpectedVersion}'.")]
+    private static partial void LogBuildNotMatching(ILogger logger, string actualVersion, string component, string expectedVersion);
+
+    [LoggerMessage(
+        LogLevel.Warning,
+        Message = "Could not check migration status for '{Component}' yet.")]
+    private static partial void LogCouldNotCheck(ILogger logger, string component, Exception exception);
 }

@@ -20,7 +20,7 @@ using Microsoft.Extensions.Logging;
 namespace Hj.EShop.Migrations.Orchestration;
 
 // See doc/CHRONICLE.md — retries any SqlException directly (not via an EF Core execution strategy) because not every cold-start failure is classified as transient, and non-EF runners have no execution strategy at all.
-public static class SqlExceptionRetry
+public static partial class SqlExceptionRetry
 {
     public static async Task RunAsync(Func<Task> operation, int maxAttempts, ILogger logger)
     {
@@ -35,15 +35,15 @@ public static class SqlExceptionRetry
             catch (SqlException ex) when (attempt < maxAttempts)
             {
                 var delay = TimeSpan.FromSeconds(Math.Pow(2, attempt));
-                logger.LogWarning(
-                    ex,
-                    "Attempt {Attempt}/{MaxAttempts} failed; retrying in {Delay}.",
-                    attempt,
-                    maxAttempts,
-                    delay);
+                LogAttempt(logger, attempt, maxAttempts, delay, ex);
                 await Task.Delay(delay);
                 attempt++;
             }
         }
     }
+
+    [LoggerMessage(
+        LogLevel.Warning,
+        Message = "Attempt {Attempt}/{MaxAttempts} failed; retrying in {Delay}.")]
+    private static partial void LogAttempt(ILogger logger, int attempt, int maxAttempts, TimeSpan delay, Exception exception);
 }

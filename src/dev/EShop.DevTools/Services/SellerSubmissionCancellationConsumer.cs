@@ -25,7 +25,7 @@ namespace Hj.EShop.DevTools.Services;
 
 // Drains "seller-submissions-cancellations" and drops the matching entry from
 // SellerPendingSubmissionStore, so the simulator stops showing it as pending.
-internal sealed class SellerSubmissionCancellationConsumer(
+internal partial class SellerSubmissionCancellationConsumer(
     ServiceBusClient client,
     SellerPendingSubmissionStore store,
     IHubContext<SellerSubmissionsHub> hubContext,
@@ -42,9 +42,7 @@ internal sealed class SellerSubmissionCancellationConsumer(
             // Expected race, not corruption: the submission may already be resolved
             // (Approved/Rejected), or its cancellation arrived after a restart drained
             // the queue.
-            logger.LogWarning(
-                "Received a submission cancellation for unknown or already-resolved submission {SubmissionId}.",
-                message.SubmissionId);
+            LogReceivedCancellationForUnknownSubmission(logger, message.SubmissionId);
             return MessageHandlingResult.UnknownRecord;
         }
 
@@ -52,4 +50,10 @@ internal sealed class SellerSubmissionCancellationConsumer(
 
         return MessageHandlingResult.Handled;
     }
+
+    [LoggerMessage(
+        EventId = 1002,
+        Level = LogLevel.Warning,
+        Message = "Received a submission cancellation for unknown or already-resolved submission {SubmissionId}.")]
+    private static partial void LogReceivedCancellationForUnknownSubmission(ILogger logger, Guid submissionId);
 }

@@ -22,7 +22,7 @@ using Polly.Retry;
 
 namespace Hj.EShop.Messaging;
 
-public abstract class ServiceBusQueueConsumer(
+public abstract partial class ServiceBusQueueConsumer(
     ServiceBusClient client,
     string queueName,
     ILogger logger) : BackgroundService
@@ -36,7 +36,7 @@ public abstract class ServiceBusQueueConsumer(
         _processor.ProcessMessageAsync += ProcessMessageAsync;
         _processor.ProcessErrorAsync += ProcessErrorAsync;
 
-        // See doc/MEMORY.md — retries a not-yet-reachable Service Bus namespace instead of crashing the host.
+        // Retries a not-yet-reachable Service Bus namespace instead of crashing the host.
         ResiliencePipeline startupRetryPipeline = new ResiliencePipelineBuilder()
             .AddRetry(new RetryStrategyOptions
             {
@@ -47,11 +47,7 @@ public abstract class ServiceBusQueueConsumer(
                 MaxRetryAttempts = int.MaxValue,
                 OnRetry = args =>
                 {
-                    logger.LogWarning(
-                        args.Outcome.Exception,
-                        "Retrying StartProcessingAsync for queue {QueueName} (attempt {AttemptNumber}).",
-                        queueName,
-                        args.AttemptNumber + 1);
+                    LogRetryingStartProcessing(logger, queueName, args.AttemptNumber + 1, args.Outcome.Exception);
                     return default;
                 },
             })
@@ -92,7 +88,7 @@ public abstract class ServiceBusQueueConsumer(
         if (result == MessageHandlingResult.UnknownRecord)
         {
             // The target record doesn't exist and never will, so dead-letter for manual reconciliation instead of retrying via redelivery.
-            logger.LogWarning("Dead-lettering an unresolvable message from queue {QueueName}.", queueName);
+            LogDeadLettering(logger, queueName);
             await args.DeadLetterMessageAsync(args.Message, deadLetterReason: "UnknownRecord", cancellationToken: args.CancellationToken);
             return;
         }
@@ -102,9 +98,24 @@ public abstract class ServiceBusQueueConsumer(
 
     private Task ProcessErrorAsync(ProcessErrorEventArgs args)
     {
-        logger.LogError(args.Exception, "Error processing a message from queue {QueueName}.", queueName);
+        LogErrorProcessing(logger, queueName, args.Exception);
         return Task.CompletedTask;
     }
+
+    [LoggerMessage(
+        LogLevel.Warning,
+        Message = "Retrying StartProcessingAsync for queue {QueueName} (attempt {AttemptNumber}).")]
+    private static partial void LogRetryingStartProcessing(ILogger logger, string queueName, int attemptNumber, Exception? exception);
+
+    [LoggerMessage(
+        LogLevel.Warning,
+        Message = "Dead-lettering an unresolvable message from queue {QueueName}.")]
+    private static partial void LogDeadLettering(ILogger logger, string queueName);
+
+    [LoggerMessage(
+        LogLevel.Error,
+        Message = "Error processing a message from queue {QueueName}.")]
+    private static partial void LogErrorProcessing(ILogger logger, string queueName, Exception exception);
 }
 
 public enum MessageHandlingResult

@@ -29,7 +29,7 @@ namespace Hj.EShop.SellerPortal.Bff.Endpoints;
 // The Seller's inventory-reporting feature (ADR 0007) - separate from the draft/
 // submission workflow, and only reachable for a SKU the Merchandiser has already
 // approved for this Seller.
-internal static class InventoryEndpoints
+internal static partial class InventoryEndpoints
 {
     public static IEndpointRouteBuilder MapInventoryEndpoints(this IEndpointRouteBuilder endpoints)
     {
@@ -172,8 +172,7 @@ internal static class InventoryEndpoints
             // Matches SubmissionEndpoints.PublishSubmissionRequestAsync: any transport
             // exception hits this log-and-500 path. The SellerInventory row above is
             // already durable - no compensating transaction exists yet.
-            logger.LogError(
-                exception, "Failed to publish an inventory report for seller {SellerId}, SKU {Sku}.", sellerId, sku);
+            LogFailedToPublishInventoryReport(logger, sellerId, sku, exception);
             return Results.StatusCode(StatusCodes.Status500InternalServerError);
         }
 
@@ -190,4 +189,9 @@ internal static class InventoryEndpoints
             inventory?.LastSyncedAtUtc,
             inventory?.LastError);
     }
+
+    [LoggerMessage(
+        Level = LogLevel.Error,
+        Message = "Failed to publish an inventory report for seller {SellerId}, SKU {Sku}.")]
+    private static partial void LogFailedToPublishInventoryReport(ILogger logger, Guid sellerId, string sku, Exception exception);
 }

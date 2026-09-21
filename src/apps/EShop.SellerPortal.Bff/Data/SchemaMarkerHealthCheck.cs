@@ -22,8 +22,8 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace Hj.EShop.SellerPortal.Bff.Data;
 
-// See doc/MEMORY.md - reports not-ready until EShop.SellerPortal.MigrationRunner's
-// marker shows success. Not tagged "live": liveness must stay independent of readiness.
+// reports not-ready until EShop.SellerPortal.MigrationRunner's marker shows
+// success. Not tagged "live": liveness must stay independent of readiness.
 internal sealed class SchemaMarkerHealthCheck(SellerPortalDbContext dbContext) : IHealthCheck
 {
     public async Task<HealthCheckResult> CheckHealthAsync(

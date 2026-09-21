@@ -28,7 +28,7 @@ using Polly.Retry;
 
 namespace Hj.EShop.SellerPortal.Bff.Endpoints;
 
-internal static class SubmissionEndpoints
+internal static partial class SubmissionEndpoints
 {
     public static IEndpointRouteBuilder MapSubmissionEndpoints(this IEndpointRouteBuilder endpoints)
     {
@@ -341,7 +341,7 @@ internal static class SubmissionEndpoints
             // must hit this log-and-500 path; the `when` clause only lets a genuine
             // caller-initiated cancellation propagate normally. DB state above is already
             // durable - no compensating transaction exists yet for a persistent failure.
-            logger.LogError(exception, "Failed to publish a submission request for submission {SubmissionId}.", submissionId);
+            LogFailedToPublishSubmissionRequest(logger, submissionId, exception);
             return Results.StatusCode(StatusCodes.Status500InternalServerError);
         }
 
@@ -366,7 +366,7 @@ internal static class SubmissionEndpoints
         catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             // Same rationale as PublishSubmissionRequestAsync's catch clause above.
-            logger.LogError(exception, "Failed to publish a submission cancellation for submission {SubmissionId}.", submissionId);
+            LogFailedToPublishSubmissionCancellation(logger, submissionId, exception);
             return Results.StatusCode(StatusCodes.Status500InternalServerError);
         }
 
@@ -396,11 +396,7 @@ internal static class SubmissionEndpoints
                 MaxRetryAttempts = 2,
                 OnRetry = args =>
                 {
-                    logger.LogWarning(
-                        args.Outcome.Exception,
-                        "Retrying a submission-message publish for submission {SubmissionId} (attempt {AttemptNumber}).",
-                        submissionId,
-                        args.AttemptNumber + 1);
+                    LogRetryingSubmissionMessagePublish(logger, submissionId, args.AttemptNumber + 1, args.Outcome.Exception);
                     return default;
                 },
             })
@@ -410,6 +406,21 @@ internal static class SubmissionEndpoints
             ct => new ValueTask(sender.SendMessagesAsync([message], ct)),
             cancellationToken);
     }
+
+    [LoggerMessage(
+        Level = LogLevel.Error,
+        Message = "Failed to publish a submission request for submission {SubmissionId}.")]
+    private static partial void LogFailedToPublishSubmissionRequest(ILogger logger, Guid submissionId, Exception exception);
+
+    [LoggerMessage(
+        Level = LogLevel.Error,
+        Message = "Failed to publish a submission cancellation for submission {SubmissionId}.")]
+    private static partial void LogFailedToPublishSubmissionCancellation(ILogger logger, Guid submissionId, Exception exception);
+
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "Retrying a submission-message publish for submission {SubmissionId} (attempt {AttemptNumber}).")]
+    internal static partial void LogRetryingSubmissionMessagePublish(ILogger logger, Guid submissionId, int attemptNumber, Exception? exception);
 
     internal static SubmissionSummary ToSummary(Submission submission)
     {

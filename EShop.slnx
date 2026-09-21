@@ -1,4 +1,8 @@
 <Solution>
+  <Folder Name="/lib/">
+    <Project Path="lib/Aspire-RemoteContainers/src/RemoteContainers.Aspire/RemoteContainers.Aspire.csproj" />
+    <Project Path="lib/DotNet-ReverseProxy/src/ReverseProxy.Aspire/ReverseProxy.Aspire.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/apps/EShop.SellerPortal.Bff/EShop.SellerPortal.Bff.csproj" />
     <Project Path="src/apps/EShop.SellerPortal.MigrationRunner/EShop.SellerPortal.MigrationRunner.csproj" />

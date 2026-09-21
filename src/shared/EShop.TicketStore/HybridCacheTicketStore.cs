@@ -20,7 +20,7 @@ using Microsoft.Extensions.Caching.Hybrid;
 
 namespace Hj.EShop.TicketStore;
 
-// See doc/MEMORY.md / ADR 0012 — shared by EShop.SellerPortal.Bff and EShop.StoreFront.Web, each registering its own instance with its own key prefix via DI.
+// Shared by EShop.SellerPortal.Bff and EShop.StoreFront.Web, each registering its own instance with its own key prefix via DI.
 public sealed class HybridCacheTicketStore(HybridCache cache, string keyPrefix) : ITicketStore
 {
     // Cookie auth's own default ExpireTimeSpan - used only when a ticket has no

@@ -73,7 +73,7 @@ else if (EnvironmentChecks.IsBuildTimeOpenApiGeneration())
     // regardless of this mock host run, or mapping throws.
     builder.AddDefaultHealthChecks();
 
-    // See doc/MEMORY.md - these two stand-ins only need to exist, never connect.
+    // these two stand-ins only need to exist, never connect.
     // Factory form (not AddSingleton(instance)) so DI disposes this at shutdown -
     // CA2000 otherwise flags the constructed-but-unowned instance.
     builder.Services.AddSingleton(_ => new ServiceBusClient(TestingDefaults.FakeServiceBusConnectionString));

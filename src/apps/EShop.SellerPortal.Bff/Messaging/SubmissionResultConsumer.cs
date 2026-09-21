@@ -26,7 +26,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Hj.EShop.SellerPortal.Bff.Messaging;
 
-internal sealed class SubmissionResultConsumer(
+internal partial class SubmissionResultConsumer(
     ServiceBusClient client,
     IServiceScopeFactory scopeFactory,
     SubmissionNotificationBroadcaster broadcaster,
@@ -53,7 +53,7 @@ internal sealed class SubmissionResultConsumer(
 
         if (submission is null)
         {
-            logger.LogWarning("Received a submission result for unknown submission {SubmissionId}.", message.SubmissionId);
+            LogReceivedResultForUnknownSubmission(logger, message.SubmissionId);
             return MessageHandlingResult.UnknownRecord;
         }
 
@@ -63,10 +63,7 @@ internal sealed class SubmissionResultConsumer(
             // (SubmissionEndpoints.CancelReview) while an Approve/Reject result for
             // that same submission is already in flight. Applying it now would act on
             // a Draft the Seller has since resumed editing.
-            logger.LogWarning(
-                "Ignoring a submission result for {SubmissionId}: its status is already {Status}, not Pending.",
-                message.SubmissionId,
-                submission.Status);
+            LogIgnoringSubmissionResultBecauseNotPending(logger, message.SubmissionId, submission.Status);
             return MessageHandlingResult.Handled;
         }
 
@@ -130,4 +127,14 @@ internal sealed class SubmissionResultConsumer(
 
         return MessageHandlingResult.Handled;
     }
+
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "Received a submission result for unknown submission {SubmissionId}.")]
+    private static partial void LogReceivedResultForUnknownSubmission(ILogger logger, Guid submissionId);
+
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "Ignoring a submission result for {SubmissionId}: its status is already {Status}, not Pending.")]
+    private static partial void LogIgnoringSubmissionResultBecauseNotPending(ILogger logger, Guid submissionId, SubmissionStatus status);
 }

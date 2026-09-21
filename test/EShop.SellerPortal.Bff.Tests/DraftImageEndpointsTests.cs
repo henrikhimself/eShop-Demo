@@ -149,7 +149,7 @@ public sealed class DraftImageEndpointsTests : IAsyncLifetime
 
     private static async Task<HttpResponseMessage> PostImageAsync(HttpClient client, Guid draftId, byte[] content, string contentType)
     {
-        using MultipartFormDataContent form = new();
+        using MultipartFormDataContent form = [];
         using ByteArrayContent fileContent = new(content);
         fileContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
         form.Add(fileContent, "file", "cover");

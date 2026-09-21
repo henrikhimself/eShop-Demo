@@ -484,7 +484,7 @@ public sealed class SubmissionEndpointsTests : IAsyncLifetime
 
     private static async Task UploadImageAsync(HttpClient client, Guid draftId)
     {
-        using MultipartFormDataContent form = new();
+        using MultipartFormDataContent form = [];
         using ByteArrayContent fileContent = new([1, 2, 3]);
         fileContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
         form.Add(fileContent, "file", "cover.jpg");
