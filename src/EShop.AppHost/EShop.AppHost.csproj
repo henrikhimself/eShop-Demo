@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../lib/Aspire-RemoteContainers/src/RemoteContainers.Aspire/RemoteContainers.Aspire.csproj" IsAspireProjectResource="false" />
     <ProjectReference Include="../../lib/DotNet-ReverseProxy/src/ReverseProxy.Aspire/ReverseProxy.Aspire.csproj" IsAspireProjectResource="false" />
     <ProjectReference Include="../shared/EShop.Common/EShop.Common.csproj" IsAspireProjectResource="false" />
     <ProjectReference Include="../dev/EShop.DevTools/EShop.DevTools.csproj" />
