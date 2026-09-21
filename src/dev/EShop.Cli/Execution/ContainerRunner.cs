@@ -77,7 +77,9 @@ internal sealed class ContainerRunner(
         arguments.AddRange(invocation.Arguments);
 
         return await processRunner.RunAsync(
-            new ProcessRequest("docker", arguments, invocation.WorkingDirectory, Interactive: invocation.Interactive),
+            new ProcessRequest(
+                "docker", arguments, invocation.WorkingDirectory,
+                Interactive: invocation.Interactive, OutputLineHandler: invocation.OutputLineHandler),
             cancellationToken);
     }
 

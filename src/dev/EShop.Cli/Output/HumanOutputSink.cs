@@ -15,6 +15,7 @@
 // </copyright>
 
 using Spectre.Console;
+using Hj.EShop.Cli.Execution;
 
 namespace Hj.EShop.Cli.Output;
 
@@ -79,6 +80,12 @@ internal sealed class HumanOutputSink(TimeSpan? sessionEndGracePeriod = null) : 
         };
 
         AnsiConsole.MarkupLine($"{emoji} [{color}]{Markup.Escape(message)}[/]");
+    }
+
+    public void Debug(string utility, ProcessOutputLine outputLine)
+    {
+        string stream = outputLine.Stream == ProcessOutputStream.StandardOutput ? "stdout" : "stderr";
+        AnsiConsole.WriteLine($"[{utility} {stream}] {outputLine.Text}");
     }
 
     // Steps from several commands may be in flight at once, so they all share one

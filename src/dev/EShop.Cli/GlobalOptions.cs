@@ -20,10 +20,12 @@ using Hj.EShop.Cli.Output;
 namespace Hj.EShop.Cli;
 
 // The fully-resolved result of GlobalOptionsInterceptor's precedence chain
-// (flag > env var > default) for both global options - see GlobalOptionsInterceptor.
+// (flag > env var > default) for every global option - see GlobalOptionsInterceptor.
 // UnusableLocalTools defaults to empty so existing call sites that only care about
 // Tools/Output don't need to pass it - ToolExecutor is the only reader.
 internal sealed record GlobalOptions(ExecutionMode Tools, OutputMode Output, IReadOnlySet<string>? UnusableLocalTools = null)
 {
     public IReadOnlySet<string> UnusableLocalTools { get; init; } = UnusableLocalTools ?? new HashSet<string>();
+
+    public bool Debug { get; init; }
 }

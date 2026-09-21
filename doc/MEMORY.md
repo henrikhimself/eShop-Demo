@@ -118,7 +118,12 @@ for the full domain rules.
   or inside the `eshop-utility` Containerfile image, per `--tools auto` (local-first,
   default), `local`, or `container`. `eshop build`/`restore`/`test` (unit) run their
   independent steps concurrently (`Task.WhenAll`); `test e2e`/`test coverage` stay
-  sequential. `HumanOutputSink` shows a live spinner; `AiOutputSink` (`--agent`) writes a
+  sequential. Local tool processes use the checkout's `.cache` tree for their
+  re-fetchable tool home and NuGet/npm/pnpm state, matching the utility container.
+  The global `--debug` option replaces the normal presentation sink with timestamped,
+  line-by-line utility stdout/stderr output for troubleshooting; it has no spinner and
+  wins over `--agent` presentation while `--agent` still supplies `NO_COLOR`.
+  `HumanOutputSink` shows a live spinner; `AiOutputSink` (`--agent`) writes a
   once-a-minute liveness heartbeat and scopes `NO_COLOR` to itself only.
 
 ### Seller Portal

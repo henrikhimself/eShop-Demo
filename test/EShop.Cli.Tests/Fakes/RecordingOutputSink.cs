@@ -15,6 +15,7 @@
 // </copyright>
 
 using Hj.EShop.Cli.Output;
+using Hj.EShop.Cli.Execution;
 
 namespace Hj.EShop.Cli.Tests.Fakes;
 
@@ -50,6 +51,11 @@ internal sealed class RecordingOutputSink : IOutputSink
     public void Status(Severity severity, string message)
     {
         _calls.Add($"Status({severity}, \"{message}\")");
+    }
+
+    public void Debug(string utility, ProcessOutputLine outputLine)
+    {
+        _calls.Add($"Debug(\"{utility}\", {outputLine.Stream}, \"{outputLine.Text}\")");
     }
 
     public IDisposable BeginStep(string name)

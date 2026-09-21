@@ -14,6 +14,7 @@
 // limitations under the License.
 // </copyright>
 
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
 using Hj.EShop.Cli.Execution;
@@ -47,6 +48,25 @@ public sealed class ProcessRunnerTests
         ProcessResult result = await runner.RunAsync(request, TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task RunAsync_OutputLineHandler_StreamsBothOutputStreamsAndCapturesThem()
+    {
+        ProcessRunner runner = new();
+        ConcurrentQueue<ProcessOutputLine> received = [];
+        ProcessRequest request = new(
+            "sh",
+            ["-c", "printf 'standard output\\n'; printf 'standard error\\n' >&2"],
+            OutputLineHandler: received.Enqueue);
+
+        ProcessResult result = await runner.RunAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Contains(new ProcessOutputLine(ProcessOutputStream.StandardOutput, "standard output"), received);
+        Assert.Contains(new ProcessOutputLine(ProcessOutputStream.StandardError, "standard error"), received);
+        Assert.Equal("standard output", result.StandardOutput.Trim());
+        Assert.Equal("standard error", result.StandardError.Trim());
     }
 
     [Fact]

@@ -20,7 +20,7 @@ using Spectre.Console.Cli;
 
 namespace Hj.EShop.Cli;
 
-// Every command's settings class derives from this one, so --tools/--agent are
+// Every command's settings class derives from this one, so --tools/--agent/--debug are
 // available (and consistently documented) everywhere. GlobalOptionsInterceptor
 // resolves the actual precedence (flag > env var > default) once per invocation - see
 // that class, not this one, for the resolution logic itself.
@@ -33,4 +33,8 @@ internal abstract class GlobalSettings : CommandSettings
     [CommandOption("--agent")]
     [Description("AI-optimized output: no color/emoji/spinners, stable status lines.")]
     public bool Agent { get; set; }
+
+    [CommandOption("--debug")]
+    [Description("Stream prefixed utility output for troubleshooting.")]
+    public bool Debug { get; set; }
 }

@@ -8,6 +8,15 @@ machine to build, run, and test it.
 - x86-64 (amd64) CPU
 - Docker
 
+## Prerequisites for running local Aspire CLI
+
+- .NET 10
+- Node
+- Corepack pnpm
+- Aspire CLI compatible with the `Aspire.AppHost.Sdk` version
+
+Use the versions pinned by `global.json`, `.nvmrc`, and `package.json`.
+
 ### Hosts file entries
 
 The local development reverse proxy gives the Seller Portal, the Storefront, and
@@ -85,7 +94,28 @@ The eShop CLI formalizes development workflows, automates routine tasks, and enf
 
 It provides an AI-friendly developer experience with terminal output designed to be easily understood by AI coding agents. It also acts as a guardrail against common AI coding failure modes, helping detect when agents take shortcuts, skip validation, or otherwise drift from the project's required quality standards.
 
+When `--tools local` is used, or `--tools auto` selects a local tool, the CLI sets the
+same repository-relative `.cache` locations used by the utility container for the tool
+home, NuGet packages, npm cache, and pnpm data. This keeps re-fetchable tool state
+inside the checkout and out of the developer's normal home directory.
+
 See `AGENTS.md` ("Common Commands") for the exact commands to run for restore, build, format, test, run, diagrams, and screenshots.
+
+### Troubleshooting command steps
+
+Add `--debug` to stream each utility's standard output and standard error while it
+runs. Every line includes the utility name and output stream. Debug output has no
+spinner, color, or rich terminal widgets, so it is suitable for diagnosing a command
+step that appears to stop responding.
+
+For example, to inspect frontend dependency installation:
+
+```bash
+./scripts/eshop.sh restore --debug --agent
+```
+
+`--debug` selects troubleshooting output even when `--agent` is present. The
+`--agent` option still disables color in child utilities.
 
 ## Agent Coding Harness
 

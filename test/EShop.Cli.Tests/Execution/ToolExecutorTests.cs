@@ -16,6 +16,7 @@
 
 using Hj.EShop.Cli.Execution;
 using Hj.EShop.Cli.Output;
+using Hj.EShop.Cli.Repo;
 using Hj.EShop.Cli.Tests.Fakes;
 using Xunit;
 
@@ -32,7 +33,9 @@ public sealed class ToolExecutorTests
             new FakeGlobalOptionsAccessor(new GlobalOptions(ExecutionMode.Auto, OutputMode.Human)),
             new AlwaysOnPathLocator(),
             containerRunner,
-            processRunner);
+            processRunner,
+            new RecordingOutputSink(),
+            new RepoPaths("/repo"));
 
         await executor.RunAsync(new ToolInvocation("dotnet", ["build"]), TestContext.Current.CancellationToken);
 
@@ -49,7 +52,9 @@ public sealed class ToolExecutorTests
             new FakeGlobalOptionsAccessor(new GlobalOptions(ExecutionMode.Auto, OutputMode.Human)),
             new NeverOnPathLocator(),
             containerRunner,
-            processRunner);
+            processRunner,
+            new RecordingOutputSink(),
+            new RepoPaths("/repo"));
 
         await executor.RunAsync(new ToolInvocation("rumdl", ["check", "."]), TestContext.Current.CancellationToken);
 
@@ -70,7 +75,9 @@ public sealed class ToolExecutorTests
                 new GlobalOptions(ExecutionMode.Auto, OutputMode.Human, new HashSet<string> { "node" })),
             new AlwaysOnPathLocator(),
             containerRunner,
-            processRunner);
+            processRunner,
+            new RecordingOutputSink(),
+            new RepoPaths("/repo"));
 
         await executor.RunAsync(new ToolInvocation("node", ["--version"]), TestContext.Current.CancellationToken);
 
@@ -90,7 +97,9 @@ public sealed class ToolExecutorTests
                 new GlobalOptions(ExecutionMode.Auto, OutputMode.Human, new HashSet<string> { "node" })),
             new AlwaysOnPathLocator(),
             containerRunner,
-            processRunner);
+            processRunner,
+            new RecordingOutputSink(),
+            new RepoPaths("/repo"));
 
         await executor.RunAsync(new ToolInvocation("dotnet", ["build"]), TestContext.Current.CancellationToken);
 
@@ -107,7 +116,9 @@ public sealed class ToolExecutorTests
             new FakeGlobalOptionsAccessor(new GlobalOptions(ExecutionMode.Local, OutputMode.Human)),
             new NeverOnPathLocator(),
             containerRunner,
-            processRunner);
+            processRunner,
+            new RecordingOutputSink(),
+            new RepoPaths("/repo"));
 
         await executor.RunAsync(new ToolInvocation("dotnet", ["build"]), TestContext.Current.CancellationToken);
 
@@ -124,7 +135,9 @@ public sealed class ToolExecutorTests
             new FakeGlobalOptionsAccessor(new GlobalOptions(ExecutionMode.Container, OutputMode.Human)),
             new AlwaysOnPathLocator(),
             containerRunner,
-            processRunner);
+            processRunner,
+            new RecordingOutputSink(),
+            new RepoPaths("/repo"));
 
         await executor.RunAsync(new ToolInvocation("dotnet", ["build"]), TestContext.Current.CancellationToken);
 
@@ -143,7 +156,9 @@ public sealed class ToolExecutorTests
             new FakeGlobalOptionsAccessor(new GlobalOptions(ExecutionMode.Local, OutputMode.Human)),
             new AlwaysOnPathLocator(),
             containerRunner,
-            processRunner);
+            processRunner,
+            new RecordingOutputSink(),
+            new RepoPaths("/repo"));
         ToolInvocation invocation = new("dotnet", ["test"], ForceMode: ExecutionMode.Container);
 
         await executor.RunAsync(invocation, TestContext.Current.CancellationToken);
@@ -157,33 +172,53 @@ public sealed class ToolExecutorTests
     public async Task RunAsync_OutputModeAi_SetsNoColorForALocalInvocation()
     {
         FakeProcessRunner processRunner = new();
+        RecordingOutputSink output = new();
+        RepoPaths paths = new("/repo");
         ToolExecutor executor = new(
             new FakeGlobalOptionsAccessor(new GlobalOptions(ExecutionMode.Local, OutputMode.Ai)),
             new AlwaysOnPathLocator(),
             new FakeContainerRunner(),
-            processRunner);
+            processRunner,
+            output,
+            paths);
 
         await executor.RunAsync(new ToolInvocation("dotnet", ["build"]), TestContext.Current.CancellationToken);
 
         ProcessRequest request = Assert.Single(processRunner.Invocations);
         Assert.NotNull(request.EnvironmentVariables);
         Assert.Equal("1", request.EnvironmentVariables!["NO_COLOR"]);
+        Assert.Equal(paths.CacheHomeDir, request.EnvironmentVariables["HOME"]);
     }
 
     [Fact]
-    public async Task RunAsync_OutputModeHuman_DoesNotSetNoColor()
+    public async Task RunAsync_OutputModeHuman_ConfiguresRepositoryCacheEnvironment()
     {
         FakeProcessRunner processRunner = new();
+        RecordingOutputSink output = new();
+        RepoPaths paths = new("/repo");
         ToolExecutor executor = new(
             new FakeGlobalOptionsAccessor(new GlobalOptions(ExecutionMode.Local, OutputMode.Human)),
             new AlwaysOnPathLocator(),
             new FakeContainerRunner(),
-            processRunner);
+            processRunner,
+            output,
+            paths);
 
         await executor.RunAsync(new ToolInvocation("dotnet", ["build"]), TestContext.Current.CancellationToken);
 
         ProcessRequest request = Assert.Single(processRunner.Invocations);
-        Assert.Null(request.EnvironmentVariables);
+        Assert.NotNull(request.EnvironmentVariables);
+        Assert.Equal(
+            Path.Combine(paths.CacheHomeDir, ".aspnet", "dev-certs", "trust"),
+            request.EnvironmentVariables!["SSL_CERT_DIR"]);
+        Assert.Equal(paths.CacheHomeDir, request.EnvironmentVariables!["HOME"]);
+        Assert.Equal(paths.CacheHomeDir, request.EnvironmentVariables["DOTNET_CLI_HOME"]);
+        Assert.Equal(paths.NuGetPackagesDir, request.EnvironmentVariables["NUGET_PACKAGES"]);
+        Assert.Equal(paths.NpmCacheDir, request.EnvironmentVariables["npm_config_cache"]);
+        Assert.Equal(paths.PnpmStoreDir, request.EnvironmentVariables["PNPM_CONFIG_STORE_DIR"]);
+        Assert.Equal(paths.PnpmHomeDir, request.EnvironmentVariables["PNPM_HOME"]);
+        Assert.Equal("0", request.EnvironmentVariables["COREPACK_ENABLE_DOWNLOAD_PROMPT"]);
+        Assert.DoesNotContain("NO_COLOR", request.EnvironmentVariables);
     }
 
     [Fact]
@@ -195,13 +230,62 @@ public sealed class ToolExecutorTests
             new FakeGlobalOptionsAccessor(new GlobalOptions(ExecutionMode.Container, OutputMode.Ai)),
             new AlwaysOnPathLocator(),
             containerRunner,
-            processRunner);
+            processRunner,
+            new RecordingOutputSink(),
+            new RepoPaths("/repo"));
 
         await executor.RunAsync(new ToolInvocation("dotnet", ["build"]), TestContext.Current.CancellationToken);
 
         ToolInvocation recorded = Assert.Single(containerRunner.Invocations);
         Assert.NotNull(recorded.EnvironmentVariables);
         Assert.Equal("1", recorded.EnvironmentVariables!["NO_COLOR"]);
+    }
+
+    [Fact]
+    public async Task RunAsync_Debug_StreamsPrefixedLocalUtilityOutput()
+    {
+        FakeProcessRunner processRunner = new();
+        RecordingOutputSink output = new();
+        GlobalOptions options = new(ExecutionMode.Local, OutputMode.Human) { Debug = true };
+        ToolExecutor executor = new(
+            new FakeGlobalOptionsAccessor(options),
+            new AlwaysOnPathLocator(),
+            new FakeContainerRunner(),
+            processRunner,
+            output,
+            new RepoPaths("/repo"));
+
+        await executor.RunAsync(new ToolInvocation("pnpm", ["install"]), TestContext.Current.CancellationToken);
+
+        ProcessRequest request = Assert.Single(processRunner.Invocations);
+        Assert.NotNull(request.OutputLineHandler);
+        request.OutputLineHandler!(new ProcessOutputLine(ProcessOutputStream.StandardError, "downloading package"));
+        Assert.Contains("Debug(\"pnpm\", StandardError, \"downloading package\")", output.Calls);
+    }
+
+    [Fact]
+    public async Task RunAsync_Debug_StreamsForcedContainerUtilityOutput()
+    {
+        FakeContainerRunner containerRunner = new();
+        RecordingOutputSink output = new();
+        GlobalOptions options = new(ExecutionMode.Local, OutputMode.Ai) { Debug = true };
+        ToolExecutor executor = new(
+            new FakeGlobalOptionsAccessor(options),
+            new AlwaysOnPathLocator(),
+            containerRunner,
+            new FakeProcessRunner(),
+            output,
+            new RepoPaths("/repo"));
+
+        await executor.RunAsync(
+            new ToolInvocation("node", ["screenshot.mjs"], ForceMode: ExecutionMode.Container),
+            TestContext.Current.CancellationToken);
+
+        ToolInvocation invocation = Assert.Single(containerRunner.Invocations);
+        Assert.NotNull(invocation.OutputLineHandler);
+        invocation.OutputLineHandler!(new ProcessOutputLine(ProcessOutputStream.StandardOutput, "captured"));
+        Assert.Contains("Debug(\"node\", StandardOutput, \"captured\")", output.Calls);
+        Assert.Equal("1", invocation.EnvironmentVariables!["NO_COLOR"]);
     }
 
     private sealed class AlwaysOnPathLocator : ILocalToolLocator

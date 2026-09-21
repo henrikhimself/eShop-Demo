@@ -37,7 +37,8 @@ public sealed class AppHostGuardIntegrationTests
 
         // Auto + a real LocalToolLocator resolves `aspire` locally as long as it's on
         // PATH, so the never-invoked FakeContainerRunner here is just a safe stand-in.
-        ToolExecutor toolExecutor = new(accessor, new LocalToolLocator(), new FakeContainerRunner(), new ProcessRunner());
+        ToolExecutor toolExecutor = new(
+            accessor, new LocalToolLocator(), new FakeContainerRunner(), new ProcessRunner(), new RecordingOutputSink(), paths);
         AppHostGuard guard = new(toolExecutor, paths);
 
         bool alreadyRunning = await guard.IsAlreadyRunningAsync(TestContext.Current.CancellationToken);

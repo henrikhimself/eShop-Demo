@@ -59,7 +59,8 @@ registrar.Register(typeof(IAppHostSessionRunner), typeof(AppHostSessionRunner));
 // GlobalOptionsInterceptor has run, and the CLI's final flush below needs to reach
 // the exact same instance a command used.
 IOutputSink? outputSink = null;
-Func<IOutputSink> outputSinkFactory = () => outputSink ??= OutputSinkFactory.Create(globalOptionsAccessor.Options.Output);
+Func<IOutputSink> outputSinkFactory = () => outputSink ??= OutputSinkFactory.Create(
+    globalOptionsAccessor.Options.Output, globalOptionsAccessor.Options.Debug);
 registrar.RegisterLazy(typeof(IOutputSink), () => outputSinkFactory());
 
 // UtilityImageProvisioner needs the same factory - see its own comment.

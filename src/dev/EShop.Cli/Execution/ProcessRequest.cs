@@ -18,10 +18,12 @@ namespace Hj.EShop.Cli.Execution;
 
 // The one real OS-process boundary every tool invocation goes through (see
 // IProcessRunner). Interactive is true only for the `aspire start`/wait/stop session -
-// it disables output capture so the child inherits the real console directly.
+// it disables output capture so the child inherits the real console directly. When
+// output is captured, OutputLineHandler receives each line as it arrives.
 internal sealed record ProcessRequest(
     string FileName,
     IReadOnlyList<string> Arguments,
     string? WorkingDirectory = null,
     IReadOnlyDictionary<string, string>? EnvironmentVariables = null,
-    bool Interactive = false);
+    bool Interactive = false,
+    Action<ProcessOutputLine>? OutputLineHandler = null);

@@ -1,5 +1,4 @@
 {
-    "dotnet.defaultSolution": "EShop.slnx",
     "editor.minimap.enabled": false,
     "editor.hover.delay": 2000,
     "editor.codeLens": false,
@@ -12,9 +11,18 @@
       "**/*.sarif": true
     },
     "explorer.fileNesting.enabled": true,
+    "dotnet.defaultSolution": "EShop.slnx",
     "csharp.debug.symbolOptions.searchNuGetOrgSymbolServer": true,
     "csharp.debug.symbolOptions.searchMicrosoftSymbolServer": true,
     "csharp.debug.justMyCode": true,
     "csharp.debug.requireExactSource": true,
-    "csharp.debug.suppressJITOptimizations": false
+    "csharp.debug.suppressJITOptimizations": false,
+    "remote.portsAttributes": {
+        "15000": {
+            "label": "Aspire Dashboard"
+        },
+        "8443": {
+            "label": "Reverse Proxy"
+        }
+    }
 }

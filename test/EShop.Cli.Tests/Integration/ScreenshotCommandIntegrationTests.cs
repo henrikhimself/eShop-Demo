@@ -50,7 +50,9 @@ public sealed class ScreenshotCommandIntegrationTests : IDisposable
             new FakeGlobalOptionsAccessor(new Hj.EShop.Cli.GlobalOptions(ExecutionMode.Auto, Hj.EShop.Cli.Output.OutputMode.Human)),
             new LocalToolLocator(),
             containerRunner,
-            processRunner);
+            processRunner,
+            output,
+            _paths);
         ScreenshotCommand command = new(output, toolExecutor, _paths);
         ScreenshotSettings settings = new() { Url = "data:text/html,<h1>hello</h1>", OutputPath = _outputPath };
 

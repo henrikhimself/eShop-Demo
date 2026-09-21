@@ -21,8 +21,13 @@ namespace Hj.EShop.Cli.Output;
 // GlobalOptionsInterceptor for why).
 internal static class OutputSinkFactory
 {
-    public static IOutputSink Create(OutputMode mode)
+    public static IOutputSink Create(OutputMode mode, bool debug = false)
     {
+        if (debug)
+        {
+            return new DebugOutputSink(Console.Out);
+        }
+
         return mode == OutputMode.Ai ? new AiOutputSink(Console.Out) : new HumanOutputSink();
     }
 }

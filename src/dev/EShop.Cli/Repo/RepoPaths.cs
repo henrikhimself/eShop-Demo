@@ -26,6 +26,18 @@ internal sealed class RepoPaths(string root)
 
     public string Root { get; } = root;
 
+    public string CacheDir => Path.Combine(Root, ".cache");
+
+    public string CacheHomeDir => Path.Combine(CacheDir, "home");
+
+    public string NuGetPackagesDir => Path.Combine(CacheDir, "nuget-packages");
+
+    public string NpmCacheDir => Path.Combine(CacheDir, "npm-cache");
+
+    public string PnpmStoreDir => Path.Combine(CacheDir, "pnpm-store");
+
+    public string PnpmHomeDir => Path.Combine(CacheDir, "pnpm-home");
+
     public string Solution => Path.Combine(Root, "EShop.slnx");
 
     public string SellerPortalWebDir => Path.Combine(Root, "src", "apps", "EShop.SellerPortal.Web");

@@ -15,6 +15,7 @@
 // </copyright>
 
 using System.Diagnostics;
+using Hj.EShop.Cli.Execution;
 
 namespace Hj.EShop.Cli.Output;
 
@@ -80,6 +81,12 @@ internal sealed class AiOutputSink(TextWriter writer, TimeSpan? heartbeatInterva
         }
 
         writer.WriteLine();
+    }
+
+    public void Debug(string utility, ProcessOutputLine outputLine)
+    {
+        string stream = outputLine.Stream == ProcessOutputStream.StandardOutput ? "stdout" : "stderr";
+        writer.WriteLine($"[{utility} {stream}] {outputLine.Text}");
     }
 
     public IDisposable BeginStep(string name)

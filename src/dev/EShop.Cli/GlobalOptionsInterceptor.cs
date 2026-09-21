@@ -21,7 +21,7 @@ using Spectre.Console.Cli;
 
 namespace Hj.EShop.Cli;
 
-// Runs once per invocation, after Spectre binds --tools/--agent but before any
+// Runs once per invocation, after Spectre binds the global options but before any
 // command constructor resolves - this is the one and only place either global option
 // gets parsed. Precedence: explicit flag > environment variable > default. Also runs
 // the dev-cert trust and local-prerequisite checks before every command.
@@ -50,12 +50,12 @@ internal sealed class GlobalOptionsInterceptor(
         // auto routing needs its UnusableLocalTools result baked into GlobalOptions.
         PrerequisiteCheckResult prerequisiteCheckResult =
             prerequisiteChecker.CheckAsync(CancellationToken.None).GetAwaiter().GetResult();
-        accessor.Resolve(new GlobalOptions(tools, output, prerequisiteCheckResult.UnusableLocalTools));
+        accessor.Resolve(new GlobalOptions(tools, output, prerequisiteCheckResult.UnusableLocalTools) { Debug = globalSettings.Debug });
 
         // IOutputSink can't be constructor-injected here because it depends on the
         // accessor.Resolve(...) call above, so this builds a throwaway instance directly
         // from the mode just resolved instead.
-        IOutputSink outputSink = OutputSinkFactory.Create(output);
+        IOutputSink outputSink = OutputSinkFactory.Create(output, globalSettings.Debug);
 
         IReadOnlyList<string> issuesToShow = IssuesToShow(prerequisiteCheckResult, tools);
         if (issuesToShow.Count > 0)

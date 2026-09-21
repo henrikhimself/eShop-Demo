@@ -50,7 +50,9 @@ public sealed class RenderDiagramCommandIntegrationTests : IDisposable
             new FakeGlobalOptionsAccessor(new Hj.EShop.Cli.GlobalOptions(ExecutionMode.Auto, Hj.EShop.Cli.Output.OutputMode.Human)),
             new LocalToolLocator(),
             containerRunner,
-            processRunner);
+            processRunner,
+            output,
+            _paths);
         RenderDiagramCommand command = new(output, toolExecutor, _paths);
         RenderDiagramSettings settings = new() { File = _pumlPath };
 

@@ -133,6 +133,25 @@ public sealed class ContainerRunnerTests
     }
 
     [Fact]
+    public async Task RunAsync_InvocationHasOutputLineHandler_PassesItToProcessRequest()
+    {
+        FakeProcessRunner processRunner = new();
+        ContainerRunner runner = new(
+            processRunner,
+            new FakeUtilityImageProvisioner(),
+            new FakeLinuxIdentityProvider(identity: null),
+            new RepoPaths("/repo"));
+        Action<ProcessOutputLine> handler = _ => { };
+
+        await runner.RunAsync(
+            new ToolInvocation("pnpm", ["install"], OutputLineHandler: handler),
+            TestContext.Current.CancellationToken);
+
+        ProcessRequest request = Assert.Single(processRunner.Invocations);
+        Assert.Same(handler, request.OutputLineHandler);
+    }
+
+    [Fact]
     public async Task RunAsync_EnsuresUtilityImageBeforeRunning()
     {
         FakeProcessRunner processRunner = new();

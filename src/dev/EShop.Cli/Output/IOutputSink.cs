@@ -14,6 +14,8 @@
 // limitations under the License.
 // </copyright>
 
+using Hj.EShop.Cli.Execution;
+
 namespace Hj.EShop.Cli.Output;
 
 // The only way a command may produce output. No command calls Console.WriteLine or
@@ -30,6 +32,8 @@ internal interface IOutputSink
     void Table(string title, IReadOnlyList<string> columns, IReadOnlyList<IReadOnlyList<string>> rows);
 
     void Status(Severity severity, string message);
+
+    void Debug(string utility, ProcessOutputLine outputLine);
 
     IDisposable BeginStep(string name);
 

@@ -15,6 +15,7 @@
 // </copyright>
 
 using Hj.EShop.Cli.Output;
+using Hj.EShop.Cli.Repo;
 
 namespace Hj.EShop.Cli.Execution;
 
@@ -22,7 +23,9 @@ internal sealed class ToolExecutor(
     IGlobalOptionsAccessor globalOptions,
     ILocalToolLocator localToolLocator,
     IContainerRunner containerRunner,
-    IProcessRunner processRunner) : IToolExecutor
+    IProcessRunner processRunner,
+    IOutputSink output,
+    RepoPaths paths) : IToolExecutor
 {
     public Task<ProcessResult> RunAsync(ToolInvocation invocation, CancellationToken cancellationToken)
     {
@@ -37,6 +40,14 @@ internal sealed class ToolExecutor(
                 : new Dictionary<string, string>(invocation.EnvironmentVariables);
             environmentVariables["NO_COLOR"] = "1";
             invocation = invocation with { EnvironmentVariables = environmentVariables };
+        }
+
+        if (globalOptions.Options.Debug)
+        {
+            invocation = invocation with
+            {
+                OutputLineHandler = outputLine => output.Debug(invocation.Tool, outputLine),
+            };
         }
 
         return mode switch
@@ -61,10 +72,22 @@ internal sealed class ToolExecutor(
 
     private Task<ProcessResult> RunLocalAsync(ToolInvocation invocation, CancellationToken cancellationToken)
     {
+        Dictionary<string, string> environmentVariables = invocation.EnvironmentVariables is null
+            ? []
+            : new Dictionary<string, string>(invocation.EnvironmentVariables);
+        environmentVariables["SSL_CERT_DIR"] = Path.Combine(paths.CacheHomeDir, ".aspnet", "dev-certs", "trust");
+        environmentVariables["HOME"] = paths.CacheHomeDir;
+        environmentVariables["DOTNET_CLI_HOME"] = paths.CacheHomeDir;
+        environmentVariables["NUGET_PACKAGES"] = paths.NuGetPackagesDir;
+        environmentVariables["npm_config_cache"] = paths.NpmCacheDir;
+        environmentVariables["PNPM_CONFIG_STORE_DIR"] = paths.PnpmStoreDir;
+        environmentVariables["PNPM_HOME"] = paths.PnpmHomeDir;
+        environmentVariables["COREPACK_ENABLE_DOWNLOAD_PROMPT"] = "0";
+
         return processRunner.RunAsync(
             new ProcessRequest(
                 invocation.Tool, invocation.Arguments, invocation.WorkingDirectory,
-                invocation.EnvironmentVariables, Interactive: invocation.Interactive),
+                environmentVariables, Interactive: invocation.Interactive, OutputLineHandler: invocation.OutputLineHandler),
             cancellationToken);
     }
 }

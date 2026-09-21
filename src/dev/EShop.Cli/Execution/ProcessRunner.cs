@@ -49,24 +49,6 @@ internal sealed class ProcessRunner : IProcessRunner
         StringBuilder standardOutput = new();
         StringBuilder standardError = new();
 
-        if (captureOutput)
-        {
-            process.OutputDataReceived += (_, e) =>
-            {
-                if (e.Data is not null)
-                {
-                    standardOutput.AppendLine(e.Data);
-                }
-            };
-            process.ErrorDataReceived += (_, e) =>
-            {
-                if (e.Data is not null)
-                {
-                    standardError.AppendLine(e.Data);
-                }
-            };
-        }
-
         process.Start();
 
         // Killed on cancellation, not just disposed - Process.Dispose() releases the
@@ -78,8 +60,23 @@ internal sealed class ProcessRunner : IProcessRunner
 
         if (captureOutput)
         {
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
+            Task standardOutputTask = ReadOutputAsync(
+                process.StandardOutput, ProcessOutputStream.StandardOutput, standardOutput, request.OutputLineHandler);
+            Task standardErrorTask = ReadOutputAsync(
+                process.StandardError, ProcessOutputStream.StandardError, standardError, request.OutputLineHandler);
+
+            try
+            {
+                await process.WaitForExitAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                await process.WaitForExitAsync(CancellationToken.None);
+                throw;
+            }
+
+            await Task.WhenAll(standardOutputTask, standardErrorTask);
+            return new ProcessResult(process.ExitCode, standardOutput.ToString(), standardError.ToString());
         }
 
         try
@@ -93,6 +90,19 @@ internal sealed class ProcessRunner : IProcessRunner
         }
 
         return new ProcessResult(process.ExitCode, standardOutput.ToString(), standardError.ToString());
+    }
+
+    private static async Task ReadOutputAsync(
+        StreamReader reader,
+        ProcessOutputStream stream,
+        StringBuilder output,
+        Action<ProcessOutputLine>? outputLineHandler)
+    {
+        while (await reader.ReadLineAsync() is string line)
+        {
+            output.AppendLine(line);
+            outputLineHandler?.Invoke(new ProcessOutputLine(stream, line));
+        }
     }
 
     private static void KillProcessTree(Process process)

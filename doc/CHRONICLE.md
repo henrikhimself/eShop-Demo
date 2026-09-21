@@ -1229,3 +1229,27 @@ about Storefront OIDC/login hardening were merged into one section, and the two
 content. No facts were changed, no new decisions were introduced, and every invariant,
 rejected alternative, and unresolved risk referenced elsewhere in the repository was
 preserved. See git history for the pre-compression text.
+
+## Local tool cache environment alignment
+
+The utility image already redirected re-fetchable tool state into the checkout's
+`.cache` tree. Local `EShop.Cli` invocations initially inherited the developer's normal
+home and cache locations instead, making `--tools local` behave differently from the
+container fallback. `ToolExecutor` now derives the corresponding local environment
+from `RepoPaths` for reusable tool state and the repo-managed ASP.NET development
+certificate trust directory. It leaves container-only paths for image-installed tools
+unchanged, including the pinned corepack, Playwright, Node, and .NET locations.
+
+## Live debug output for utility processes
+
+The CLI originally reported external utility output only after a process exited. This
+made a running `pnpm install` indistinguishable from a stalled one. The global
+`--debug` option now selects a dedicated plain-text sink and streams stdout/stderr as
+each utility emits it. Lines include the utility and stream because commands can run
+more than one utility concurrently. Debug output intentionally replaces the normal
+human or agent presentation: its purpose is troubleshooting, not concise output.
+
+The local tool environment also sets `COREPACK_ENABLE_DOWNLOAD_PROMPT=0`. A clean
+checkout cache can require Corepack to download the pinned pnpm release; without this
+setting, Corepack waits for an interactive confirmation that is difficult to see while
+the CLI captures utility output.

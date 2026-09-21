@@ -32,12 +32,13 @@ public sealed class GlobalOptionsInterceptorTests
         FakeDevCertificateInstaller devCertificateInstaller = new();
         FakePrerequisiteChecker prerequisiteChecker = new([]);
         GlobalOptionsInterceptor interceptor = new(accessor, devCertificateInstaller, prerequisiteChecker);
-        DefaultSettings settings = new() { Tools = ExecutionMode.Local, Agent = true };
+        DefaultSettings settings = new() { Tools = ExecutionMode.Local, Agent = true, Debug = true };
 
         interceptor.Intercept(context: null!, settings);
 
         Assert.Equal(ExecutionMode.Local, accessor.Options.Tools);
         Assert.Equal(OutputMode.Ai, accessor.Options.Output);
+        Assert.True(accessor.Options.Debug);
         Assert.Equal(1, devCertificateInstaller.CallCount);
         Assert.Equal(1, prerequisiteChecker.CallCount);
     }
