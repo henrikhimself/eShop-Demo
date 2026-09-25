@@ -22,6 +22,8 @@ using EPiServer.Web.Routing;
 using Hj.EShop.Common;
 using Hj.EShop.ServiceDefaults;
 using Hj.EShop.StoreFront.Web.Features.HealthChecks;
+using Hj.EShop.StoreFront.Web.Foundation.Options;
+using Hj.EShop.StoreFront.Web.Foundation.Presentation;
 using Hj.EShop.StoreFront.Web.Initialization;
 using Mediachase.Commerce.Anonymous;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -34,9 +36,16 @@ internal sealed class Startup(IConfiguration configuration, IWebHostEnvironment 
     {
         Extensions.AddServiceDefaults(services, configuration, "EShop.StoreFront.Web", webHostEnvironment);
 
-        // General-purpose infrastructure, not owned by any one feature - currently
-        // backs HybridCacheTicketStore (AuthConfiguration.cs).
+        services.AddOptions<StoreFrontOptions>().BindConfiguration("StoreFront");
+
         services.AddHybridCache();
+
+        services
+            .AddMvc(o =>
+            {
+                o.Conventions.Add(new FeaturesControllerModelConvention());
+            })
+            .AddRazorOptions(o => o.ViewLocationExpanders.Add(new FeaturesViewLocationExpander()));
 
         services
             .AddCms()
@@ -48,31 +57,27 @@ internal sealed class Startup(IConfiguration configuration, IWebHostEnvironment 
 
         services.AddAuthConfiguration(configuration, webHostEnvironment);
 
-        // Keep the default KnownNetworks/KnownProxies (loopback only) instead of clearing
-        // them - an empty list would let a client spoof X-Forwarded-Host, and the OIDC
-        // handler computes redirect_uri from the forwarded host since every request
-        // arrives via the reverse proxy.
-        services.Configure<ForwardedHeadersOptions>(options =>
+        services.Configure<ForwardedHeadersOptions>(o =>
         {
-            options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
+            o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
         });
 
         services
             .AddEmbeddedLocalization<Startup>()
-            .Configure<ProtectedModuleOptions>(p => p.RootPath = "~/ui") // match DXP path
+            .Configure<ProtectedModuleOptions>(o => o.RootPath = "~/ui") // match DXP path
             .Configure<UIOptions>(o => o.EditUrl = new Uri("~/ui/cms/", UriKind.Relative))
-            .AddAzureBlobProvider(config =>
+            .AddAzureBlobProvider(o =>
             {
-                config.ConnectionString = configuration.GetConnectionString(KnownNames.ResourceStorageBlob);
-                config.ContainerName = KnownNames.ResourceStorefrontStorageBlobContainer;
+                o.ConnectionString = configuration.GetConnectionString(KnownNames.ResourceStorageBlob);
+                o.ContainerName = KnownNames.ResourceStorefrontStorageBlobContainer;
             });
 
-        services.Configure<CookiePolicyOptions>(options =>
+        services.Configure<CookiePolicyOptions>(o =>
         {
-            options.CheckConsentNeeded = context => false;
-            options.HttpOnly = Microsoft.AspNetCore.CookiePolicy.HttpOnlyPolicy.Always;
-            options.MinimumSameSitePolicy = SameSiteMode.None;
-            options.Secure = CookieSecurePolicy.Always;
+            o.CheckConsentNeeded = context => false;
+            o.HttpOnly = Microsoft.AspNetCore.CookiePolicy.HttpOnlyPolicy.Always;
+            o.MinimumSameSitePolicy = SameSiteMode.None;
+            o.Secure = CookieSecurePolicy.Always;
         });
 
         services.AddDatabase();
@@ -93,10 +98,10 @@ internal sealed class Startup(IConfiguration configuration, IWebHostEnvironment 
         app.UseAuthorization();
         app.UseDefaultEndpointsMiddleware();
 
-        app.UseEndpoints(endpoints =>
+        app.UseEndpoints(o =>
         {
-            endpoints.MapDefaultEndpoints();
-            endpoints.MapContent();
+            o.MapDefaultEndpoints();
+            o.MapContent();
         });
     }
 }

@@ -1,4 +1,4 @@
-// <copyright file="FrontPageController.cs" company="Henrik Jensen">
+// <copyright file="StoreFrontOptions.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -14,17 +14,9 @@
 // limitations under the License.
 // </copyright>
 
-using EPiServer.Core;
-using EPiServer.Web.Mvc;
-using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
-using Microsoft.AspNetCore.Mvc;
+namespace Hj.EShop.StoreFront.Web.Foundation.Options;
 
-namespace Hj.EShop.StoreFront.Web.Features.StoreFrontPage;
-
-public class FrontPageController : PageController<FrontPage>
+internal sealed class StoreFrontOptions
 {
-    public IActionResult Index(PageData currentPage)
-    {
-        return View();
-    }
+    public DefaultOptions? Defaults { get; set; }
 }

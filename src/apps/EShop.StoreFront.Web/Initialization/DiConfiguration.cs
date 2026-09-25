@@ -24,7 +24,7 @@ internal static class DiConfiguration
     {
         services.Scan(scan => scan
             .FromAssemblyOf<Startup>()
-                .AddClasses(c => c.Where(IncludeClass))
+                .AddClasses(c => c.Where(IncludeClass), false)
                 .UsingRegistrationStrategy(RegistrationStrategy.Skip)
                 .As(t => t.GetInterfaces().Where(IncludeInterface))
                 .WithScopedLifetime());
@@ -34,13 +34,13 @@ internal static class DiConfiguration
 
     private static bool IncludeClass(Type t)
     {
-        bool include = InKnownNamespace(t) && t.IsPublic && !t.IsGenericType && !t.IsNested && !t.IsAbstract;
+        bool include = InKnownNamespace(t) && !t.IsGenericType && !t.IsNested && !t.IsAbstract;
         return include;
     }
 
     private static bool IncludeInterface(Type t)
     {
-        bool include = InKnownNamespace(t) && t.IsPublic && !t.IsGenericType;
+        bool include = InKnownNamespace(t) && !t.IsGenericType;
         return include;
     }
 
