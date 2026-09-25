@@ -42,7 +42,10 @@ case "${X_ARCH}" in
     ;;
 esac
 
-X_PUBLISH_DIR="tmp/cli-publish/${X_RID}"
+# Published under .cache/, not tmp/: `eshop.sh clean` deletes tmp/ while this very
+# binary is still running from it, which can crash a not-yet-loaded runtime assembly
+# out from under itself. .cache/ is never touched by clean.
+X_PUBLISH_DIR=".cache/cli-publish/${X_RID}"
 X_BINARY="${X_PUBLISH_DIR}/EShop.Cli"
 
 # Rebuild the utility image whenever its own content changes.
@@ -59,9 +62,16 @@ fi
 
 X_SOURCE_HASH_FILE="${X_PUBLISH_DIR}/.source-hash"
 
-# A content hash, not file mtimes, decides staleness.
+# A content hash, not file mtimes, decides staleness. Covers EShop.Cli itself, its
+# EShop.Common project reference, and the root props that influence every project's
+# resolved package versions and build settings - a change to any of these can change
+# the published binary without touching EShop.Cli's own .cs/.csproj files.
 X_CURRENT_HASH="$(
-  find src/dev/EShop.Cli \( -name obj -o -name bin \) -prune -o \( -name '*.cs' -o -name '*.csproj' \) -type f -print \
+  { find src/dev/EShop.Cli src/shared/EShop.Common \( -name obj -o -name bin \) -prune \
+      -o \( -name '*.cs' -o -name '*.csproj' \) -type f -print
+    echo Directory.Packages.props
+    echo Directory.Build.props
+  } \
     | LC_ALL=C sort \
     | xargs sha256sum \
     | sha256sum \

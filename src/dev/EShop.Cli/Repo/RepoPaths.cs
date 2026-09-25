@@ -67,6 +67,8 @@ internal sealed class RepoPaths(string root)
 
     public string ContainerEnvPath => Path.Combine(Root, "scripts", "container.env");
 
+    public string CliAppSettingsPath => Path.Combine(Root, "src", "dev", "EShop.Cli", "appsettings.json");
+
     public string TmpDir => Path.Combine(Root, "tmp");
 
     public string TestResultsDir => Path.Combine(TmpDir, "TestResults");

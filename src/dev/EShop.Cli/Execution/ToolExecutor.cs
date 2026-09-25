@@ -75,14 +75,10 @@ internal sealed class ToolExecutor(
         Dictionary<string, string> environmentVariables = invocation.EnvironmentVariables is null
             ? []
             : new Dictionary<string, string>(invocation.EnvironmentVariables);
-        environmentVariables["SSL_CERT_DIR"] = Path.Combine(paths.CacheHomeDir, ".aspnet", "dev-certs", "trust");
-        environmentVariables["HOME"] = paths.CacheHomeDir;
-        environmentVariables["DOTNET_CLI_HOME"] = paths.CacheHomeDir;
-        environmentVariables["NUGET_PACKAGES"] = paths.NuGetPackagesDir;
-        environmentVariables["npm_config_cache"] = paths.NpmCacheDir;
-        environmentVariables["PNPM_CONFIG_STORE_DIR"] = paths.PnpmStoreDir;
-        environmentVariables["PNPM_HOME"] = paths.PnpmHomeDir;
-        environmentVariables["COREPACK_ENABLE_DOWNLOAD_PROMPT"] = "0";
+        foreach ((string key, string value) in LocalToolEnvironment.Build(paths))
+        {
+            environmentVariables[key] = value;
+        }
 
         return processRunner.RunAsync(
             new ProcessRequest(

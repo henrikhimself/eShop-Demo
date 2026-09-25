@@ -54,6 +54,8 @@ registrar.Register(typeof(IApiSchemaGenerator), typeof(ApiSchemaGenerator));
 registrar.Register(typeof(IAppHostGuard), typeof(AppHostGuard));
 registrar.Register(typeof(IConsoleKeyReader), typeof(ConsoleKeyReader));
 registrar.Register(typeof(IAppHostSessionRunner), typeof(AppHostSessionRunner));
+registrar.Register(typeof(IBuildSettingsReader), typeof(BuildSettingsReader));
+registrar.Register(typeof(IRunSettingsReader), typeof(RunSettingsReader));
 
 // Deferred and memoized: IOutputSink can only resolve correctly after
 // GlobalOptionsInterceptor has run, and the CLI's final flush below needs to reach
@@ -80,6 +82,8 @@ app.Configure(config =>
         .WithDescription("Apply every auto-fixable formatting/lint fix.");
     config.AddCommand<CleanCommand>("clean")
         .WithDescription("Delete bin/obj, Next.js build caches, and tmp/ (never node_modules, .cache/, or the utility image).");
+    config.AddCommand<EnvCommand>("env")
+        .WithDescription("Print `export` statements for the local dev-tool sandbox environment (eval this into your shell).");
 
     config.AddBranch<TestSettings>("test", test =>
     {

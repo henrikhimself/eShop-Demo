@@ -17,10 +17,14 @@
 using Aspire.Hosting.Azure;
 using Aspire.Hosting.JavaScript;
 using Hj.EShop.Common;
+using Hj.RemoteContainers.Aspire;
 using Hj.ReverseProxy.Aspire;
+using Microsoft.Extensions.Hosting;
 using Projects;
 
 IDistributedApplicationBuilder builder = DistributedApplication.CreateBuilder(args);
+
+bool isProductionDeployment = builder.ExecutionContext.IsPublishMode || builder.Environment.IsProduction();
 
 #region SQL server
 IResourceBuilder<AzureSqlServerResource> sql = builder.AddAzureSqlServer(KnownNames.ResourceSql)
@@ -99,7 +103,7 @@ IResourceBuilder<ProjectResource> storefrontWeb = builder
 #endregion
 
 #region Development environment
-if (!builder.ExecutionContext.IsPublishMode)
+if (!isProductionDeployment)
 {
     #region Keycloak
     IResourceBuilder<ParameterResource> keycloakAdminUsername = builder.AddParameter(KnownNames.ResourceKeycloakAdminUsername, "admin");
@@ -133,6 +137,7 @@ if (!builder.ExecutionContext.IsPublishMode)
         .WithReference(submissionsImageContainer)
         .WithExternalHttpEndpoints();
 
+    #region Reverse proxy
     string reverseProxyHome = Environment.GetEnvironmentVariable(KnownNames.ReverseProxyHomeEnvVarName)
         ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".reverseproxy");
     try
@@ -161,11 +166,14 @@ if (!builder.ExecutionContext.IsPublishMode)
         .WithReverseProxyReference(keycloak.GetEndpoint("http"), KnownNames.ReverseProxyIdentityHostName, true)
         .WithReverseProxyReference(sellerPortalWeb.GetEndpoint("http"), KnownNames.ReverseProxySellerPortalHostName, true)
         .WithReverseProxyReference(storefrontWeb.GetEndpoint("http"), KnownNames.ReverseProxyStorefrontHostName, true);
+    #endregion
+
+    builder.AddSshTunneling();
 }
 #endregion
 
 #region Production environment
-if (builder.ExecutionContext.IsPublishMode)
+if (isProductionDeployment)
 {
     builder.AddAzureContainerAppEnvironment(KnownNames.ResourceAcaEnvironment);
 

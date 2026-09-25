@@ -24,7 +24,8 @@ namespace Hj.EShop.Cli.Commands;
 
 // Never mutates files - see FormatCommand for that. Fails if the report is
 // non-empty, including style-only diagnostics.
-internal sealed class BuildCommand(IOutputSink output, IToolExecutor toolExecutor, RepoPaths paths)
+internal sealed class BuildCommand(
+    IOutputSink output, IToolExecutor toolExecutor, RepoPaths paths, IBuildSettingsReader buildSettingsReader)
     : AsyncCommand<DefaultSettings>
 {
     private const string FormatReportFileName = "build-format.json";
@@ -88,6 +89,13 @@ internal sealed class BuildCommand(IOutputSink output, IToolExecutor toolExecuto
                 cancellationToken);
         }
 
+        // Extra "dotnet build" arguments (currently: disabling SourceLink's git queries,
+        // since this repository has no remote for it to resolve - see appsettings.json's
+        // "build:params") live in the CLI's own settings, not in the vendored
+        // lib/DotNet-ReverseProxy or lib/Aspire-RemoteContainers projects, since a re-vendor
+        // from a fresh zip would drop any setting made there.
+        IReadOnlyList<string> extraBuildParams = await buildSettingsReader.GetBuildParamsAsync(cancellationToken);
+
         ProcessResult buildResult;
         using (output.BeginStep("dotnet build"))
         {
@@ -97,6 +105,7 @@ internal sealed class BuildCommand(IOutputSink output, IToolExecutor toolExecuto
                     [
                         "build", relativeSolution, "--nologo", "--no-incremental", "-warnaserror",
                         "/p:TreatWarningsAsErrors=true", "/p:RunAnalyzersDuringBuild=true",
+                        .. extraBuildParams,
                     ],
                     WorkingDirectory: paths.Root),
                 cancellationToken);

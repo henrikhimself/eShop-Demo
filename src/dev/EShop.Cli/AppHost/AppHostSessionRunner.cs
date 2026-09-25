@@ -14,24 +14,29 @@
 // limitations under the License.
 // </copyright>
 
+using Hj.EShop.Cli.Commands;
 using Hj.EShop.Cli.Execution;
 using Hj.EShop.Cli.Output;
 using Hj.EShop.Cli.Repo;
 
 namespace Hj.EShop.Cli.AppHost;
 
-internal sealed class AppHostSessionRunner(IOutputSink output, IToolExecutor toolExecutor, IConsoleKeyReader keyReader, RepoPaths paths)
+internal sealed class AppHostSessionRunner(
+    IOutputSink output, IToolExecutor toolExecutor, IConsoleKeyReader keyReader, RepoPaths paths, IRunSettingsReader runSettingsReader)
     : IAppHostSessionRunner
 {
     public async Task<int> RunAsync(IReadOnlyList<string> extraArguments, CancellationToken cancellationToken)
     {
         string relativeAppHost = Path.GetRelativePath(paths.Root, paths.AppHostProject);
 
+        IReadOnlyDictionary<string, string> runEnvironmentVariables = await runSettingsReader.GetRunEnvironmentVariablesAsync(cancellationToken);
+
         ProcessResult startResult = await toolExecutor.RunAsync(
             new ToolInvocation(
                 "aspire",
                 ["start", "--no-build", "--non-interactive", "--apphost", relativeAppHost, .. extraArguments],
-                WorkingDirectory: paths.Root),
+                WorkingDirectory: paths.Root,
+                EnvironmentVariables: runEnvironmentVariables),
             cancellationToken);
 
         // Not streamed live (this ToolInvocation isn't Interactive) - `aspire start`'s
@@ -57,7 +62,9 @@ internal sealed class AppHostSessionRunner(IOutputSink output, IToolExecutor too
         }
 
         ProcessResult stopResult = await toolExecutor.RunAsync(
-            new ToolInvocation("aspire", ["stop", "--non-interactive", "--apphost", relativeAppHost], WorkingDirectory: paths.Root),
+            new ToolInvocation(
+                "aspire", ["stop", "--non-interactive", "--apphost", relativeAppHost],
+                WorkingDirectory: paths.Root, EnvironmentVariables: runEnvironmentVariables),
             CancellationToken.None);
 
         return stopResult.ExitCode;

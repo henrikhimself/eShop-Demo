@@ -68,6 +68,16 @@ A bootstrap script builds and runs the CLI:
 ./scripts/eshop.sh clean --agent
 ```
 
+```bash
+# Print `export` statements for the same .cache/-sandboxed environment ToolExecutor uses for local tools - for running a utility the CLI doesn't wrap itself against that same sandbox
+eval "$(./scripts/eshop.sh env --agent)"
+```
+
+Never run `source ./scripts/eshop.sh env`: the wrapper script `cd`s to the repo root
+and ends with `exec`, which replaces the calling shell process instead of returning to
+it. `eval "$(...)"` runs the script in a subshell and only evals the printed `export`
+lines into the caller's own shell.
+
 ### Running
 
 ```bash

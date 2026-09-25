@@ -28,7 +28,8 @@ internal sealed class RunCommand(
     ILocalToolLocator localToolLocator,
     IAppHostSessionRunner sessionRunner,
     IContainerRunner containerRunner,
-    RepoPaths paths) : AsyncCommand<RunSettings>
+    RepoPaths paths,
+    IRunSettingsReader runSettingsReader) : AsyncCommand<RunSettings>
 {
     protected override async Task<int> ExecuteAsync(CommandContext context, RunSettings settings, CancellationToken cancellationToken)
     {
@@ -49,7 +50,9 @@ internal sealed class RunCommand(
         // continuous session inside a single container (see AppHostContainerScript).
         string relativeAppHost = Path.GetRelativePath(paths.Root, paths.AppHostProject);
         string script = AppHostContainerScript.Build(relativeAppHost, settings.AppHostArguments);
-        ProcessResult result = await containerRunner.RunAsync(new ToolInvocation("bash", ["-c", script], Interactive: true), cancellationToken);
+        IReadOnlyDictionary<string, string> runEnvironmentVariables = await runSettingsReader.GetRunEnvironmentVariablesAsync(cancellationToken);
+        ProcessResult result = await containerRunner.RunAsync(
+            new ToolInvocation("bash", ["-c", script], Interactive: true, EnvironmentVariables: runEnvironmentVariables), cancellationToken);
         return result.ExitCode;
     }
 }

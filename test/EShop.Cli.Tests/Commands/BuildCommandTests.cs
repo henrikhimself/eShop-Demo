@@ -28,6 +28,7 @@ public sealed class BuildCommandTests : IDisposable
 {
     private readonly string _root = Directory.CreateTempSubdirectory("eshop-cli-tests-").FullName;
     private readonly RepoPaths _paths;
+    private readonly FakeBuildSettingsReader _buildSettingsReader = new();
 
     public BuildCommandTests()
     {
@@ -53,7 +54,7 @@ public sealed class BuildCommandTests : IDisposable
         });
         await File.WriteAllTextAsync(_paths.GeneratedApiSchema, "committed content", TestContext.Current.CancellationToken);
         RecordingOutputSink output = new();
-        BuildCommand command = new(output, toolExecutor, _paths);
+        BuildCommand command = new(output, toolExecutor, _paths, _buildSettingsReader);
 
         int exitCode = await ((ICommand<DefaultSettings>)command).ExecuteAsync(
             context: null!, settings: new DefaultSettings(), TestContext.Current.CancellationToken);
@@ -81,7 +82,7 @@ public sealed class BuildCommandTests : IDisposable
         });
         await File.WriteAllTextAsync(_paths.GeneratedApiSchema, "committed content", TestContext.Current.CancellationToken);
         RecordingOutputSink output = new();
-        BuildCommand command = new(output, toolExecutor, _paths);
+        BuildCommand command = new(output, toolExecutor, _paths, _buildSettingsReader);
 
         int exitCode = await ((ICommand<DefaultSettings>)command).ExecuteAsync(
             context: null!, settings: new DefaultSettings(), TestContext.Current.CancellationToken);
@@ -105,7 +106,7 @@ public sealed class BuildCommandTests : IDisposable
         });
         await File.WriteAllTextAsync(_paths.GeneratedApiSchema, "stale committed content", TestContext.Current.CancellationToken);
         RecordingOutputSink output = new();
-        BuildCommand command = new(output, toolExecutor, _paths);
+        BuildCommand command = new(output, toolExecutor, _paths, _buildSettingsReader);
 
         int exitCode = await ((ICommand<DefaultSettings>)command).ExecuteAsync(
             context: null!, settings: new DefaultSettings(), TestContext.Current.CancellationToken);
@@ -128,7 +129,7 @@ public sealed class BuildCommandTests : IDisposable
         });
         await File.WriteAllTextAsync(_paths.GeneratedApiSchema, "committed content", TestContext.Current.CancellationToken);
         RecordingOutputSink output = new();
-        BuildCommand command = new(output, toolExecutor, _paths);
+        BuildCommand command = new(output, toolExecutor, _paths, _buildSettingsReader);
 
         int exitCode = await ((ICommand<DefaultSettings>)command).ExecuteAsync(
             context: null!, settings: new DefaultSettings(), TestContext.Current.CancellationToken);
@@ -157,7 +158,7 @@ public sealed class BuildCommandTests : IDisposable
         });
         await File.WriteAllTextAsync(_paths.GeneratedApiSchema, "committed content", TestContext.Current.CancellationToken);
         RecordingOutputSink output = new();
-        BuildCommand command = new(output, toolExecutor, _paths);
+        BuildCommand command = new(output, toolExecutor, _paths, _buildSettingsReader);
 
         int exitCode = await ((ICommand<DefaultSettings>)command).ExecuteAsync(
             context: null!, settings: new DefaultSettings(), TestContext.Current.CancellationToken);
@@ -186,7 +187,7 @@ public sealed class BuildCommandTests : IDisposable
                 ? TimeSpan.FromMilliseconds(200)
                 : TimeSpan.Zero);
         await File.WriteAllTextAsync(_paths.GeneratedApiSchema, "committed content", TestContext.Current.CancellationToken);
-        BuildCommand command = new(new RecordingOutputSink(), toolExecutor, _paths);
+        BuildCommand command = new(new RecordingOutputSink(), toolExecutor, _paths, _buildSettingsReader);
 
         var stopwatch = Stopwatch.StartNew();
         await ((ICommand<DefaultSettings>)command).ExecuteAsync(
@@ -213,7 +214,7 @@ public sealed class BuildCommandTests : IDisposable
             return new ProcessResult(0, string.Empty, string.Empty);
         });
         await File.WriteAllTextAsync(_paths.GeneratedApiSchema, "committed content", TestContext.Current.CancellationToken);
-        BuildCommand command = new(new RecordingOutputSink(), toolExecutor, _paths);
+        BuildCommand command = new(new RecordingOutputSink(), toolExecutor, _paths, _buildSettingsReader);
 
         await ((ICommand<DefaultSettings>)command).ExecuteAsync(context: null!, settings: new DefaultSettings(), TestContext.Current.CancellationToken);
 
@@ -246,7 +247,7 @@ public sealed class BuildCommandTests : IDisposable
         });
         await File.WriteAllTextAsync(_paths.GeneratedApiSchema, "committed content", TestContext.Current.CancellationToken);
         RecordingOutputSink output = new();
-        BuildCommand command = new(output, toolExecutor, _paths);
+        BuildCommand command = new(output, toolExecutor, _paths, _buildSettingsReader);
 
         int exitCode = await ((ICommand<DefaultSettings>)command).ExecuteAsync(
             context: null!, settings: new DefaultSettings(), TestContext.Current.CancellationToken);
