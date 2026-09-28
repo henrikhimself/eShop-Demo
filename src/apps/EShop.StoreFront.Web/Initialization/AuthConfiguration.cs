@@ -61,11 +61,6 @@ internal static class AuthConfiguration
                     options.ExpireTimeSpan = TimeSpan.FromHours(1);
                     options.SlidingExpiration = true;
 
-                    // Mirrors EShop.SellerPortal.Bff's OidcSignOutTokenRefresh: always
-                    // re-validates against Keycloak on every request, since a Keycloak
-                    // restart can forget a session without advancing the saved id_token's
-                    // exp claim (doc/CHRONICLE.md). Skipped for Entra External ID, whose
-                    // production URLs are assumed stable.
                     options.Events.OnValidatePrincipal = async context =>
                     {
                         OpenIdConnectOptions? oidcOptions = context.HttpContext.RequestServices
@@ -129,7 +124,7 @@ internal static class AuthConfiguration
         // handler is configured centrally in EShop.ServiceDefaults (non-Production only).
         services.AddHttpClient();
 
-        // Skipped when using fake infrastructure - no real IConnectionMultiplexer to bind
+        // Skipped when using fake infrastructure due to no real IConnectionMultiplexer to bind
         // the key ring's XmlRepository to.
         if (webHostEnvironment.ShouldUseRealInfrastructure())
         {
@@ -144,13 +139,12 @@ internal static class AuthConfiguration
         }
 
         // SetApplicationName isolates this app's Data Protection keys if another app
-        // later shares the same Redis instance; the actual XmlRepository is set above,
-        // inside the infrastructure guard.
+        // later shares the same Redis instance
         services.AddDataProtection()
             .SetApplicationName("EShop.Storefront");
 
-        // The "storefront-ticket:" prefix avoids colliding with EShop.SellerPortal.Bff's
-        // tickets in the same shared Redis "cache" resource.
+        // The "storefront-ticket:" prefix avoids colliding with other tickets in the same
+        // shared Redis "cache" resource.
         services.AddSingleton<ITicketStore>(
             sp => new HybridCacheTicketStore(sp.GetRequiredService<HybridCache>(), "storefront-ticket:"));
         services.AddOptions<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme)

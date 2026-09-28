@@ -14,6 +14,7 @@
 // limitations under the License.
 // </copyright>
 
+using System.Diagnostics.CodeAnalysis;
 using Hj.EShop.StoreFront.Web.Foundation.Operations.Internal;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.Operations;
@@ -25,4 +26,7 @@ internal class OperationResponse
     public bool IsSuccess { get; init; }
 
     public InvalidOperationException? Error { get; init; }
+
+    [MemberNotNullWhen(true, nameof(Error))]
+    public bool HasError { get; init; }
 }

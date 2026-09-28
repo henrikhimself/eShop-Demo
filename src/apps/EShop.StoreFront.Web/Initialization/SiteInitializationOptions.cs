@@ -1,4 +1,4 @@
-// <copyright file="DefaultOptions.cs" company="Henrik Jensen">
+// <copyright file="SiteInitializationOptions.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -14,11 +14,13 @@
 // limitations under the License.
 // </copyright>
 
-namespace Hj.EShop.StoreFront.Web.Foundation.Options;
+namespace Hj.EShop.StoreFront.Web.Initialization;
 
-internal sealed class DefaultOptions
+internal sealed class SiteInitializationOptions
 {
     public string? ApplicationName { get; set; }
 
     public string? ApplicationAuthority { get; set; }
+
+    public string? ApplicationLanguage { get; set; }
 }

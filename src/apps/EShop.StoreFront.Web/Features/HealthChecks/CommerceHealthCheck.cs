@@ -37,7 +37,7 @@ internal sealed class CommerceHealthCheck : IHealthCheck
     {
         var result = HealthCheckResult.Healthy("Commerce is healthy");
 
-#pragma warning disable CA1031
+#pragma warning disable CA1031 // Do not catch general exception types
         try
         {
             var lo = new LoaderOptions { LanguageLoaderOption.MasterLanguage() };

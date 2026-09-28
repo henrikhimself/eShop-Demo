@@ -22,7 +22,6 @@ using EPiServer.Web.Routing;
 using Hj.EShop.Common;
 using Hj.EShop.ServiceDefaults;
 using Hj.EShop.StoreFront.Web.Features.HealthChecks;
-using Hj.EShop.StoreFront.Web.Foundation.Options;
 using Hj.EShop.StoreFront.Web.Foundation.Presentation;
 using Hj.EShop.StoreFront.Web.Initialization;
 using Mediachase.Commerce.Anonymous;
@@ -35,8 +34,6 @@ internal sealed class Startup(IConfiguration configuration, IWebHostEnvironment 
     public void ConfigureServices(IServiceCollection services)
     {
         Extensions.AddServiceDefaults(services, configuration, "EShop.StoreFront.Web", webHostEnvironment);
-
-        services.AddOptions<StoreFrontOptions>().BindConfiguration("StoreFront");
 
         services.AddHybridCache();
 
@@ -55,7 +52,9 @@ internal sealed class Startup(IConfiguration configuration, IWebHostEnvironment 
             .AddVisitorGroupsMvc()
             .AddVisitorGroupsUI();
 
-        services.AddAuthConfiguration(configuration, webHostEnvironment);
+        services
+            .AddSiteInitialization()
+            .AddAuthConfiguration(configuration, webHostEnvironment);
 
         services.Configure<ForwardedHeadersOptions>(o =>
         {

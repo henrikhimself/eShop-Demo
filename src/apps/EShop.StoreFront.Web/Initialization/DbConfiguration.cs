@@ -24,8 +24,7 @@ internal static class DbConfiguration
 {
     public static IServiceCollection AddDatabase(this IServiceCollection services)
     {
-        // See doc/adr/0023-explicit-database-schema-migration-resources.md - normal
-        // startup must never mutate schema.
+        // Migration is done elsewhere
         services.Configure<DataAccessOptions>(options =>
         {
             options.UpdateDatabaseSchema = false;

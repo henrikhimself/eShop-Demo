@@ -1,4 +1,4 @@
-// <copyright file="OperationExtensions.cs" company="Henrik Jensen">
+// <copyright file="IDefaultSiteService.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -14,19 +14,12 @@
 // limitations under the License.
 // </copyright>
 
-using System.Security.Claims;
-using Hj.EShop.StoreFront.Web.Foundation.Operations.Internal;
+using EPiServer.Applications;
+using Hj.EShop.StoreFront.Web.Foundation.Operations;
 
-namespace Hj.EShop.StoreFront.Web.Foundation.Operations;
+namespace Hj.EShop.StoreFront.Web.Features.DefaultSite;
 
-internal static class OperationExtensions
+internal interface IDefaultSiteService
 {
-    extension(OperationContext context)
-    {
-        public ClaimsPrincipal? ClaimsPrincipal => context.Principal as ClaimsPrincipal;
-
-        public ClaimsIdentity? ClaimsIdentity => context.ClaimsPrincipal?.Identity as ClaimsIdentity;
-
-        public bool IsUserAuthenticated => context.ClaimsIdentity?.IsAuthenticated ?? false;
-    }
+    Task<OperationDataResponse<IRoutableApplication>> GetOrCreateAsync(OperationDataRequest<DefaultSiteData> request);
 }

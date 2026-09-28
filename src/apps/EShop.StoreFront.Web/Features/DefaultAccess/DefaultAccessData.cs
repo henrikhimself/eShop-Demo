@@ -1,4 +1,4 @@
-// <copyright file="OperationExtensions.cs" company="Henrik Jensen">
+// <copyright file="DefaultAccessData.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -14,19 +14,16 @@
 // limitations under the License.
 // </copyright>
 
-using System.Security.Claims;
-using Hj.EShop.StoreFront.Web.Foundation.Operations.Internal;
+using EPiServer.Core;
+using EPiServer.Security;
 
-namespace Hj.EShop.StoreFront.Web.Foundation.Operations;
+namespace Hj.EShop.StoreFront.Web.Features.DefaultAccess;
 
-internal static class OperationExtensions
+internal sealed class DefaultAccessData
 {
-    extension(OperationContext context)
-    {
-        public ClaimsPrincipal? ClaimsPrincipal => context.Principal as ClaimsPrincipal;
+    public required ContentReference ContentReference { get; init; }
 
-        public ClaimsIdentity? ClaimsIdentity => context.ClaimsPrincipal?.Identity as ClaimsIdentity;
+    public required Action<IContentSecurityDescriptor> Action { get; init; }
 
-        public bool IsUserAuthenticated => context.ClaimsIdentity?.IsAuthenticated ?? false;
-    }
+    public SecuritySaveType SaveType { get; init; } = SecuritySaveType.Replace;
 }

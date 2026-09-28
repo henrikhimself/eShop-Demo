@@ -14,18 +14,18 @@
 // limitations under the License.
 // </copyright>
 
-using EPiServer;
+using System.Globalization;
 using EPiServer.Applications;
 using EPiServer.Commerce.Initialization;
 using EPiServer.Commerce.Routing;
-using EPiServer.Core;
-using EPiServer.DataAccess;
 using EPiServer.Framework;
 using EPiServer.Framework.Initialization;
 using EPiServer.Security;
 using Hj.EShop.Common;
+using Hj.EShop.StoreFront.Web.Features.DefaultAccess;
+using Hj.EShop.StoreFront.Web.Features.DefaultSite;
 using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
-using Hj.EShop.StoreFront.Web.Foundation.Options;
+using Hj.EShop.StoreFront.Web.Foundation.Operations;
 using Microsoft.Extensions.Options;
 
 namespace Hj.EShop.StoreFront.Web.Initialization;
@@ -44,50 +44,72 @@ internal sealed class SiteInitialization : IInitializableModule
         context.InitComplete -= InitCompleteAsync;
     }
 
-    private static async Task<IRoutableApplication> EnsureDefaultApplicationAsync(IServiceProvider serviceProvider)
+    private static async Task<IRoutableApplication> EnsureDefaultSiteAsync(
+        OperationRequest request,
+        IDefaultSiteService defaultSiteService,
+        IOptions<SiteInitializationOptions> options)
     {
-        IApplicationRepository applicationRepository = serviceProvider.GetRequiredService<IApplicationRepository>();
-        IContentRepository contentRepository = serviceProvider.GetRequiredService<IContentRepository>();
-        IOptions<StoreFrontOptions> storeFrontOptions = serviceProvider.GetRequiredService<IOptions<StoreFrontOptions>>();
+        SiteInitializationOptions config = options.Value;
+        string? applicationName = config?.ApplicationName;
+        string? applicationAuthority = config?.ApplicationAuthority;
+        string? applicationLanguage = config?.ApplicationLanguage;
 
-        IRoutableApplication? defaultApp = await applicationRepository.GetDefaultAsync();
-
-        if (defaultApp is null)
+        DefaultSiteData defaultSiteData = new()
         {
-            FrontPage frontPage = contentRepository.GetDefault<FrontPage>(ContentReference.RootPage);
-            frontPage.Name = "FrontPage";
-            ContentReference frontPageReference = contentRepository.Save(frontPage, SaveAction.Publish, AccessLevel.NoAccess);
+            Name = string.IsNullOrWhiteSpace(applicationName)
+                ? "Default"
+                : applicationName,
+            Authority = string.IsNullOrWhiteSpace(applicationAuthority)
+                ? $"{KnownNames.ReverseProxyStorefrontHostName}:{KnownNames.ReverseProxyHttpsPort}"
+                : applicationAuthority,
+            MainLanguage = CultureInfo.GetCultureInfo(string.IsNullOrWhiteSpace(applicationLanguage)
+                ? "en"
+                : applicationLanguage),
+            StartPageType = typeof(FrontPage),
+            PreferredUrlScheme = UrlScheme.Http,
+        };
+        OperationDataResponse<IRoutableApplication> response = await defaultSiteService.GetOrCreateAsync(request.CreateOperationRequest(defaultSiteData));
 
-            DefaultOptions? appDefaults = storeFrontOptions.Value.Defaults;
-            string appName = appDefaults?.ApplicationName ?? "Default" + Random.Shared.Next();
-            string hostAuthority = appDefaults?.ApplicationAuthority
-                ?? $"{KnownNames.ReverseProxyStorefrontHostName}:{KnownNames.ReverseProxyHttpsPort}";
-
-            var storeFrontApp = new InProcessWebsite(appName.ToLowerInvariant(), frontPageReference)
-            {
-                DisplayName = appName
-            };
-            var host = new ApplicationHost(hostAuthority)
-            {
-                Type = ApplicationHostType.Default,
-                PreferredUrlScheme = UrlScheme.Http,
-            };
-            storeFrontApp.Hosts.Add(host);
-            await applicationRepository.SaveAsync(storeFrontApp, CancellationToken.None);
-
-            defaultApp = storeFrontApp;
-            await applicationRepository.MakeDefaultAsync(defaultApp, true, CancellationToken.None);
+        if (response.HasError)
+        {
+            throw response.Error;
         }
 
-        return defaultApp;
+        if (response.HasData)
+        {
+            return response.Data;
+        }
+
+        throw new InitializationException("Failed to ensure default application");
     }
 
-    private static void MapCatalogRoute(IRoutableApplication defaultApp)
+    private static void EnsureDefaultAccess(
+        OperationRequest request,
+        IRoutableApplication defaultSite,
+        IDefaultAccessService defaultAccessService)
+    {
+        defaultAccessService.ResetRootPage();
+        defaultAccessService.ResetBluePrints();
+        defaultAccessService.ResetWasteBasket();
+
+        DefaultAccessData defaultAppAccess = new()
+        {
+            ContentReference = defaultSite.EntryPoint,
+            Action = acl =>
+            {
+                if (!acl.IsInherited)
+                {
+                    acl.ToInherited();
+                }
+            },
+        };
+        defaultAccessService.Reset(request.CreateOperationRequest(defaultAppAccess));
+    }
+
+    private static void MapCatalogRoute(IRoutableApplication defaultSite)
     {
         bool enableOutgoingSeoUri = false;
-        CatalogRouteHelper.MapDefaultHierarchialRouter(() => ContentReference.IsNullOrEmpty(ContentReference.StartPage)
-            ? ContentReference.RootPage
-            : defaultApp.EntryPoint, enableOutgoingSeoUri);
+        CatalogRouteHelper.MapDefaultHierarchialRouter(() => defaultSite.EntryPoint, enableOutgoingSeoUri);
     }
 
     private async void InitCompleteAsync(object? sender, EventArgs args)
@@ -97,10 +119,21 @@ internal sealed class SiteInitialization : IInitializableModule
             return;
         }
 
+        OperationRequest request = context.CreateOperationRequest();
+
         await using AsyncServiceScope scope = context.Services.CreateAsyncScope();
         IServiceProvider serviceProvider = scope.ServiceProvider;
 
-        IRoutableApplication defaultApp = await EnsureDefaultApplicationAsync(serviceProvider);
-        MapCatalogRoute(defaultApp);
+        IRoutableApplication defaultSite = await EnsureDefaultSiteAsync(
+            request,
+            serviceProvider.GetRequiredService<IDefaultSiteService>(),
+            serviceProvider.GetRequiredService<IOptions<SiteInitializationOptions>>());
+
+        EnsureDefaultAccess(
+            request,
+            defaultSite,
+            serviceProvider.GetRequiredService<IDefaultAccessService>());
+
+        MapCatalogRoute(defaultSite);
     }
 }

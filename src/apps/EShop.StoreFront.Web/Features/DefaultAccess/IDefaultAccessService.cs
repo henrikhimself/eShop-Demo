@@ -1,4 +1,4 @@
-// <copyright file="StoreFrontOptions.cs" company="Henrik Jensen">
+// <copyright file="IDefaultAccessService.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -14,9 +14,17 @@
 // limitations under the License.
 // </copyright>
 
-namespace Hj.EShop.StoreFront.Web.Foundation.Options;
+using Hj.EShop.StoreFront.Web.Foundation.Operations;
 
-internal sealed class StoreFrontOptions
+namespace Hj.EShop.StoreFront.Web.Features.DefaultAccess;
+
+internal interface IDefaultAccessService
 {
-    public DefaultOptions? Defaults { get; set; }
+    void ResetRootPage();
+
+    void ResetBluePrints();
+
+    void ResetWasteBasket();
+
+    void Reset(OperationDataRequest<DefaultAccessData> request);
 }

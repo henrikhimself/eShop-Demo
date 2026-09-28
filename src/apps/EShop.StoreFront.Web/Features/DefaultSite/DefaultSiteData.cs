@@ -1,4 +1,4 @@
-// <copyright file="OperationExtensions.cs" company="Henrik Jensen">
+// <copyright file="DefaultSiteData.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -14,19 +14,20 @@
 // limitations under the License.
 // </copyright>
 
-using System.Security.Claims;
-using Hj.EShop.StoreFront.Web.Foundation.Operations.Internal;
+using System.Globalization;
+using EPiServer.Applications;
 
-namespace Hj.EShop.StoreFront.Web.Foundation.Operations;
+namespace Hj.EShop.StoreFront.Web.Features.DefaultSite;
 
-internal static class OperationExtensions
+internal sealed class DefaultSiteData
 {
-    extension(OperationContext context)
-    {
-        public ClaimsPrincipal? ClaimsPrincipal => context.Principal as ClaimsPrincipal;
+    public required string Name { get; set; }
 
-        public ClaimsIdentity? ClaimsIdentity => context.ClaimsPrincipal?.Identity as ClaimsIdentity;
+    public required string Authority { get; set; }
 
-        public bool IsUserAuthenticated => context.ClaimsIdentity?.IsAuthenticated ?? false;
-    }
+    public required CultureInfo MainLanguage { get; set; }
+
+    public required Type StartPageType { get; set; }
+
+    public UrlScheme? PreferredUrlScheme { get; set; }
 }

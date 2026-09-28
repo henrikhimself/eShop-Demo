@@ -32,7 +32,7 @@ internal sealed class CmsHealthCheck : IHealthCheck
     {
         var result = HealthCheckResult.Healthy("CMS is healthy");
 
-#pragma warning disable CA1031
+#pragma warning disable CA1031 // Do not catch general exception types
         try
         {
             IEnumerable<Application> apps = await _applicationRepository.ListAsync(cancellationToken);

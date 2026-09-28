@@ -1,4 +1,4 @@
-// <copyright file="OperationExtensions.cs" company="Henrik Jensen">
+// <copyright file="SiteInitializationExtensions.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -14,19 +14,14 @@
 // limitations under the License.
 // </copyright>
 
-using System.Security.Claims;
-using Hj.EShop.StoreFront.Web.Foundation.Operations.Internal;
+namespace Hj.EShop.StoreFront.Web.Initialization;
 
-namespace Hj.EShop.StoreFront.Web.Foundation.Operations;
-
-internal static class OperationExtensions
+internal static class SiteInitializationExtensions
 {
-    extension(OperationContext context)
+    public static IServiceCollection AddSiteInitialization(this IServiceCollection services)
     {
-        public ClaimsPrincipal? ClaimsPrincipal => context.Principal as ClaimsPrincipal;
-
-        public ClaimsIdentity? ClaimsIdentity => context.ClaimsPrincipal?.Identity as ClaimsIdentity;
-
-        public bool IsUserAuthenticated => context.ClaimsIdentity?.IsAuthenticated ?? false;
+        services
+            .AddOptions<SiteInitializationOptions>().BindConfiguration("SiteInitialization");
+        return services;
     }
 }
