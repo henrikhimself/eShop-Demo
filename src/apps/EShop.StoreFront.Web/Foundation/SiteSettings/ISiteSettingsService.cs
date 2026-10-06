@@ -14,6 +14,7 @@
 // limitations under the License.
 // </copyright>
 
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
 using Hj.EShop.StoreFront.Web.Foundation.Operations;
 using Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Models;
 
@@ -21,9 +22,9 @@ namespace Hj.EShop.StoreFront.Web.Foundation.SiteSettings;
 
 internal interface ISiteSettingsService
 {
-    Task<OperationDataResponse<T>> GetSettingsAsync<T>(OperationDataRequest<GetSettingsRequest> request)
+    Task<OperationDataResponse<T>> GetSettingsAsync<T>(OperationDataRequest<GetSettingsData> request)
         where T : class, ISiteSettingsBlock;
 
-    Task<OperationDataResponse<T>> GetDefaultAsync<T>(OperationDataRequest<GetDefaultRequest> request)
+    Task<OperationDataResponse<T>> GetDefaultAsync<T>(OperationDataRequest<GetDefaultData> request)
         where T : class, ISiteSettingsBlock, new();
 }

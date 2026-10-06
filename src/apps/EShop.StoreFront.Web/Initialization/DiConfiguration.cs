@@ -20,7 +20,7 @@ namespace Hj.EShop.StoreFront.Web.Initialization;
 
 internal static class DiConfiguration
 {
-    public static IServiceCollection AddScrutorScan(this IServiceCollection services)
+    public static IServiceCollection AddDi(this IServiceCollection services)
     {
         services.Scan(scan => scan
             .FromAssemblyOf<Startup>()

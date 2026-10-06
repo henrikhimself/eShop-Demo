@@ -14,6 +14,7 @@
 // limitations under the License.
 // </copyright>
 
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
 using Hj.EShop.StoreFront.Web.Foundation.Operations;
 using Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Models;
 
@@ -27,7 +28,7 @@ internal static class ISiteSettingsServiceExtensions
         return await i.GetAsync<T>(ToGetSettingsFromCmsRequest(request));
     }
 
-    public static async Task<T> GetAsync<T>(this ISiteSettingsService i, OperationDataRequest<GetSettingsRequest> request)
+    public static async Task<T> GetAsync<T>(this ISiteSettingsService i, OperationDataRequest<GetSettingsData> request)
         where T : class, ISiteSettingsBlock, new()
     {
         OperationDataResponse<T> settings = await i.GetSettingsAsync<T>(request);
@@ -53,12 +54,12 @@ internal static class ISiteSettingsServiceExtensions
     public static Task<OperationDataResponse<T>> GetDefaultAsync<T>(this ISiteSettingsService i, OperationRequest request)
         where T : class, ISiteSettingsBlock, new()
     {
-        return i.GetDefaultAsync<T>(request.CreateOperationRequest<GetDefaultRequest>(new()));
+        return i.GetDefaultAsync<T>(request.CreateOperationRequest<GetDefaultData>(new()));
     }
 
-    private static OperationDataRequest<GetSettingsRequest> ToGetSettingsFromCmsRequest(OperationRequest request)
+    private static OperationDataRequest<GetSettingsData> ToGetSettingsFromCmsRequest(OperationRequest request)
     {
-        return request.CreateOperationRequest<GetSettingsRequest>(new()
+        return request.CreateOperationRequest<GetSettingsData>(new()
         {
             ContentLink = request.Context.ContentLink,
             Language = request.Context.Language,

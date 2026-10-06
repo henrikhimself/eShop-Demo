@@ -1,4 +1,4 @@
-// <copyright file="FeaturesControllerModelConvention.cs" company="Henrik Jensen">
+// <copyright file="FeaturesControllerConvention.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -16,25 +16,25 @@
 
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
 
-namespace Hj.EShop.StoreFront.Web.Foundation.Presentation;
+namespace Hj.EShop.StoreFront.Web.Foundation.Conventions;
 
-internal sealed class FeaturesControllerModelConvention : IControllerModelConvention
+internal sealed class FeaturesControllerConvention : IControllerModelConvention
 {
-    private const string FeaturesNs = "Features";
-
     public void Apply(ControllerModel controller)
     {
+        const string NsSegment = "Features";
+
         string[]? ns = controller.ControllerType.Namespace?.Split('.');
-        if (ns is null || !ns.Any(t => t == FeaturesNs))
+        if (ns is null || !ns.Any(t => t == NsSegment))
         {
             return;
         }
 
         string? name = ns
-          .SkipWhile(t => !t.Equals(FeaturesNs, StringComparison.Ordinal))
+          .SkipWhile(t => !t.Equals(NsSegment, StringComparison.Ordinal))
           .Skip(1)
           .Take(1)
           .FirstOrDefault();
-        controller.Properties.Add(FeaturesViewLocationExpander.Feature, name);
+        controller.SetFeatureName(name);
     }
 }

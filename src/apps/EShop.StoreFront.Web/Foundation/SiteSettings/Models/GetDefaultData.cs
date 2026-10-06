@@ -1,4 +1,4 @@
-// <copyright file="FrontPageController.cs" company="Henrik Jensen">
+// <copyright file="GetDefaultData.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -15,16 +15,10 @@
 // </copyright>
 
 using EPiServer.Core;
-using EPiServer.Web.Mvc;
-using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
-using Microsoft.AspNetCore.Mvc;
 
-namespace Hj.EShop.StoreFront.Web.Features.StoreFrontPage;
+namespace Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Models;
 
-public class FrontPageController : PageController<FrontPage>
+internal sealed class GetDefaultData
 {
-    public IActionResult Index(PageData currentPage)
-    {
-        return View();
-    }
+    public ContentReference? ParentLink { get; init; }
 }

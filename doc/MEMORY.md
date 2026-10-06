@@ -2,6 +2,10 @@
 
 ## Current State
 
+This file is the repository's authoritative current-state reference. Keep historical
+reasoning, discarded alternatives, and completed implementation narratives in
+[`CHRONICLE.md`](./CHRONICLE.md).
+
 A demo eCommerce website built on .NET 10, Optimizely CMS 13, and Optimizely Commerce
 Connect 15, orchestrated with Aspire 13. The store is a movie store: it sells movies
 (DVD, Blu-ray, streaming entitlement) and movie merchandise, supplied by third-party
@@ -333,7 +337,7 @@ Surprising or important constraints future work must not accidentally violate.
   excluded from a real deployment.
 - `ClaimTypeOptions` (Storefront) must map its custom claim names during service
   registration, before DI is built, not from the deferred OpenID Connect options
-  callback - see `doc/CHRONICLE.md` for the defect that caused.
+  callback.
 
 ## Open Follow-ups
 
@@ -343,7 +347,7 @@ Surprising or important constraints future work must not accidentally violate.
 - The two Storefront migration runners' `ToolsDirectory`/script-folder-name
   configuration is still a literal, separate from `Directory.Packages.props`'s pin -
   only the version number is derived automatically (`OptimizelyInstalledVersion`,
-  reading the actual referenced assembly). See `doc/CHRONICLE.md`.
+  reading the actual referenced assembly).
 - `PLAN-1.md`'s upstream pull request/merge/NuGet publication, its later automated
   forwarding tests, and its documentation/release-candidate work remain open (tracked in
   `PLAN-1.md` itself).

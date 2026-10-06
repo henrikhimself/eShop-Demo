@@ -1,4 +1,4 @@
-// <copyright file="ISiteSettingsLoader.cs" company="Henrik Jensen">
+// <copyright file="FrontPageController.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -14,16 +14,16 @@
 // limitations under the License.
 // </copyright>
 
-using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
-using Hj.EShop.StoreFront.Web.Foundation.Operations;
-using Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Models;
+using EPiServer.Web.Mvc;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
+using Microsoft.AspNetCore.Mvc;
 
-namespace Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Internal;
+namespace Hj.EShop.StoreFront.Web.Features.SiteInProcess.Controllers;
 
-internal interface ISiteSettingsLoader
+public class FrontPageController : PageController<FrontPage>
 {
-    bool CanHandle(OperationDataRequest<GetSettingsData> request);
-
-    Task<OperationDataResponse<T>> LoadSettingsAsync<T>(OperationDataRequest<GetSettingsData> request)
-        where T : class, ISiteSettingsBlock;
+    public IActionResult Index(FrontPage currentPage)
+    {
+        return View(currentPage);
+    }
 }

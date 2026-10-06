@@ -22,7 +22,7 @@ using EPiServer.Web.Routing;
 using Hj.EShop.Common;
 using Hj.EShop.ServiceDefaults;
 using Hj.EShop.StoreFront.Web.Features.HealthChecks;
-using Hj.EShop.StoreFront.Web.Foundation.Presentation;
+using Hj.EShop.StoreFront.Web.Foundation.Conventions;
 using Hj.EShop.StoreFront.Web.Initialization;
 using Mediachase.Commerce.Anonymous;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -35,14 +35,17 @@ internal sealed class Startup(IConfiguration configuration, IWebHostEnvironment 
     {
         Extensions.AddServiceDefaults(services, configuration, "EShop.StoreFront.Web", webHostEnvironment);
 
-        services.AddHybridCache();
-
-        services
+        IMvcBuilder mvc = services
             .AddMvc(o =>
             {
-                o.Conventions.Add(new FeaturesControllerModelConvention());
+                o.Conventions.Add(new FeaturesControllerConvention());
             })
             .AddRazorOptions(o => o.ViewLocationExpanders.Add(new FeaturesViewLocationExpander()));
+
+        if (webHostEnvironment.IsDevelopment())
+        {
+            mvc.AddRazorRuntimeCompilation();
+        }
 
         services
             .AddCms()
@@ -52,9 +55,13 @@ internal sealed class Startup(IConfiguration configuration, IWebHostEnvironment 
             .AddVisitorGroupsMvc()
             .AddVisitorGroupsUI();
 
+        services.AddHybridCache();
+
         services
-            .AddSiteInitialization()
-            .AddAuthConfiguration(configuration, webHostEnvironment);
+            .AddDi()
+            .AddDb()
+            .AddAuth(configuration, webHostEnvironment)
+            .AddSiteInitialization();
 
         services.Configure<ForwardedHeadersOptions>(o =>
         {
@@ -79,18 +86,22 @@ internal sealed class Startup(IConfiguration configuration, IWebHostEnvironment 
             o.Secure = CookieSecurePolicy.Always;
         });
 
-        services.AddDatabase();
-        services.AddScrutorScan();
         services
             .AddHealthChecks()
             .AddCheck<CmsHealthCheck>(nameof(CmsHealthCheck))
             .AddCheck<CommerceHealthCheck>(nameof(CommerceHealthCheck));
     }
 
-    public static void Configure(IApplicationBuilder app)
+    public void Configure(IApplicationBuilder app)
     {
         app.UseAnonymousId();
         app.UseStaticFiles();
+
+        if (webHostEnvironment.IsDevelopment())
+        {
+            app.UseDeveloperExceptionPage();
+        }
+
         app.UseRouting();
         app.UseForwardedHeaders();
         app.UseAuthentication();

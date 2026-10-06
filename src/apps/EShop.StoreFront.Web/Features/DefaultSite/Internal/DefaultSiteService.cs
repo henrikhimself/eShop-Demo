@@ -22,7 +22,7 @@ using EPiServer.DataAccess;
 using EPiServer.Security;
 using Hj.EShop.StoreFront.Web.Foundation.Operations;
 
-namespace Hj.EShop.StoreFront.Web.Features.DefaultSite;
+namespace Hj.EShop.StoreFront.Web.Features.DefaultSite.Internal;
 
 internal sealed class DefaultSiteService : IDefaultSiteService
 {

@@ -1,4 +1,4 @@
-// <copyright file="ISiteSettingsLoader.cs" company="Henrik Jensen">
+// <copyright file="ISiteSettingsBlock.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -14,16 +14,10 @@
 // limitations under the License.
 // </copyright>
 
-using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
-using Hj.EShop.StoreFront.Web.Foundation.Operations;
-using Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Models;
+using EPiServer.Core;
 
-namespace Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Internal;
+namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
 
-internal interface ISiteSettingsLoader
+internal interface ISiteSettingsBlock : IContentData
 {
-    bool CanHandle(OperationDataRequest<GetSettingsData> request);
-
-    Task<OperationDataResponse<T>> LoadSettingsAsync<T>(OperationDataRequest<GetSettingsData> request)
-        where T : class, ISiteSettingsBlock;
 }

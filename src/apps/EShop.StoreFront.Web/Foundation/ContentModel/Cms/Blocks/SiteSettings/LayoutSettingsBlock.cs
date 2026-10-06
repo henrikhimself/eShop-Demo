@@ -17,16 +17,16 @@
 using System.ComponentModel.DataAnnotations;
 using EPiServer.Core;
 using EPiServer.DataAnnotations;
-using EPiServer.Forms.Core;
 using EPiServer.Web;
-using Hj.EShop.StoreFront.Web.Foundation.SiteSettings;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms.BaseContent;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms.Blocks.SiteSettings;
 
 [ContentType(
     DisplayName = "Layout Settings",
     GUID = "eff62260-2e12-4b3d-b79e-ea83f9f232fc")]
-public class LayoutSettingsBlock : BlockBase, ISiteSettingsBlock
+public class LayoutSettingsBlock : SiteBlockBase, ISiteSettingsBlock
 {
     [Display(
         Name = "Logo",

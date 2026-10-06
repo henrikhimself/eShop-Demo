@@ -15,23 +15,23 @@
 // </copyright>
 
 using Microsoft.AspNetCore.Mvc.Razor;
-using Microsoft.AspNetCore.Mvc.Controllers;
 
-namespace Hj.EShop.StoreFront.Web.Foundation.Presentation;
+namespace Hj.EShop.StoreFront.Web.Foundation.Conventions;
 
 internal sealed class FeaturesViewLocationExpander : IViewLocationExpander
 {
-    public const string Feature = "feature";
+    private const string FeatureName = "FeatureName";
 
-    private readonly List<string> _viewLocationFormats = ["/Features/{3}/{0}.cshtml"];
+    private readonly List<string> _viewLocationFormats = [
+        "/Features/{3}/Views/{1}/{0}.cshtml",
+        "/Features/{3}/Views/Shared/{0}.cshtml",
+        "/Features/{3}/{0}.cshtml"];
 
     public IEnumerable<string> ExpandViewLocations(ViewLocationExpanderContext context, IEnumerable<string> viewLocations)
     {
-        if (context.ActionContext.ActionDescriptor is ControllerActionDescriptor controllerActionDescriptor
-            && controllerActionDescriptor.Properties.ContainsKey(Feature))
+        if (context.Values.TryGetValue(FeatureName, out string? featureName))
         {
-            string? featureName = controllerActionDescriptor.Properties[Feature] as string;
-            foreach (string item in ExpandViewLocations(_viewLocationFormats.Union(viewLocations), featureName))
+            foreach (string item in ExpandFeaturesViewLocations(_viewLocationFormats.Concat(viewLocations), featureName))
             {
                 yield return item;
             }
@@ -47,16 +47,14 @@ internal sealed class FeaturesViewLocationExpander : IViewLocationExpander
 
     public void PopulateValues(ViewLocationExpanderContext context)
     {
-        if (context.ActionContext?.ActionDescriptor is not ControllerActionDescriptor controllerActionDescriptor
-            || !controllerActionDescriptor.Properties.ContainsKey(Feature))
+        string? featureName = context.ActionContext.GetFeatureName();
+        if (!string.IsNullOrWhiteSpace(featureName))
         {
-            return;
+            context.Values[FeatureName] = context.ActionContext.GetFeatureName();
         }
-
-        context.Values[Feature] = controllerActionDescriptor.Properties[Feature]?.ToString();
     }
 
-    private static IEnumerable<string> ExpandViewLocations(IEnumerable<string> viewLocations, string? featureName)
+    private static IEnumerable<string> ExpandFeaturesViewLocations(IEnumerable<string> viewLocations, string? featureName)
     {
         foreach (string location in viewLocations)
         {

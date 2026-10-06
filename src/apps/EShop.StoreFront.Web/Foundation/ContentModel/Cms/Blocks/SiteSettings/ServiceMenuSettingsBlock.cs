@@ -16,16 +16,16 @@
 
 using System.ComponentModel.DataAnnotations;
 using EPiServer.DataAnnotations;
-using EPiServer.Forms.Core;
 using EPiServer.SpecializedProperties;
-using Hj.EShop.StoreFront.Web.Foundation.SiteSettings;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms.BaseContent;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms.Blocks.SiteSettings;
 
 [ContentType(
     DisplayName = "Service Menu Settings",
     GUID = "328edd40-4313-4f56-bd6c-da4b5c6b9f93")]
-public class ServiceMenuSettingsBlock : BlockBase, ISiteSettingsBlock
+public class ServiceMenuSettingsBlock : SiteBlockBase, ISiteSettingsBlock
 {
     [CultureSpecific]
     [Display(

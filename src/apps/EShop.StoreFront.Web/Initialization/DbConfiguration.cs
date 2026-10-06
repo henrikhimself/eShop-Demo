@@ -22,7 +22,7 @@ namespace Hj.EShop.StoreFront.Web.Initialization;
 
 internal static class DbConfiguration
 {
-    public static IServiceCollection AddDatabase(this IServiceCollection services)
+    public static IServiceCollection AddDb(this IServiceCollection services)
     {
         // Migration is done elsewhere
         services.Configure<DataAccessOptions>(options =>

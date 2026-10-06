@@ -1,4 +1,4 @@
-// <copyright file="IDisableIndexing.cs" company="Henrik Jensen">
+// <copyright file="GetSettingsData.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -14,11 +14,14 @@
 // limitations under the License.
 // </copyright>
 
+using System.Globalization;
 using EPiServer.Core;
 
-namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Markers;
+namespace Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Models;
 
-internal interface IDisableIndexing : IContentData
+internal sealed class GetSettingsData
 {
-    bool DisableIndexing { get; }
+    public CultureInfo? Language { get; init; }
+
+    public ContentReference? ContentLink { get; init; }
 }

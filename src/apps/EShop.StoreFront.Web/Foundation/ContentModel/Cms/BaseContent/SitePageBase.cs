@@ -18,7 +18,7 @@ using System.ComponentModel.DataAnnotations;
 using EPiServer.Core;
 using EPiServer.DataAbstraction;
 using EPiServer.DataAnnotations;
-using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Markers;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms.BaseContent;
 
@@ -30,5 +30,5 @@ public abstract class SitePageBase : PageData, IDisableIndexing
         Description = "Exclude content from being included when searching.",
         GroupName = SystemTabNames.Settings,
         Order = 100)]
-    public virtual bool DisableIndexing { get; set; }
+    public virtual bool? DisableIndexing { get; set; }
 }

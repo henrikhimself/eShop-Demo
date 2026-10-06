@@ -1,4 +1,4 @@
-// <copyright file="FolderPageUIDescriptor.cs" company="Henrik Jensen">
+// <copyright file="ContainerPageUiDescriptor.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -15,13 +15,14 @@
 // </copyright>
 
 using EPiServer.Shell;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
 
-namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms.Descriptors;
+namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Descriptors;
 
 [UIDescriptorRegistration]
-internal sealed class FolderPageUIDescriptor : UIDescriptor<FolderPage>
+internal sealed class ContainerPageUiDescriptor : UIDescriptor<IContainerPage>
 {
-    public FolderPageUIDescriptor()
+    public ContainerPageUiDescriptor()
         : base(ContentTypeCssClassNames.Container)
     {
         DefaultView = CmsViewNames.ContentListingView;

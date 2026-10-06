@@ -1,4 +1,4 @@
-// <copyright file="BlockBase.cs" company="Henrik Jensen">
+// <copyright file="SiteBlockBase.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -22,7 +22,7 @@ using EPiServer.DataAbstraction;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms.BaseContent;
 
-public abstract class BlockBase : BlockData
+public abstract class SiteBlockBase : BlockData
 {
     public override void SetDefaultValues(ContentType contentType)
     {

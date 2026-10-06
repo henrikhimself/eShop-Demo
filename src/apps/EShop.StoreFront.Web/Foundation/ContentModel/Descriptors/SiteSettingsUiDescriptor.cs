@@ -1,4 +1,4 @@
-// <copyright file="SiteBundleBase.cs" company="Henrik Jensen">
+// <copyright file="SiteSettingsUiDescriptor.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -14,21 +14,19 @@
 // limitations under the License.
 // </copyright>
 
-using System.ComponentModel.DataAnnotations;
-using EPiServer.Commerce.Catalog.ContentTypes;
-using EPiServer.DataAbstraction;
-using EPiServer.DataAnnotations;
+using EPiServer.Core;
+using EPiServer.Shell;
 using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
 
-namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Commerce.BaseContent;
+namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Descriptors;
 
-public abstract class SiteBundleBase : BundleContent, IDisableIndexing
+[UIDescriptorRegistration]
+internal sealed class SiteSettingsUiDescriptor : UIDescriptor<ISiteSettingsBlock>
 {
-    [CultureSpecific]
-    [Display(
-        Name = "Disable indexing",
-        Description = "Exclude content from being included when searching.",
-        GroupName = SystemTabNames.Settings,
-        Order = 100)]
-    public virtual bool? DisableIndexing { get; set; }
+    public SiteSettingsUiDescriptor()
+        : base(ContentTypeCssClassNames.SharedBlock)
+    {
+        IsPrimaryType = true;
+        ContainerTypes = [typeof(ContentFolder)];
+    }
 }

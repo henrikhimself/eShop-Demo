@@ -17,12 +17,13 @@
 using EPiServer.Core;
 using EPiServer.DataAbstraction;
 using EPiServer.DataAnnotations;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
 
 [ContentType(
     DisplayName = "Folder",
     GUID = "480cb694-84d3-43ae-9e3f-2c616c342d3f")]
-public class FolderPage : PageData
+public class FolderPage : PageData, IContainerPage
 {
 }

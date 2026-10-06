@@ -21,7 +21,7 @@ using EPiServer.DataAbstraction;
 using EPiServer.Security;
 using Hj.EShop.StoreFront.Web.Foundation.Operations;
 
-namespace Hj.EShop.StoreFront.Web.Features.DefaultAccess;
+namespace Hj.EShop.StoreFront.Web.Features.DefaultAccess.Internal;
 
 internal sealed class DefaultAccessService : IDefaultAccessService
 {

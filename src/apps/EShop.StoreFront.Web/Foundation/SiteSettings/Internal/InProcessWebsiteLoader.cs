@@ -18,6 +18,7 @@ using EPiServer;
 using EPiServer.Applications;
 using EPiServer.Core;
 using EPiServer.Web;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
 using Hj.EShop.StoreFront.Web.Foundation.Operations;
 using Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Models;
 
@@ -39,12 +40,12 @@ internal class InProcessWebsiteLoader : ISiteSettingsLoader
         _contentAreaLoader = contentAreaLoader;
     }
 
-    public bool CanHandle(OperationDataRequest<GetSettingsRequest> request)
+    public bool CanHandle(OperationDataRequest<GetSettingsData> request)
     {
         return request.Data.ContentLink is not null;
     }
 
-    public async Task<OperationDataResponse<T>> LoadSettingsAsync<T>(OperationDataRequest<GetSettingsRequest> request)
+    public async Task<OperationDataResponse<T>> LoadSettingsAsync<T>(OperationDataRequest<GetSettingsData> request)
         where T : class, ISiteSettingsBlock
     {
         Application? application = await _applicationResolver.GetByContentAsync(request.Data.ContentLink!, false, request.CancellationToken);

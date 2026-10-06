@@ -18,6 +18,7 @@ using System.Reflection;
 using EPiServer;
 using EPiServer.Core;
 using EPiServer.SpecializedProperties;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
 using Hj.EShop.StoreFront.Web.Foundation.Operations;
 using Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Models;
 
@@ -36,7 +37,7 @@ internal class SiteSettingsService : ISiteSettingsService
         _siteSettingsLoaders = siteSettingsLoaders;
     }
 
-    public async Task<OperationDataResponse<T>> GetSettingsAsync<T>(OperationDataRequest<GetSettingsRequest> request)
+    public async Task<OperationDataResponse<T>> GetSettingsAsync<T>(OperationDataRequest<GetSettingsData> request)
         where T : class, ISiteSettingsBlock
     {
         List<ISiteSettingsLoader> loaders = _siteSettingsLoaders.Where(impl => impl.CanHandle(request))?.ToList() ?? [];
@@ -57,7 +58,7 @@ internal class SiteSettingsService : ISiteSettingsService
         return request.Ok<T>();
     }
 
-    public Task<OperationDataResponse<T>> GetDefaultAsync<T>(OperationDataRequest<GetDefaultRequest> request)
+    public Task<OperationDataResponse<T>> GetDefaultAsync<T>(OperationDataRequest<GetDefaultData> request)
         where T : class, ISiteSettingsBlock, new()
     {
         T setting;

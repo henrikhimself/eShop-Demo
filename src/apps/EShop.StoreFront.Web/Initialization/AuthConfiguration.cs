@@ -35,7 +35,7 @@ namespace Hj.EShop.StoreFront.Web.Initialization;
 
 internal static class AuthConfiguration
 {
-    public static void AddAuthConfiguration(
+    public static IServiceCollection AddAuth(
         this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment webHostEnvironment)
     {
         services.Configure<ClaimTypeOptions>(options =>
@@ -149,6 +149,8 @@ internal static class AuthConfiguration
             sp => new HybridCacheTicketStore(sp.GetRequiredService<HybridCache>(), "storefront-ticket:"));
         services.AddOptions<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme)
             .Configure<ITicketStore>((options, store) => options.SessionStore = store);
+
+        return services;
     }
 
     private static void ConfigureEntraIdOidc(OpenIdConnectOptions options, IConfiguration configuration)

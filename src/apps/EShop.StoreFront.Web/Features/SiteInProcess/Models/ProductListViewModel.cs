@@ -1,4 +1,4 @@
-// <copyright file="GetDefaultRequest.cs" company="Henrik Jensen">
+// <copyright file="ProductListViewModel.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -14,11 +14,14 @@
 // limitations under the License.
 // </copyright>
 
-using EPiServer.Core;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Commerce;
 
-namespace Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Models;
+namespace Hj.EShop.StoreFront.Web.Features.SiteInProcess.Models;
 
-internal sealed class GetDefaultRequest
+internal sealed class ProductListViewModel
 {
-    public ContentReference? ParentLink { get; init; }
+    public required ProductListPage CurrentContent { get; init; }
+
+    public required IEnumerable<MovieProduct> Movies { get; init; }
 }

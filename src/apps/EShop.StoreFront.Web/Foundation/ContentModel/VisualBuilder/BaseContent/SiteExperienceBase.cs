@@ -18,7 +18,7 @@ using System.ComponentModel.DataAnnotations;
 using EPiServer.DataAbstraction;
 using EPiServer.DataAnnotations;
 using EPiServer.VisualBuilder;
-using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Markers;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.VisualBuilder.BaseContent;
 
@@ -30,5 +30,5 @@ public abstract class SiteExperienceBase : ExperienceData, IDisableIndexing
         Description = "Exclude content from being included when searching.",
         GroupName = SystemTabNames.Settings,
         Order = 100)]
-    public virtual bool DisableIndexing { get; set; }
+    public virtual bool? DisableIndexing { get; set; }
 }
