@@ -67,10 +67,10 @@ internal static class AuthConfiguration
                 // id_token, including for logout.
                 options.Events.OnValidatePrincipal = async context =>
                 {
-                    OpenIdConnectOptions? oidcOptions = context.HttpContext.RequestServices
-                        .GetService<IOptionsMonitor<OpenIdConnectOptions>>()
-                        ?.Get(OpenIdConnectDefaults.AuthenticationScheme);
-                    OpenIdConnectConfiguration? configuration = oidcOptions?.ConfigurationManager is null
+                    OpenIdConnectOptions oidcOptions = context.HttpContext.RequestServices
+                        .GetRequiredService<IOptionsMonitor<OpenIdConnectOptions>>()
+                        .Get(OpenIdConnectDefaults.AuthenticationScheme);
+                    OpenIdConnectConfiguration? configuration = oidcOptions.ConfigurationManager is null
                         ? null
                         : await oidcOptions.ConfigurationManager.GetConfigurationAsync(context.HttpContext.RequestAborted);
 
@@ -83,10 +83,10 @@ internal static class AuthConfiguration
                     RefreshOutcome outcome = await OidcSignOutTokenRefresh.ValidateAsync(
                         context.Properties.GetTokenValue("id_token"),
                         context.Properties.GetTokenValue("refresh_token"),
-                        context.HttpContext.RequestServices.GetRequiredService<IHttpClientFactory>().CreateClient(),
+                        oidcOptions.Backchannel,
                         configuration is null ? null : new Uri(configuration.TokenEndpoint),
-                        oidcOptions?.ClientId ?? string.Empty,
-                        oidcOptions?.ClientSecret,
+                        oidcOptions.ClientId ?? string.Empty,
+                        oidcOptions.ClientSecret,
                         alwaysConfirmWithProvider,
                         TimeProvider.System,
                         context.HttpContext.RequestAborted);
@@ -114,11 +114,6 @@ internal static class AuthConfiguration
 
         if (!EnvironmentChecks.IsBuildTimeOpenApiGeneration())
         {
-            // Used only by AddCookie's OnValidatePrincipal above for the refresh-token
-            // grant call - via IHttpClientFactory, not OpenIdConnectOptions.Backchannel,
-            // so its handler is configured centrally in EShop.ServiceDefaults.
-            builder.Services.AddHttpClient();
-
             authenticationBuilder.AddOpenIdConnect(options =>
             {
                 // Set by AppHost.cs (ADR 0002/0010/0020). Falls through to Keycloak, not

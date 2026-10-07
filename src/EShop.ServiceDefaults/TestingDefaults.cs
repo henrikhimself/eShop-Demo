@@ -29,17 +29,20 @@ public static class TestingDefaults
     public const string FakeStorageConnectionString = "UseDevelopmentStorage=true";
     public const string FakeBlobContainerName = "fake";
 
-    // The proxy's self-signed dev CA (PLAN-2.md) is trusted by a developer's own OS/browser (DEVELOP.md), not by HttpClients inside AppHost-launched resources.
-    // Gated on non-Production, not IsFakeEnvironment(): Aspire always launches project resources as "Development", even under containerized e2e; "Fake" only applies to WebApplicationFactory unit tests, which never go through the reverse proxy.
+    // The proxy's self-signed dev CA is trusted by a developer's own OS/browser (DEVELOP.md), not by HttpClients inside AppHost-launched resources.
+    // Gated on non-Production, not IsFakeEnvironment(): Aspire always launches project resources as "Development", even under containerized e2e; "Fake"
+    // only applies to WebApplicationFactory unit tests, which never go through the reverse proxy.
     public static HttpClientHandler CreateLenientHttpHandler()
     {
         return new HttpClientHandler
         {
             ServerCertificateCustomValidationCallback = (_, _, chain, errors) =>
-                errors == SslPolicyErrors.RemoteCertificateChainErrors
-                && chain is not null
-                && chain.ChainStatus.All(status => status.Status
-                    is X509ChainStatusFlags.UntrustedRoot or X509ChainStatusFlags.PartialChain),
+                errors is SslPolicyErrors.None
+                || (errors is SslPolicyErrors.RemoteCertificateChainErrors
+                    && chain is not null
+                    && chain.ChainStatus.All(status => status.Status
+                        is X509ChainStatusFlags.UntrustedRoot
+                        or X509ChainStatusFlags.PartialChain)),
         };
     }
 }

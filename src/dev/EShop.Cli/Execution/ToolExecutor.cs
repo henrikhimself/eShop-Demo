@@ -75,7 +75,7 @@ internal sealed class ToolExecutor(
         Dictionary<string, string> environmentVariables = invocation.EnvironmentVariables is null
             ? []
             : new Dictionary<string, string>(invocation.EnvironmentVariables);
-        foreach ((string key, string value) in LocalToolEnvironment.Build(paths))
+        foreach ((string key, string value) in LocalToolEnvironment.Build(paths, localToolLocator))
         {
             environmentVariables[key] = value;
         }

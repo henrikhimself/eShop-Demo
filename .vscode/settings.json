@@ -24,5 +24,6 @@
         "8443": {
             "label": "Reverse Proxy"
         }
-    }
+    },
+    "aspire.aspireCliExecutablePath": "${workspaceFolder}/scripts/aspire.sh"
 }

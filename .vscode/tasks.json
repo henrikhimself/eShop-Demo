@@ -41,6 +41,24 @@
       }
     },
     {
+      "label": "eShop: Quick Build",
+      "type": "shell",
+      "command": "eval \"$(./scripts/eshop.sh env)\" && dotnet build EShop.slnx",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
       "label": "eShop: Test",
       "type": "shell",
       "command": "${workspaceFolder}/scripts/eshop.sh",

@@ -22,9 +22,16 @@ internal sealed class LocalToolLocator(IReadOnlyList<string>? searchPaths = null
 {
     private readonly IReadOnlyList<string> _searchPaths = searchPaths ?? SplitPath();
 
+    public string? FindOnPath(string tool)
+    {
+        return _searchPaths
+            .Select(directory => Path.Combine(directory, tool))
+            .FirstOrDefault(File.Exists);
+    }
+
     public bool IsOnPath(string tool)
     {
-        return _searchPaths.Any(directory => File.Exists(Path.Combine(directory, tool)));
+        return FindOnPath(tool) is not null;
     }
 
     private static string[] SplitPath()

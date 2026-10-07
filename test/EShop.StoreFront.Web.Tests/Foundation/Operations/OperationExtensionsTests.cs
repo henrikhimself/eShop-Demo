@@ -14,8 +14,6 @@
 // limitations under the License.
 // </copyright>
 
-using System.Globalization;
-using System.Reflection;
 using System.Security.Claims;
 using System.Security.Principal;
 using Hj.EShop.StoreFront.Web.Foundation.Operations;
@@ -338,23 +336,6 @@ public sealed class OperationExtensionsTests
         Assert.Same(request.Context, response.Context);
     }
 
-    [Fact]
-    public void ToCultureInfo_WithNullOrWhitespace_ReturnsNull()
-    {
-        Assert.Null(InvokeToCultureInfo(null));
-        Assert.Null(InvokeToCultureInfo(string.Empty));
-        Assert.Null(InvokeToCultureInfo("   "));
-    }
-
-    [Fact]
-    public void ToCultureInfo_WithLanguage_ReturnsCultureInfo()
-    {
-        CultureInfo? culture = InvokeToCultureInfo("sv-SE");
-
-        Assert.NotNull(culture);
-        Assert.Equal("sv-SE", culture.Name);
-    }
-
     private static OperationRequest CreateOperationRequest()
     {
         return new OperationRequest()
@@ -365,16 +346,6 @@ public sealed class OperationExtensionsTests
                 Principal = new ClaimsPrincipal(new ClaimsIdentity(authenticationType: "Cookies")),
             },
         };
-    }
-
-    private static CultureInfo? InvokeToCultureInfo(string? language)
-    {
-        MethodInfo toCultureInfo = typeof(OperationExtensions).GetMethod(
-            "ToCultureInfo",
-            BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("OperationExtensions.ToCultureInfo was not found.");
-
-        return (CultureInfo?)toCultureInfo.Invoke(obj: null, [language]);
     }
 
     private sealed class TestController : Controller

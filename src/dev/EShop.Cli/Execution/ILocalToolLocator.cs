@@ -18,5 +18,7 @@ namespace Hj.EShop.Cli.Execution;
 
 internal interface ILocalToolLocator
 {
+    string? FindOnPath(string tool);
+
     bool IsOnPath(string tool);
 }

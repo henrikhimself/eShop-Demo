@@ -26,6 +26,7 @@ using Hj.EShop.StoreFront.Web.Foundation.Conventions;
 using Hj.EShop.StoreFront.Web.Initialization;
 using Mediachase.Commerce.Anonymous;
 using Microsoft.AspNetCore.HttpOverrides;
+using Optimizely.Graph.Commerce;
 
 namespace Hj.EShop.StoreFront.Web;
 
@@ -33,7 +34,7 @@ internal sealed class Startup(IConfiguration configuration, IWebHostEnvironment 
 {
     public void ConfigureServices(IServiceCollection services)
     {
-        Extensions.AddServiceDefaults(services, configuration, "EShop.StoreFront.Web", webHostEnvironment);
+        Extensions.AddServiceDefaults(services, configuration, "EShop.StoreFront.Web");
 
         IMvcBuilder mvc = services
             .AddMvc(o =>
@@ -50,6 +51,7 @@ internal sealed class Startup(IConfiguration configuration, IWebHostEnvironment 
         services
             .AddCms()
             .AddCommerce()
+            .AddCommerceGraph()
             .AddLanguageManager()
             .AddForms()
             .AddVisitorGroupsMvc()

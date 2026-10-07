@@ -98,6 +98,11 @@ IResourceBuilder<ProjectResource> storefrontWeb = builder
     .WithHttpHealthCheck("/health")
     .WithEnvironment("ConnectionStrings__EPiServerDB", storefrontCmsDb)
     .WithEnvironment("ConnectionStrings__EcfSqlConnection", storefrontCommerceDb)
+    .WithEnvironment("Optimizely__ContentGraph__GatewayAddress", builder.AddParameter("optimizely-contentgraph-gateway", false))
+    .WithEnvironment("Optimizely__ContentGraph__AppKey", builder.AddParameter("optimizely-contentgraph-appkey", true))
+    .WithEnvironment("Optimizely__ContentGraph__Secret", builder.AddParameter("optimizely-contentgraph-secret", true))
+    .WithEnvironment("Optimizely__ContentGraph__SingleKey", builder.AddParameter("optimizely-contentgraph-singlekey", true))
+    .WithEnvironment("Optimizely__ContentGraph__AllowSendingLog", builder.AddParameter("optimizely-contentgraph-allowsendinglog", false))
     .WithReference(storageBlob)
     .WithReference(cache);
 #endregion

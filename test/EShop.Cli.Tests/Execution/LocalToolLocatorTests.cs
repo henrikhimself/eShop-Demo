@@ -35,6 +35,24 @@ public sealed class LocalToolLocatorTests : IDisposable
     }
 
     [Fact]
+    public void FindOnPath_ToolPresentInSearchPath_ReturnsFirstMatchingPath()
+    {
+        string toolPath = Path.Combine(_directory, "footool");
+        File.WriteAllText(toolPath, string.Empty);
+        LocalToolLocator locator = new([_directory]);
+
+        Assert.Equal(toolPath, locator.FindOnPath("footool"));
+    }
+
+    [Fact]
+    public void FindOnPath_ToolAbsentFromSearchPath_ReturnsNull()
+    {
+        LocalToolLocator locator = new([_directory]);
+
+        Assert.Null(locator.FindOnPath("no-such-tool"));
+    }
+
+    [Fact]
     public void IsOnPath_ToolAbsentFromSearchPath_ReturnsFalse()
     {
         LocalToolLocator locator = new([_directory]);

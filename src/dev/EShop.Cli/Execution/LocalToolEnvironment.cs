@@ -24,9 +24,9 @@ namespace Hj.EShop.Cli.Execution;
 // can never drift apart.
 internal static class LocalToolEnvironment
 {
-    public static IReadOnlyList<KeyValuePair<string, string>> Build(RepoPaths paths)
+    public static IReadOnlyList<KeyValuePair<string, string>> Build(RepoPaths paths, ILocalToolLocator localToolLocator)
     {
-        return
+        List<KeyValuePair<string, string>> environmentVariables =
         [
             new("SSL_CERT_DIR", Path.Combine(paths.CacheHomeDir, ".aspnet", "dev-certs", "trust")),
             new("HOME", paths.CacheHomeDir),
@@ -37,5 +37,12 @@ internal static class LocalToolEnvironment
             new("PNPM_HOME", paths.PnpmHomeDir),
             new("COREPACK_ENABLE_DOWNLOAD_PROMPT", "0"),
         ];
+
+        if (localToolLocator.FindOnPath("aspire") is string aspireCliPath)
+        {
+            environmentVariables.Add(new("AspireCliPath", aspireCliPath));
+        }
+
+        return environmentVariables;
     }
 }

@@ -30,7 +30,8 @@ public sealed class EnvCommandTests
     {
         RepoPaths paths = new("/repo");
         RecordingOutputSink output = new();
-        EnvCommand command = new(output, paths);
+        FakeLocalToolLocator localToolLocator = new("aspire");
+        EnvCommand command = new(output, localToolLocator, paths);
 
         int exitCode = await ((ICommand<DefaultSettings>)command).ExecuteAsync(
             context: null!, settings: new DefaultSettings(), TestContext.Current.CancellationToken);
@@ -39,7 +40,7 @@ public sealed class EnvCommandTests
 
         // Every variable ToolExecutor.RunLocalAsync sets for a locally-run tool must
         // also be printed here, in the same order, or the two would silently drift.
-        foreach ((string key, string value) in LocalToolEnvironment.Build(paths))
+        foreach ((string key, string value) in LocalToolEnvironment.Build(paths, localToolLocator))
         {
             Assert.Contains($"Text(\"export {key}='{value}'\")", output.Calls);
         }
@@ -52,11 +53,24 @@ public sealed class EnvCommandTests
         // one output mode - neither is valid POSIX shell, so calling them here would
         // break `eval "$(./scripts/eshop.sh env)"`.
         RecordingOutputSink output = new();
-        EnvCommand command = new(output, new RepoPaths("/repo"));
+        EnvCommand command = new(output, new FakeLocalToolLocator(), new RepoPaths("/repo"));
 
         await ((ICommand<DefaultSettings>)command).ExecuteAsync(
             context: null!, settings: new DefaultSettings(), TestContext.Current.CancellationToken);
 
         Assert.All(output.Calls, call => Assert.StartsWith("Text(", call, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_AspireCliUnavailable_OmitsAspireCliPath()
+    {
+        RecordingOutputSink output = new();
+        EnvCommand command = new(output, new FakeLocalToolLocator(), new RepoPaths("/repo"));
+
+        int exitCode = await ((ICommand<DefaultSettings>)command).ExecuteAsync(
+            context: null!, settings: new DefaultSettings(), TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, exitCode);
+        Assert.DoesNotContain(output.Calls, call => call.Contains("AspireCliPath", StringComparison.Ordinal));
     }
 }

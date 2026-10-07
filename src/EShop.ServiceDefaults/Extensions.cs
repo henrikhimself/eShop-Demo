@@ -37,13 +37,13 @@ public static class Extensions
         // Do not also call ConfigureOpenTelemetry() here - it would duplicate ConfigureOpenTelemetryServices and could register UseOtlpExporter twice.
         builder.Logging.ConfigureOpenTelemetryLogging();
 
-        AddServiceDefaults(builder.Services, builder.Configuration, builder.Environment.ApplicationName, builder.Environment);
+        AddServiceDefaults(builder.Services, builder.Configuration, builder.Environment.ApplicationName);
 
         return builder;
     }
 
     // Startup.cs hosting: call from ConfigureServices; call ConfigureOpenTelemetryLogging separately from Program.cs.
-    public static void AddServiceDefaults(IServiceCollection services, IConfiguration configuration, string applicationName, IHostEnvironment environment)
+    public static void AddServiceDefaults(IServiceCollection services, IConfiguration configuration, string applicationName)
     {
         ConfigureOpenTelemetryServices(services, configuration, applicationName);
 
@@ -60,12 +60,6 @@ public static class Extensions
 
             http.AddServiceDiscovery();
 
-            // Every HttpClientFactory client needs the OIDC handler's relaxed TLS validation too (see TestingDefaults).
-            // Gated on non-Production, not IsFakeEnvironment(): Aspire launches Bff/Storefront under "Development" regardless of native vs. containerized e2e runs.
-            if (!environment.IsProduction())
-            {
-                http.ConfigurePrimaryHttpMessageHandler(TestingDefaults.CreateLenientHttpHandler);
-            }
         });
     }
 

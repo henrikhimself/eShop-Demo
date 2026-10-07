@@ -122,8 +122,9 @@ public sealed class ToolExecutorTests
 
         await executor.RunAsync(new ToolInvocation("dotnet", ["build"]), TestContext.Current.CancellationToken);
 
-        Assert.Single(processRunner.Invocations);
+        ProcessRequest request = Assert.Single(processRunner.Invocations);
         Assert.Empty(containerRunner.Invocations);
+        Assert.DoesNotContain("AspireCliPath", request.EnvironmentVariables!);
     }
 
     [Fact]
@@ -142,7 +143,8 @@ public sealed class ToolExecutorTests
         await executor.RunAsync(new ToolInvocation("dotnet", ["build"]), TestContext.Current.CancellationToken);
 
         Assert.Empty(processRunner.Invocations);
-        Assert.Single(containerRunner.Invocations);
+        ToolInvocation recorded = Assert.Single(containerRunner.Invocations);
+        Assert.Null(recorded.EnvironmentVariables);
     }
 
     [Fact]
@@ -218,6 +220,7 @@ public sealed class ToolExecutorTests
         Assert.Equal(paths.PnpmStoreDir, request.EnvironmentVariables["PNPM_CONFIG_STORE_DIR"]);
         Assert.Equal(paths.PnpmHomeDir, request.EnvironmentVariables["PNPM_HOME"]);
         Assert.Equal("0", request.EnvironmentVariables["COREPACK_ENABLE_DOWNLOAD_PROMPT"]);
+        Assert.Equal("/tools/aspire", request.EnvironmentVariables["AspireCliPath"]);
         Assert.DoesNotContain("NO_COLOR", request.EnvironmentVariables);
     }
 
@@ -239,6 +242,7 @@ public sealed class ToolExecutorTests
         ToolInvocation recorded = Assert.Single(containerRunner.Invocations);
         Assert.NotNull(recorded.EnvironmentVariables);
         Assert.Equal("1", recorded.EnvironmentVariables!["NO_COLOR"]);
+        Assert.DoesNotContain("AspireCliPath", recorded.EnvironmentVariables);
     }
 
     [Fact]
@@ -290,6 +294,11 @@ public sealed class ToolExecutorTests
 
     private sealed class AlwaysOnPathLocator : ILocalToolLocator
     {
+        public string? FindOnPath(string tool)
+        {
+            return $"/tools/{tool}";
+        }
+
         public bool IsOnPath(string tool)
         {
             return true;
@@ -298,6 +307,11 @@ public sealed class ToolExecutorTests
 
     private sealed class NeverOnPathLocator : ILocalToolLocator
     {
+        public string? FindOnPath(string tool)
+        {
+            return null;
+        }
+
         public bool IsOnPath(string tool)
         {
             return false;

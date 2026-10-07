@@ -63,10 +63,10 @@ internal static class AuthConfiguration
 
                     options.Events.OnValidatePrincipal = async context =>
                     {
-                        OpenIdConnectOptions? oidcOptions = context.HttpContext.RequestServices
-                            .GetService<IOptionsMonitor<OpenIdConnectOptions>>()
-                            ?.Get(OpenIdConnectDefaults.AuthenticationScheme);
-                        OpenIdConnectConfiguration? oidcConfiguration = oidcOptions?.ConfigurationManager is null
+                        OpenIdConnectOptions oidcOptions = context.HttpContext.RequestServices
+                            .GetRequiredService<IOptionsMonitor<OpenIdConnectOptions>>()
+                            .Get(OpenIdConnectDefaults.AuthenticationScheme);
+                        OpenIdConnectConfiguration? oidcConfiguration = oidcOptions.ConfigurationManager is null
                             ? null
                             : await oidcOptions.ConfigurationManager.GetConfigurationAsync(context.HttpContext.RequestAborted);
 
@@ -76,10 +76,10 @@ internal static class AuthConfiguration
                         RefreshOutcome outcome = await OidcSignOutTokenRefresh.ValidateAsync(
                             context.Properties.GetTokenValue("id_token"),
                             context.Properties.GetTokenValue("refresh_token"),
-                            context.HttpContext.RequestServices.GetRequiredService<IHttpClientFactory>().CreateClient(),
+                            oidcOptions.Backchannel,
                             oidcConfiguration is null ? null : new Uri(oidcConfiguration.TokenEndpoint),
-                            oidcOptions?.ClientId ?? string.Empty,
-                            oidcOptions?.ClientSecret,
+                            oidcOptions.ClientId ?? string.Empty,
+                            oidcOptions.ClientSecret,
                             alwaysConfirmWithProvider,
                             TimeProvider.System,
                             context.HttpContext.RequestAborted);
@@ -119,10 +119,6 @@ internal static class AuthConfiguration
 
                 ConfigureCommonOidc(options, webHostEnvironment);
             });
-
-        // Used only by OnValidatePrincipal above, for the refresh-token grant call; its
-        // handler is configured centrally in EShop.ServiceDefaults (non-Production only).
-        services.AddHttpClient();
 
         // Skipped when using fake infrastructure due to no real IConnectionMultiplexer to bind
         // the key ring's XmlRepository to.
