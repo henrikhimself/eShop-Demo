@@ -87,7 +87,7 @@ public sealed class SubmissionEventsEndpointsTests : IAsyncLifetime
 
         SubmissionSummary? delivered = JsonSerializer.Deserialize<SubmissionSummary>(json, TestJsonOptions.Default);
         Assert.NotNull(delivered);
-        Assert.Equal(summary.Id, delivered!.Id);
+        Assert.Equal(summary.Id, delivered.Id);
         Assert.Equal(summary.Status, delivered.Status);
         Assert.Equal(summary.AssignedSku, delivered.AssignedSku);
 

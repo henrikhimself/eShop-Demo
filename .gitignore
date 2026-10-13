@@ -1,11 +1,12 @@
 ## --- Project
 .attic
-*.sarif
+.cache
+.pnpm-store
+App_Data
 todo.db
 .todo.db
 tmp
-.cache
-App_Data
+*.sarif
 
 
 ## --- Agentic Workflows

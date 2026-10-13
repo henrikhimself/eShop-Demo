@@ -96,18 +96,21 @@ public sealed class ScreenshotCommandTests : IDisposable
         {
             Url = "http://localhost:3000/drafts",
             Login = true,
-            Username = "test-seller",
-            Password = "TestSeller123!",
+            LoginPath = "/bff/login",
+            Username = "seller",
+            Password = "Sell-1234",
         };
 
         await ((ICommand<ScreenshotSettings>)command).ExecuteAsync(context: null!, settings, TestContext.Current.CancellationToken);
 
         ToolInvocation invocation = Assert.Single(toolExecutor.Invocations);
         Assert.Contains("--login", invocation.Arguments);
+        Assert.Contains("--login-path", invocation.Arguments);
+        Assert.Contains("/bff/login", invocation.Arguments);
         Assert.Contains("--username", invocation.Arguments);
-        Assert.Contains("test-seller", invocation.Arguments);
+        Assert.Contains("seller", invocation.Arguments);
         Assert.Contains("--password", invocation.Arguments);
-        Assert.Contains("TestSeller123!", invocation.Arguments);
+        Assert.Contains("Sell-1234", invocation.Arguments);
     }
 
     [Fact]
@@ -130,6 +133,98 @@ public sealed class ScreenshotCommandTests : IDisposable
         Assert.DoesNotContain("--login", invocation.Arguments);
         Assert.DoesNotContain("--username", invocation.Arguments);
         Assert.DoesNotContain("--password", invocation.Arguments);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_LoginRequestedWithoutLoginPath_ReturnsNonZeroAndDoesNotInvokeTool()
+    {
+        RepoPaths paths = new(_root);
+        FakeToolExecutor toolExecutor = new(_ => new ProcessResult(0, string.Empty, string.Empty));
+        RecordingOutputSink output = new();
+        ScreenshotCommand command = new(output, toolExecutor, paths);
+        ScreenshotSettings settings = new()
+        {
+            Url = "http://localhost:3000/drafts",
+            Login = true,
+            Username = "seller",
+            Password = "Sell-1234",
+        };
+
+        int exitCode = await ((ICommand<ScreenshotSettings>)command).ExecuteAsync(
+            context: null!, settings, TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, exitCode);
+        Assert.Empty(toolExecutor.Invocations);
+        Assert.Contains(output.Calls, call => call.Contains("--login requires --login-path, --username, and --password.", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_LoginPathIsNotSameOrigin_ReturnsNonZeroAndDoesNotInvokeTool()
+    {
+        RepoPaths paths = new(_root);
+        FakeToolExecutor toolExecutor = new(_ => new ProcessResult(0, string.Empty, string.Empty));
+        RecordingOutputSink output = new();
+        ScreenshotCommand command = new(output, toolExecutor, paths);
+        ScreenshotSettings settings = new()
+        {
+            Url = "http://localhost:3000/drafts",
+            Login = true,
+            LoginPath = "https://example.com/login",
+            Username = "seller",
+            Password = "Sell-1234",
+        };
+
+        int exitCode = await ((ICommand<ScreenshotSettings>)command).ExecuteAsync(
+            context: null!, settings, TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, exitCode);
+        Assert.Empty(toolExecutor.Invocations);
+        Assert.Contains(output.Calls, call => call.Contains("--login-path must be a same-origin absolute path for <URL>.", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_LoginRequestedForDifferentResourcesAndUsers_UsesSeparateProfiles()
+    {
+        RepoPaths paths = new(_root);
+        string outputPath = Path.Combine(paths.Root, "tmp", "screenshot.png");
+        FakeToolExecutor toolExecutor = new(_ =>
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+            File.WriteAllBytes(outputPath, [1, 2, 3]);
+            return new ProcessResult(0, string.Empty, string.Empty);
+        });
+        ScreenshotCommand command = new(new RecordingOutputSink(), toolExecutor, paths);
+
+        await ((ICommand<ScreenshotSettings>)command).ExecuteAsync(
+            context: null!,
+            new ScreenshotSettings
+            {
+                Url = "http://localhost:3000/drafts",
+                Login = true,
+                LoginPath = "/bff/login",
+                Username = "seller",
+                Password = "Sell-1234",
+            },
+            TestContext.Current.CancellationToken);
+        await ((ICommand<ScreenshotSettings>)command).ExecuteAsync(
+            context: null!,
+            new ScreenshotSettings
+            {
+                Url = "http://localhost:5130/ui/cms",
+                Login = true,
+                LoginPath = "/ui/cms",
+                Username = "editor",
+                Password = "Edit-1234",
+            },
+            TestContext.Current.CancellationToken);
+
+        ToolInvocation[] invocations = [.. toolExecutor.Invocations];
+        int sellerProfileDirectoryIndex = Array.IndexOf([.. invocations[0].Arguments], "--profile-dir");
+        int editorProfileDirectoryIndex = Array.IndexOf([.. invocations[1].Arguments], "--profile-dir");
+        string sellerProfile = invocations[0].Arguments[sellerProfileDirectoryIndex + 1];
+        string editorProfile = invocations[1].Arguments[editorProfileDirectoryIndex + 1];
+
+        Assert.NotEqual(sellerProfile, editorProfile);
     }
 
     [Fact]

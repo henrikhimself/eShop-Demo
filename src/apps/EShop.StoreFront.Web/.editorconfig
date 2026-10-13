@@ -1,0 +1,6 @@
+root = false
+
+[*Controller.cs]
+# CA1515: Consider making public types internal.
+# The framework discovers controller types via reflection and, by convention, only considers public controller classes.
+dotnet_diagnostic.CA1515.severity = none

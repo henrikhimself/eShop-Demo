@@ -1,0 +1,31 @@
+@model FrontPage
+
+<div class="bg-dark text-secondary px-4 py-5 text-center">
+	<div class="col py-5">
+		<h1 class="display-5 fw-bold text-white"><span epi-property="HeroHeader" /></h1>
+		<p class="fs-5 mb-4">
+            <span epi-property="HeroByline"/>
+        </p>
+		<div class="overflow-hidden">
+			<div class="container px-5">
+				<img @Html.EditAttributes(m => m.HeroImage) src="@Url.ContentUrl(Model.HeroImage)" class="img-fluid border rounded-3 shadow-lg mb-4" width="700" height="500" loading="lazy">
+			</div>
+		</div>
+        <div class="container col-8 px-4 py-5">
+            <span epi-property="HeroContent"/>
+        </div>
+	</div>
+</div>
+
+<div class="container col-8 px-4 py-5">
+    <div class="row align-items-center g-5 py-5">
+        <div class="col">
+            <div class="display-5 fw-bold lh-1 mb-3">
+                <span epi-property="WatchOnTvContent"/>
+            </div>
+        </div>
+        <div class="col-5">
+            <img @Html.EditAttributes(m => m.WatchOnTvImage) src="@Url.ContentUrl(Model.WatchOnTvImage)" class="d-block mx-lg-auto img-fluid" width="700" height="500" loading="lazy">
+        </div>
+    </div>
+</div>

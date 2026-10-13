@@ -32,8 +32,8 @@ public sealed class UtilityImageProvisionerTests
 
         await provisioner.EnsureBuiltAsync(TestContext.Current.CancellationToken);
 
-        Assert.Single(processRunner.Invocations);
-        Assert.Equal("image", processRunner.Invocations[0].Arguments[0]);
+        ProcessRequest invocation = Assert.Single(processRunner.Invocations);
+        Assert.Equal("image", invocation.Arguments[0]);
     }
 
     [Fact]

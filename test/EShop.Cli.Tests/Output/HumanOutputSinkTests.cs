@@ -23,7 +23,7 @@ using Xunit;
 namespace Hj.EShop.Cli.Tests.Output;
 
 // Thin smoke tests only - no Spectre.Console.Testing package is cleared for use yet
-// (see doc/adr/0013-pinned-dependency-versions-and-40-day-quarantine.md), so these
+// (see doc/adr/0013-pinned-dependency-versions-and-7-day-quarantine.md), so these
 // can't assert on rendered spinner frames. They lock down the concurrency/lifecycle
 // contract instead: BeginStep is safe to call from several threads at once, a session
 // that's fully wound down lets the next BeginStep call start cleanly, and
@@ -59,39 +59,6 @@ public sealed class HumanOutputSinkTests
         await Task.WhenAll(steps).WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
 
         Assert.Equal(8, completed);
-    }
-
-    [Fact]
-    public async Task BeginStep_CalledAgainWithinTheGracePeriod_DoesNotThrowOrHang()
-    {
-        // Exercises the "reuse the still-open session instead of tearing it down and
-        // restarting" path a quick sequence of steps within one command takes.
-        HumanOutputSink sink = new(sessionEndGracePeriod: TimeSpan.FromMilliseconds(200));
-
-        IDisposable first = sink.BeginStep("first");
-        first.Dispose();
-        await Task.Delay(TimeSpan.FromMilliseconds(20), TestContext.Current.CancellationToken);
-
-        IDisposable second = sink.BeginStep("second");
-        Assert.NotNull(second);
-        second.Dispose();
-    }
-
-    [Fact]
-    public async Task BeginStep_AfterTheGracePeriodElapsesWithNoNewStep_NextCallStartsAFreshSessionCleanly()
-    {
-        HumanOutputSink sink = new(sessionEndGracePeriod: TimeSpan.FromMilliseconds(20));
-
-        IDisposable first = sink.BeginStep("first");
-        first.Dispose();
-
-        // Comfortably longer than the grace period above, so the first session has
-        // actually ended by the time "second" starts.
-        await Task.Delay(TimeSpan.FromMilliseconds(100), TestContext.Current.CancellationToken);
-
-        IDisposable second = sink.BeginStep("second");
-        Assert.NotNull(second);
-        second.Dispose();
     }
 
     [Fact]

@@ -11,7 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../src/EShop.Cli/EShop.Cli.csproj" />
+    <ProjectReference Include="../../src/dev/EShop.Cli/EShop.Cli.csproj" />
   </ItemGroup>
 
 </Project>

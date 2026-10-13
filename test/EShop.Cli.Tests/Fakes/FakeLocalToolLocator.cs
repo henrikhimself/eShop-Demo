@@ -22,6 +22,11 @@ internal sealed class FakeLocalToolLocator(params string[] toolsOnPath) : ILocal
 {
     private readonly HashSet<string> _toolsOnPath = [.. toolsOnPath];
 
+    public string? FindOnPath(string tool)
+    {
+        return IsOnPath(tool) ? $"/tools/{tool}" : null;
+    }
+
     public bool IsOnPath(string tool)
     {
         return _toolsOnPath.Contains(tool);

@@ -85,7 +85,7 @@ public sealed class InventoryEventsEndpointsTests : IAsyncLifetime
 
         InventorySummary? delivered = JsonSerializer.Deserialize<InventorySummary>(json, TestJsonOptions.Default);
         Assert.NotNull(delivered);
-        Assert.Equal(summary.Sku, delivered!.Sku);
+        Assert.Equal(summary.Sku, delivered.Sku);
         Assert.Equal(summary.SyncStatus, delivered.SyncStatus);
         Assert.Equal(summary.ReportedQuantity, delivered.ReportedQuantity);
 

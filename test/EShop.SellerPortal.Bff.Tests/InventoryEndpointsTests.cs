@@ -56,7 +56,7 @@ public sealed class InventoryEndpointsTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         List<InventorySummary>? summaries = await response.Content.ReadFromJsonAsync<List<InventorySummary>>(TestJsonOptions.Default, TestContext.Current.CancellationToken);
         Assert.NotNull(summaries);
-        Assert.Empty(summaries!);
+        Assert.Empty(summaries);
     }
 
     [Fact]

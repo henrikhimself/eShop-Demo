@@ -98,31 +98,33 @@ public sealed class AiOutputSinkTests
     }
 
     [Fact]
-    public async Task BeginStep_WhileOpen_WritesLivenessHeartbeatOnTheConfiguredInterval()
+    public void BeginStep_WhileOpen_WritesLivenessHeartbeatOnTheConfiguredInterval()
     {
         StringWriter writer = new();
-        AiOutputSink sink = new(writer, TimeSpan.FromMilliseconds(20));
+        ControllableTimeProvider timeProvider = new();
+        AiOutputSink sink = new(writer, TimeSpan.FromMinutes(1), timeProvider);
 
         using (sink.BeginStep("dotnet build EShop.slnx"))
         {
-            await Task.Delay(TimeSpan.FromMilliseconds(80), TestContext.Current.CancellationToken);
+            timeProvider.FireTimers();
         }
 
         Assert.Contains("still running", writer.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task BeginStep_AfterDispose_WritesNoFurtherHeartbeats()
+    public void BeginStep_AfterDispose_WritesNoFurtherHeartbeats()
     {
         StringWriter writer = new();
-        AiOutputSink sink = new(writer, TimeSpan.FromMilliseconds(20));
+        ControllableTimeProvider timeProvider = new();
+        AiOutputSink sink = new(writer, TimeSpan.FromMinutes(1), timeProvider);
 
         IDisposable step = sink.BeginStep("dotnet build EShop.slnx");
-        await Task.Delay(TimeSpan.FromMilliseconds(30), TestContext.Current.CancellationToken);
+        timeProvider.FireTimers();
         step.Dispose();
         string afterDispose = writer.ToString();
 
-        await Task.Delay(TimeSpan.FromMilliseconds(80), TestContext.Current.CancellationToken);
+        timeProvider.FireTimers();
 
         Assert.Equal(afterDispose, writer.ToString());
     }
@@ -138,6 +140,55 @@ public sealed class AiOutputSinkTests
 
         string expected = "Step: Publishing\r\n".ReplaceLineEndings();
         Assert.Equal(expected, writer.ToString().ReplaceLineEndings());
+    }
+
+    private sealed class ControllableTimeProvider : TimeProvider
+    {
+        private readonly List<ControllableTimer> _timers = [];
+
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            ControllableTimer timer = new(callback, state);
+            _timers.Add(timer);
+            return timer;
+        }
+
+        public void FireTimers()
+        {
+            foreach (ControllableTimer timer in _timers)
+            {
+                timer.Fire();
+            }
+        }
+
+        private sealed class ControllableTimer(TimerCallback callback, object? state) : ITimer
+        {
+            private bool _disposed;
+
+            public bool Change(TimeSpan dueTime, TimeSpan period)
+            {
+                return !_disposed;
+            }
+
+            public void Dispose()
+            {
+                _disposed = true;
+            }
+
+            public ValueTask DisposeAsync()
+            {
+                Dispose();
+                return ValueTask.CompletedTask;
+            }
+
+            public void Fire()
+            {
+                if (!_disposed)
+                {
+                    callback(state);
+                }
+            }
+        }
     }
 
     [Fact]

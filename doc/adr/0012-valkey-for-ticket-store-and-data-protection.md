@@ -43,7 +43,7 @@ the two products runs the server.
 - The eShop AppHost defines a Valkey resource with a persistent data volume. Both
   the ticket store and the key ring survive an `aspire start` restart.
 - `HybridCacheTicketStore`
-  (`src/EShop.SellerPortal.Bff/Authentication/HybridCacheTicketStore.cs`)
+  (`src/apps/EShop.SellerPortal.Bff/Authentication/HybridCacheTicketStore.cs`)
   implements `ITicketStore` over `HybridCache`. The `seller-portal` cookie now
   holds only this store's opaque key, never the whole ticket.
 - The Data Protection key ring now persists into Valkey, through a

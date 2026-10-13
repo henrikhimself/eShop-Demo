@@ -83,7 +83,7 @@ public sealed class AppHostGuardTests
     public async Task IsAlreadyRunningAsync_UnrelatedProjectPath_ReturnsFalse()
     {
         RepoPaths paths = new("/repo");
-        string json = "[{\"appHostPath\":\"/workspace/src/EShop.SellerPortal.Bff/EShop.SellerPortal.Bff.csproj\",\"status\":\"running\"}]";
+        string json = "[{\"appHostPath\":\"/workspace/src/apps/EShop.SellerPortal.Bff/EShop.SellerPortal.Bff.csproj\",\"status\":\"running\"}]";
         FakeToolExecutor toolExecutor = new(_ => new ProcessResult(0, json, string.Empty));
         AppHostGuard guard = new(toolExecutor, paths);
 

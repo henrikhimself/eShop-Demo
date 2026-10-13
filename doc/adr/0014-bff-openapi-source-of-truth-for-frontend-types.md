@@ -34,7 +34,7 @@ the two files differ.
 
 ## Consequences
 
-- `src/EShop.SellerPortal.Web/lib/types.ts` no longer defines these contracts by hand.
+- `src/apps/EShop.SellerPortal.Web/lib/types.ts` no longer defines these contracts by hand.
   It re-exports the types a code generator writes into a second, generated file, so
   every existing import of `lib/types.ts` keeps working unchanged.
 - A new top-level script builds the Bff. The script then runs the TypeScript code

@@ -53,7 +53,7 @@ public sealed class DraftImageEndpointsTests : IAsyncLifetime
         DraftImageDto? image = await postResponse.Content.ReadFromJsonAsync<DraftImageDto>(TestJsonOptions.Default, TestContext.Current.CancellationToken);
         Assert.NotNull(image);
 
-        HttpResponseMessage getResponse = await client.GetAsync(new Uri(image!.Url, UriKind.Relative), TestContext.Current.CancellationToken);
+        HttpResponseMessage getResponse = await client.GetAsync(new Uri(image.Url, UriKind.Relative), TestContext.Current.CancellationToken);
         getResponse.EnsureSuccessStatusCode();
         Assert.Equal(imageBytes, await getResponse.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
     }
@@ -149,7 +149,7 @@ public sealed class DraftImageEndpointsTests : IAsyncLifetime
 
     private static async Task<HttpResponseMessage> PostImageAsync(HttpClient client, Guid draftId, byte[] content, string contentType)
     {
-        using MultipartFormDataContent form = new();
+        using MultipartFormDataContent form = [];
         using ByteArrayContent fileContent = new(content);
         fileContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
         form.Add(fileContent, "file", "cover");

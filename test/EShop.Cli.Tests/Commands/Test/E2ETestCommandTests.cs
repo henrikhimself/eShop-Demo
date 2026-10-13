@@ -1,7 +1,7 @@
 // <copyright file="E2ETestCommandTests.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
-// Licensed under the Apache License, Version 2.0 (the "License")
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
@@ -26,14 +26,21 @@ namespace Hj.EShop.Cli.Tests.Commands.Test;
 
 public sealed class E2ETestCommandTests
 {
+    private readonly FakeTestSettingsReader _testSettingsReader = new();
+
     [Fact]
     public async Task ExecuteAsync_AlreadyRunning_FailsWithoutRestoringOrTesting()
     {
         FakeToolExecutor toolExecutor = new();
-        E2ETestCommand command = new(new RecordingOutputSink(), toolExecutor, new FakeAppHostGuard(alreadyRunning: true), new RepoPaths("/repo"));
+        E2ETestCommand command = new(
+            new RecordingOutputSink(),
+            toolExecutor,
+            new FakeAppHostGuard(alreadyRunning: true),
+            new RepoPaths("/repo"),
+            _testSettingsReader);
 
-        int exitCode = await ((ICommand<TestSettings>)command).ExecuteAsync(
-            context: null!, settings: new TestSettings(), TestContext.Current.CancellationToken);
+        int exitCode = await ((ICommand<E2ETestSettings>)command).ExecuteAsync(
+            context: null!, settings: new E2ETestSettings(), TestContext.Current.CancellationToken);
 
         Assert.Equal(1, exitCode);
         Assert.Empty(toolExecutor.Invocations);
@@ -43,9 +50,9 @@ public sealed class E2ETestCommandTests
     public async Task ExecuteAsync_RestoreAndTest_AlwaysForceContainerRegardlessOfGlobalTools()
     {
         FakeToolExecutor toolExecutor = new();
-        E2ETestCommand command = new(new RecordingOutputSink(), toolExecutor, new FakeAppHostGuard(alreadyRunning: false), new RepoPaths("/repo"));
+        E2ETestCommand command = CreateCommand(toolExecutor);
 
-        await ((ICommand<TestSettings>)command).ExecuteAsync(context: null!, settings: new TestSettings(), TestContext.Current.CancellationToken);
+        await ((ICommand<E2ETestSettings>)command).ExecuteAsync(context: null!, settings: new E2ETestSettings(), TestContext.Current.CancellationToken);
 
         Assert.Contains(toolExecutor.Invocations, i => i.Arguments.Contains("restore") && i.ForceMode == ExecutionMode.Container);
         Assert.Contains(toolExecutor.Invocations, i => i.Arguments.Contains("test") && i.ForceMode == ExecutionMode.Container);
@@ -57,9 +64,9 @@ public sealed class E2ETestCommandTests
         // Uses a relative path - this invocation always runs inside the container,
         // where the repo is mounted at /workspace, not at the host's absolute path.
         FakeToolExecutor toolExecutor = new();
-        E2ETestCommand command = new(new RecordingOutputSink(), toolExecutor, new FakeAppHostGuard(alreadyRunning: false), new RepoPaths("/repo"));
+        E2ETestCommand command = CreateCommand(toolExecutor);
 
-        await ((ICommand<TestSettings>)command).ExecuteAsync(context: null!, settings: new TestSettings(), TestContext.Current.CancellationToken);
+        await ((ICommand<E2ETestSettings>)command).ExecuteAsync(context: null!, settings: new E2ETestSettings(), TestContext.Current.CancellationToken);
 
         ToolInvocation testInvocation = Assert.Single(toolExecutor.Invocations, i => i.Arguments.Contains("test"));
         int index = testInvocation.Arguments.ToList().IndexOf("--results-directory");
@@ -68,17 +75,83 @@ public sealed class E2ETestCommandTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_PassesConfiguredParamsToDotnetTest()
+    {
+        FakeToolExecutor toolExecutor = new();
+        E2ETestCommand command = new(
+            new RecordingOutputSink(),
+            toolExecutor,
+            new FakeAppHostGuard(alreadyRunning: false),
+            new RepoPaths("/repo"),
+            new FakeTestSettingsReader("/p:EnableSourceControlManagerQueries=false", "/p:EnableSourceLink=false"));
+
+        await ((ICommand<E2ETestSettings>)command).ExecuteAsync(context: null!, settings: new E2ETestSettings(), TestContext.Current.CancellationToken);
+
+        ToolInvocation testInvocation = Assert.Single(toolExecutor.Invocations, i => i.Arguments.Contains("test"));
+        Assert.Contains("/p:EnableSourceControlManagerQueries=false", testInvocation.Arguments);
+        Assert.Contains("/p:EnableSourceLink=false", testInvocation.Arguments);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_TestFails_ReturnsNonZero()
     {
         FakeToolExecutor toolExecutor = new(invocation => invocation.Arguments.Contains("test")
             ? new ProcessResult(1, string.Empty, "failed")
             : new ProcessResult(0, string.Empty, string.Empty));
-        E2ETestCommand command = new(new RecordingOutputSink(), toolExecutor, new FakeAppHostGuard(alreadyRunning: false), new RepoPaths("/repo"));
+        E2ETestCommand command = CreateCommand(toolExecutor);
 
-        int exitCode = await ((ICommand<TestSettings>)command).ExecuteAsync(
-            context: null!, settings: new TestSettings(), TestContext.Current.CancellationToken);
+        int exitCode = await ((ICommand<E2ETestSettings>)command).ExecuteAsync(
+            context: null!, settings: new E2ETestSettings(), TestContext.Current.CancellationToken);
 
         Assert.Equal(1, exitCode);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_FilterClass_PassesTheClassToDotnetTest()
+    {
+        FakeToolExecutor toolExecutor = new();
+        E2ETestCommand command = CreateCommand(toolExecutor);
+        E2ETestSettings settings = new() { FilterClass = "Hj.EShop.AppHost.E2ETests.StorefrontLoginTests" };
+
+        await ((ICommand<E2ETestSettings>)command).ExecuteAsync(context: null!, settings, TestContext.Current.CancellationToken);
+
+        ToolInvocation testInvocation = Assert.Single(toolExecutor.Invocations, i => i.Arguments.Contains("test"));
+        Assert.Contains("--filter-class", testInvocation.Arguments);
+        Assert.Contains("Hj.EShop.AppHost.E2ETests.StorefrontLoginTests", testInvocation.Arguments);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_FilterMethod_PassesTheMethodToDotnetTest()
+    {
+        FakeToolExecutor toolExecutor = new();
+        E2ETestCommand command = CreateCommand(toolExecutor);
+        E2ETestSettings settings = new()
+        {
+            FilterMethod = "Hj.EShop.AppHost.E2ETests.StorefrontLoginTests.LoggingInAsAStorefrontStaffActorCanLoadCms",
+        };
+
+        await ((ICommand<E2ETestSettings>)command).ExecuteAsync(context: null!, settings, TestContext.Current.CancellationToken);
+
+        ToolInvocation testInvocation = Assert.Single(toolExecutor.Invocations, i => i.Arguments.Contains("test"));
+        Assert.Contains("--filter-method", testInvocation.Arguments);
+        Assert.Contains("Hj.EShop.AppHost.E2ETests.StorefrontLoginTests.LoggingInAsAStorefrontStaffActorCanLoadCms", testInvocation.Arguments);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_FilterClassAndFilterMethod_FailsWithoutRestoringOrTesting()
+    {
+        FakeToolExecutor toolExecutor = new();
+        E2ETestCommand command = CreateCommand(toolExecutor);
+        E2ETestSettings settings = new()
+        {
+            FilterClass = "Hj.EShop.AppHost.E2ETests.StorefrontLoginTests",
+            FilterMethod = "Hj.EShop.AppHost.E2ETests.StorefrontLoginTests.LoggingInAsAStorefrontStaffActorCanLoadCms",
+        };
+
+        int exitCode = await ((ICommand<E2ETestSettings>)command).ExecuteAsync(context: null!, settings, TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, exitCode);
+        Assert.Empty(toolExecutor.Invocations);
     }
 
     [Fact]
@@ -93,10 +166,15 @@ public sealed class E2ETestCommandTests
             await File.WriteAllTextAsync(staleTrx, "<stale/>", TestContext.Current.CancellationToken);
 
             FakeToolExecutor toolExecutor = new();
-            E2ETestCommand command = new(new RecordingOutputSink(), toolExecutor, new FakeAppHostGuard(alreadyRunning: false), paths);
+            E2ETestCommand command = new(
+                new RecordingOutputSink(),
+                toolExecutor,
+                new FakeAppHostGuard(alreadyRunning: false),
+                paths,
+                _testSettingsReader);
 
-            await ((ICommand<TestSettings>)command).ExecuteAsync(
-                context: null!, settings: new TestSettings(), TestContext.Current.CancellationToken);
+            await ((ICommand<E2ETestSettings>)command).ExecuteAsync(
+                context: null!, settings: new E2ETestSettings(), TestContext.Current.CancellationToken);
 
             Assert.False(File.Exists(staleTrx));
         }
@@ -104,6 +182,16 @@ public sealed class E2ETestCommandTests
         {
             Directory.Delete(tempRoot, recursive: true);
         }
+    }
+
+    private E2ETestCommand CreateCommand(FakeToolExecutor toolExecutor)
+    {
+        return new E2ETestCommand(
+            new RecordingOutputSink(),
+            toolExecutor,
+            new FakeAppHostGuard(alreadyRunning: false),
+            new RepoPaths("/repo"),
+            _testSettingsReader);
     }
 
     private sealed class FakeAppHostGuard(bool alreadyRunning) : IAppHostGuard

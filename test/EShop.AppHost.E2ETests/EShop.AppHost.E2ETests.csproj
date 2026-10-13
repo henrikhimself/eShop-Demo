@@ -14,7 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/EShop.AppHost/EShop.AppHost.csproj" />
-    <ProjectReference Include="../../src/EShop.Common/EShop.Common.csproj" />
+    <ProjectReference Include="../../src/shared/EShop.Common/EShop.Common.csproj" />
   </ItemGroup>
 
   <ItemGroup>

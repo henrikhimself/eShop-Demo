@@ -26,11 +26,13 @@ namespace Hj.EShop.Cli.Tests.Commands.Test;
 
 public sealed class UnitTestCommandTests
 {
+    private readonly FakeTestSettingsReader _testSettingsReader = new();
+
     [Fact]
     public async Task ExecuteAsync_BothTestRunsSucceed_ReturnsZero()
     {
         FakeToolExecutor toolExecutor = new();
-        UnitTestCommand command = new(new RecordingOutputSink(), toolExecutor, new RepoPaths("/repo"));
+        UnitTestCommand command = new(new RecordingOutputSink(), toolExecutor, new RepoPaths("/repo"), _testSettingsReader);
 
         int exitCode = await ((ICommand<TestSettings>)command).ExecuteAsync(
             context: null!, settings: new TestSettings(), TestContext.Current.CancellationToken);
@@ -41,16 +43,20 @@ public sealed class UnitTestCommandTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_ExcludesIntegrationTraitFromTheDefaultRun()
+    public async Task ExecuteAsync_PassesConfiguredParamsToDotnetTest()
     {
         FakeToolExecutor toolExecutor = new();
-        UnitTestCommand command = new(new RecordingOutputSink(), toolExecutor, new RepoPaths("/repo"));
+        UnitTestCommand command = new(
+            new RecordingOutputSink(),
+            toolExecutor,
+            new RepoPaths("/repo"),
+            new FakeTestSettingsReader("/p:EnableSourceControlManagerQueries=false", "/p:EnableSourceLink=false"));
 
         await ((ICommand<TestSettings>)command).ExecuteAsync(context: null!, settings: new TestSettings(), TestContext.Current.CancellationToken);
 
-        Assert.Contains(
-            toolExecutor.Invocations,
-            i => i.Tool == "dotnet" && i.Arguments.Contains("--filter-not-trait") && i.Arguments.Contains("Category=Integration"));
+        ToolInvocation testInvocation = Assert.Single(toolExecutor.Invocations, i => i.Tool == "dotnet" && i.Arguments.Contains("test"));
+        Assert.Contains("/p:EnableSourceControlManagerQueries=false", testInvocation.Arguments);
+        Assert.Contains("/p:EnableSourceLink=false", testInvocation.Arguments);
     }
 
     [Fact]
@@ -59,7 +65,7 @@ public sealed class UnitTestCommandTests
         FakeToolExecutor toolExecutor = new(invocation => invocation.Tool == "dotnet" && invocation.Arguments.Contains("test")
             ? new ProcessResult(1, string.Empty, "failed")
             : new ProcessResult(0, string.Empty, string.Empty));
-        UnitTestCommand command = new(new RecordingOutputSink(), toolExecutor, new RepoPaths("/repo"));
+        UnitTestCommand command = new(new RecordingOutputSink(), toolExecutor, new RepoPaths("/repo"), _testSettingsReader);
 
         int exitCode = await ((ICommand<TestSettings>)command).ExecuteAsync(
             context: null!, settings: new TestSettings(), TestContext.Current.CancellationToken);
@@ -73,7 +79,7 @@ public sealed class UnitTestCommandTests
         FakeToolExecutor toolExecutor = new(invocation => invocation.Tool == "pnpm"
             ? new ProcessResult(1, string.Empty, "failed")
             : new ProcessResult(0, string.Empty, string.Empty));
-        UnitTestCommand command = new(new RecordingOutputSink(), toolExecutor, new RepoPaths("/repo"));
+        UnitTestCommand command = new(new RecordingOutputSink(), toolExecutor, new RepoPaths("/repo"), _testSettingsReader);
 
         int exitCode = await ((ICommand<TestSettings>)command).ExecuteAsync(
             context: null!, settings: new TestSettings(), TestContext.Current.CancellationToken);
@@ -88,7 +94,7 @@ public sealed class UnitTestCommandTests
         // the test host try to create it inside the container's filesystem instead of
         // under /workspace.
         FakeToolExecutor toolExecutor = new();
-        UnitTestCommand command = new(new RecordingOutputSink(), toolExecutor, new RepoPaths("/repo"));
+        UnitTestCommand command = new(new RecordingOutputSink(), toolExecutor, new RepoPaths("/repo"), _testSettingsReader);
 
         await ((ICommand<TestSettings>)command).ExecuteAsync(context: null!, settings: new TestSettings(), TestContext.Current.CancellationToken);
 
@@ -105,7 +111,7 @@ public sealed class UnitTestCommandTests
             delaySelector: invocation => invocation.Tool == "dotnet" && invocation.Arguments.Contains("test") || invocation.Tool == "pnpm"
                 ? TimeSpan.FromMilliseconds(200)
                 : TimeSpan.Zero);
-        UnitTestCommand command = new(new RecordingOutputSink(), toolExecutor, new RepoPaths("/repo"));
+        UnitTestCommand command = new(new RecordingOutputSink(), toolExecutor, new RepoPaths("/repo"), _testSettingsReader);
 
         var stopwatch = Stopwatch.StartNew();
         await ((ICommand<TestSettings>)command).ExecuteAsync(
@@ -128,7 +134,7 @@ public sealed class UnitTestCommandTests
             await File.WriteAllTextAsync(staleTrx, "<stale/>", TestContext.Current.CancellationToken);
 
             FakeToolExecutor toolExecutor = new();
-            UnitTestCommand command = new(new RecordingOutputSink(), toolExecutor, paths);
+            UnitTestCommand command = new(new RecordingOutputSink(), toolExecutor, paths, _testSettingsReader);
 
             await ((ICommand<TestSettings>)command).ExecuteAsync(
                 context: null!, settings: new TestSettings(), TestContext.Current.CancellationToken);

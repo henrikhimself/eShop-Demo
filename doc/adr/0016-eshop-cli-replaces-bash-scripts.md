@@ -33,7 +33,7 @@ build and start the tool. See `doc/CHRONICLE.md` for the full design.
 
 ## Consequences
 
-- `EShop.Cli` (`src/EShop.Cli/`) and its test project (`test/EShop.Cli.Tests/`)
+- `EShop.Cli` (`src/dev/EShop.Cli/`) and its test project (`test/EShop.Cli.Tests/`)
   replace the developer-facing role of `scripts/*.bash` and `scripts/internal/`. See
   `AGENTS.md` "Common Commands" for the command reference, and `doc/CHRONICLE.md` for
   the full design.

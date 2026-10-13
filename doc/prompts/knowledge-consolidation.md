@@ -43,7 +43,7 @@ Never resolve a Medium or Low item by inventing rationale.
 
 The canonical set is:
 
-`README.md`, `AGENTS.md`, `SPEC.md`, `System landscape.md`, `TODO.md`, `MEMORY.md`, `CHRONICLE.md`, and ADR files under the repository's existing ADR directory.
+`README.md`, `DEVELOP.md`, `AGENTS.md`, `SPEC.md`, `System landscape.md`, `TODO.md`, `MEMORY.md`, `CHRONICLE.md`, and ADR files under the repository's existing ADR directory.
 
 Resolution rules:
 

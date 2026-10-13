@@ -28,6 +28,8 @@ internal sealed class FakeToolExecutor(Func<ToolInvocation, ProcessResult>? resp
 {
     private readonly List<ToolInvocation> _invocations = [];
 
+    public TaskCompletionSource FirstInvocationStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
     public IReadOnlyList<ToolInvocation> Invocations => _invocations;
 
     public async Task<ProcessResult> RunAsync(ToolInvocation invocation, CancellationToken cancellationToken)
@@ -35,6 +37,7 @@ internal sealed class FakeToolExecutor(Func<ToolInvocation, ProcessResult>? resp
         lock (_invocations)
         {
             _invocations.Add(invocation);
+            FirstInvocationStarted.TrySetResult();
         }
 
         TimeSpan delay = delaySelector?.Invoke(invocation) ?? TimeSpan.Zero;

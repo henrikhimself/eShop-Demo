@@ -54,7 +54,7 @@ public sealed class MerchandiseDraftEndpointsTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         MerchandiseDraftDetail? detail = await response.Content.ReadFromJsonAsync<MerchandiseDraftDetail>(TestJsonOptions.Default, TestContext.Current.CancellationToken);
         Assert.NotNull(detail);
-        Assert.Equal(DraftStatus.Draft, detail!.Status);
+        Assert.Equal(DraftStatus.Draft, detail.Status);
         Assert.Equal(string.Empty, detail.ProductName);
         Assert.Null(detail.AssociatedMovieTitle);
         Assert.Empty(detail.Images);
@@ -75,7 +75,7 @@ public sealed class MerchandiseDraftEndpointsTests : IAsyncLifetime
         response.EnsureSuccessStatusCode();
         MerchandiseDraftDetail? updated = await response.Content.ReadFromJsonAsync<MerchandiseDraftDetail>(TestJsonOptions.Default, TestContext.Current.CancellationToken);
         Assert.NotNull(updated);
-        Assert.Equal("A Mug", updated!.ProductName);
+        Assert.Equal("A Mug", updated.ProductName);
         Assert.Equal("Updated description", updated.Description);
         Assert.Equal(12.5m, updated.Price);
         Assert.Equal("A Movie", updated.AssociatedMovieTitle);

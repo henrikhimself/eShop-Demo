@@ -36,18 +36,12 @@ prematurely.
   temporary-image cleanup that already exists follows the code's own final-state
   handling, not the ADR's literal wording. Reconcile the wording, or confirm the code's
   handling is what was actually intended.
-- Migration artifact and runner path for the Optimizely CMS and Commerce databases (see
-  [ADR 0023](./adr/0023-explicit-database-schema-migration-resources.md)) is decided,
-  implemented, and wired into `AppHost.cs`: `EShop.StoreFront.MigrationRunner` applies
-  Optimizely's own shipped SQL scripts directly (raw ADO.NET, the same lock/marker model
-  as `EShop.SellerPortal.MigrationRunner`'s EF-based approach). Verified end to end
-  against a real SQL Server using the real `EPiServer.CMS.Core`/`EPiServer.Commerce.Core`
-  scripts (not just synthetic fixtures), and inside a real `eshop run` session - see
-  `doc/CHRONICLE.md`. `EShop.StoreFront.Web`'s own readiness against a not-yet-migrated
-  database is resolved too: a pre-flight check against the shared schema marker, not
-  `.WaitFor` or a health check (Optimizely's own `DatabaseSchemaHost` crashes the app at
-  startup on a missing schema, and `.WaitFor` has no effect once deployed to Azure
-  Container Apps) - also verified live.
+- Storefront schema migration follows [ADR 0023](./adr/0023-explicit-database-schema-migration-resources.md):
+  `EShop.StoreFront.MigrationRunner` applies the Optimizely-shipped CMS and Commerce SQL
+  scripts using the shared lock and marker model. Before Storefront starts, its preflight
+  checks the shared schema marker instead of `.WaitFor` or a health check, because
+  Optimizely's `DatabaseSchemaHost` cannot start against a missing schema and `.WaitFor`
+  does not control Azure Container Apps startup.
 - Exact deployment step that starts migration resources and observes their completion
   before dependent app revisions become active (see
   [ADR 0023](./adr/0023-explicit-database-schema-migration-resources.md)) - not yet
@@ -65,11 +59,14 @@ prematurely.
   such as T-shirts with sizes.
 - Which CMS content types, if any, checkout needs. Checkout is deferred until the team
   designs that flow.
-- `SubmissionEndpoints.cs`'s submit route commits the Draft/Submission state before
-  publishing the `SubmissionRequestMessage`, then returns `500` if the publish itself
-  throws, logging the failure. The DB state is already durable and correct at that
-  point, but nothing retries the publish and the Seller only sees a generic submit
-  failure - no compensating-transaction or retry logic exists yet for this gap.
+- `SubmissionEndpoints.cs`'s submit and cancel-review routes commit the Draft/Submission
+  state before publishing to Service Bus, then return `500` if the publish still fails
+  after a bounded retry (`SendWithRetryAsync`), logging the failure. The bounded retry
+  absorbs a transient broker failure (for example a brief Service Bus reconnect). The DB
+  state is already durable and correct at that point, but a *persistent* broker outage
+  still has no compensating transaction - the Seller only sees a generic submit failure,
+  and nothing reconciles the already-committed DB state with the never-delivered
+  message.
 - Component (C3) diagrams still to create under [`doc/c4/components`](./c4/components),
   once the specification gives enough detail:
   - The Storefront catalog and campaign flow. Checkout is deferred.
@@ -99,12 +96,26 @@ prematurely.
   replica race this used to track locally. What's left is deployment automation: ADR
   0018's Azure Container Apps target has no built-in way to run that migration runner
   as a gating job before a Bff revision activates - see the ADR 0023 items above.
-- Two `Directory.Packages.props` pins currently sit ahead of
-  [ADR 0013](./adr/0013-pinned-dependency-versions-and-40-day-quarantine.md)'s 40-day
-  quarantine on purpose, as a documented security exception (see `doc/CHRONICLE.md`
-  and `doc/MEMORY.md`'s "Non-obvious current constraints"): `Microsoft.AspNetCore.DataProtection.StackExchangeRedis`
-  (10.0.10, since the quarantine-compliant 10.0.9 transitively pulls in a
-  `System.Security.Cryptography.Xml` version with five disclosed high-severity CVEs)
-  and `SQLitePCLRaw.bundle_e_sqlite3` (2.1.12, since the quarantine-compliant 2.1.11 has
-  a disclosed high-severity CVE, GHSA-2m69-gcr7-jv3q). Revisit each once a version
-  exists that both fixes the vulnerability and clears the 40-day quarantine.
+- The local reverse proxy's own `/health` (and `/alive`) endpoint, from
+  `EShop.ServiceDefaults`' `MapDefaultEndpoints`, has no host restriction. ASP.NET
+  Core's routing gives a literal route segment priority over YARP's catch-all proxy
+  route, regardless of the proxy route's own `RequireHost` constraint, so
+  `https://storefront.eshop.local:8443/health` (for example) hits the reverse proxy's
+  own health check instead of being forwarded to the Storefront's `/health` (see
+  [ADR 0025](./adr/0025-local-development-reverse-proxy.md)). Needs a decision on
+  where the reverse proxy's own health endpoint should live instead (for example a
+  dedicated internal-only port/host), then a `RequireHost` restriction on the proxy
+  routes so no public hostname can shadow a target's own health endpoint this way.
+- The Storefront's later phases are identified but not started: a custom Optimizely
+  Shell tool for Merchandiser submission review (amends
+  [ADR 0008](./adr/0008-submission-content-with-native-approval.md) - native approval
+  alone can't handle SKU deduplication before approve/reject), then the Commerce/CMS
+  content types (MovieProduct/MovieVariant, MerchandiseProduct/MerchandiseVariant -
+  checkout content types stay deferred) and Storefront shell pages.
+- Scaffold the search microservice first with a basic API and health checks; defer
+  indexing and query endpoints until the Storefront search document shape is decided.
+  Also scaffold the Profile microservice.
+- Extend `eshop build`/`restore`/`format` coverage notes if `EShop.StoreFront.Web` ever
+  gains its own frontend build step (it has none yet - no separate JS/TS build).
+- Centralize the Storefront migration runners' script-directory configuration instead of
+  repeating it in AppHost resource configuration.

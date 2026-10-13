@@ -86,8 +86,8 @@ public sealed class SellerPortalDbContextTests : IAsyncLifetime
             .SingleAsync(d => d.Id == draft.Id, TestContext.Current.CancellationToken);
 
         Assert.Equal("A Movie", reloaded.Title);
-        Assert.Single(reloaded.FormatVariants);
-        Assert.Equal(MovieFormat.Dvd, reloaded.FormatVariants[0].Format);
+        DraftFormatVariant formatVariant = Assert.Single(reloaded.FormatVariants);
+        Assert.Equal(MovieFormat.Dvd, formatVariant.Format);
     }
 
     [Fact]

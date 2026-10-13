@@ -5,7 +5,8 @@
 Accepted
 
 [ADR 0010](./0010-keycloak-identity-provider.md) amends this ADR. ADR 0010 names
-Keycloak as the identity provider product.
+Keycloak as the identity provider product. [ADR 0028](./0028-separate-local-keycloak-realms-by-application.md)
+amends the local Keycloak single-sign-on consequence.
 
 ## Context
 

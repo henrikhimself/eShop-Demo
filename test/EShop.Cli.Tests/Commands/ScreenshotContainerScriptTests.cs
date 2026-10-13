@@ -45,14 +45,13 @@ public sealed class ScreenshotContainerScriptTests
     }
 
     [Fact]
-    public void Script_WaitsForTheFullLoginRedirectChainToLandOnANonBffPage_NotJustDomContentLoadedAfterTheClick()
+    public void Script_WaitsForTheFullLoginRedirectChainToReturnToTheResourceOrigin_NotJustDomContentLoadedAfterTheClick()
     {
-        // Clicking the Keycloak login button only starts the redirect chain
-        // (Keycloak -> /bff/signin-oidc -> the RedirectUri). The script waits for a URL
-        // back on our origin and off /bff/* so the BFF has set the auth cookie before
-        // the final `page.goto(args.url)`.
-        Assert.Contains("await page.waitForURL(", ScreenshotContainerScript.Script, StringComparison.Ordinal);
-        Assert.Contains("!url.pathname.startsWith('/bff/')", ScreenshotContainerScript.Script, StringComparison.Ordinal);
+        // A resource can start OIDC from either a dedicated login endpoint or a protected
+        // route. Waiting for the target origin is the resource-agnostic point at which its
+        // OIDC callback has finished setting the authentication cookie.
+        Assert.Contains("await page.waitForURL((url) => url.origin === origin", ScreenshotContainerScript.Script, StringComparison.Ordinal);
+        Assert.DoesNotContain("/bff/signin-oidc", ScreenshotContainerScript.Script, StringComparison.Ordinal);
     }
 
     [Fact]

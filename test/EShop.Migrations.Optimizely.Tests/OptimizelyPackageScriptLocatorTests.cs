@@ -24,35 +24,59 @@ public sealed class OptimizelyPackageScriptLocatorTests : IDisposable
         Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), $"eshop-optimizely-tools-{Guid.NewGuid():N}")).FullName;
 
     [Fact]
-    public void Locate_BaselineExists_ReturnsFileInfo()
+    public void Locate_BaselineAndEmptyIncrementalDirectoryExist_ReturnsBaselineAndEmptyIncrementalList()
     {
-        File.WriteAllText(Path.Combine(_toolsDirectory, "EPiServer.Cms.Core.sql"), "-- baseline");
+        CreateBaseline();
+        CreateIncrementalDirectory("epiupdates");
 
         OptimizelyPackageScripts scripts = OptimizelyPackageScriptLocator.Locate(_toolsDirectory, "EPiServer.Cms.Core.sql", "epiupdates");
 
-        Assert.NotNull(scripts.BaselineScript);
         Assert.Equal("EPiServer.Cms.Core.sql", scripts.BaselineScript.Name);
-    }
-
-    [Fact]
-    public void Locate_BaselineMissing_ReturnsNull()
-    {
-        OptimizelyPackageScripts scripts = OptimizelyPackageScriptLocator.Locate(_toolsDirectory, "EPiServer.Cms.Core.sql", "epiupdates");
-
-        Assert.Null(scripts.BaselineScript);
-    }
-
-    [Fact]
-    public void Locate_IncrementalFolderMissing_ReturnsEmptyIncrementalList()
-    {
-        OptimizelyPackageScripts scripts = OptimizelyPackageScriptLocator.Locate(_toolsDirectory, "EPiServer.Cms.Core.sql", "epiupdates");
-
         Assert.Empty(scripts.IncrementalScripts);
+    }
+
+    [Fact]
+    public void Locate_ToolsDirectoryMissing_Throws()
+    {
+        string missingToolsDirectory = Path.Combine(_toolsDirectory, "missing");
+
+        DirectoryNotFoundException exception = Assert.Throws<DirectoryNotFoundException>(
+            () => OptimizelyPackageScriptLocator.Locate(missingToolsDirectory, "EPiServer.Cms.Core.sql", "epiupdates"));
+
+        Assert.Contains(missingToolsDirectory, exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Locate_BaselineMissing_Throws()
+    {
+        CreateIncrementalDirectory("epiupdates");
+
+        FileNotFoundException exception = Assert.Throws<FileNotFoundException>(
+            () => OptimizelyPackageScriptLocator.Locate(_toolsDirectory, "EPiServer.Cms.Core.sql", "epiupdates"));
+
+        Assert.Equal(Path.Combine(_toolsDirectory, "EPiServer.Cms.Core.sql"), exception.FileName);
+    }
+
+    [Theory]
+    [InlineData("epiupdates")]
+    [InlineData("epiupdates_CMS")]
+    public void Locate_ConfiguredIncrementalDirectoryMissing_Throws(string missingFolderName)
+    {
+        CreateBaseline();
+        string presentFolderName = missingFolderName == "epiupdates" ? "epiupdates_CMS" : "epiupdates";
+        CreateIncrementalDirectory(presentFolderName);
+
+        DirectoryNotFoundException exception = Assert.Throws<DirectoryNotFoundException>(
+            () => OptimizelyPackageScriptLocator.Locate(
+                _toolsDirectory, "EPiServer.Cms.Core.sql", "epiupdates", "epiupdates_CMS"));
+
+        Assert.Contains(Path.Combine(_toolsDirectory, missingFolderName, "sql"), exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
     public void Locate_IncrementalScriptsAcrossMultipleFolders_ReturnsAllSortedByVersion()
     {
+        CreateBaseline();
         CreateScript("epiupdates", "12.20.0.sql");
         CreateScript("epiupdates", "12.19.0.sql");
         CreateScript("epiupdates_CMS", "12.19.5.sql");
@@ -86,9 +110,19 @@ public sealed class OptimizelyPackageScriptLocatorTests : IDisposable
         Assert.Throws<ArgumentException>(() => OptimizelyPackageScriptLocator.SortByVersion(files));
     }
 
+    private void CreateBaseline()
+    {
+        File.WriteAllText(Path.Combine(_toolsDirectory, "EPiServer.Cms.Core.sql"), "-- baseline");
+    }
+
+    private string CreateIncrementalDirectory(string folderName)
+    {
+        return Directory.CreateDirectory(Path.Combine(_toolsDirectory, folderName, "sql")).FullName;
+    }
+
     private FileInfo CreateScript(string folderName, string fileName)
     {
-        string folder = Directory.CreateDirectory(Path.Combine(_toolsDirectory, folderName, "sql")).FullName;
+        string folder = CreateIncrementalDirectory(folderName);
         string path = Path.Combine(folder, fileName);
         File.WriteAllText(path, "-- script");
         return new FileInfo(path);

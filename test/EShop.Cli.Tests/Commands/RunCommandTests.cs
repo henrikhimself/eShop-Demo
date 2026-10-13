@@ -32,7 +32,7 @@ public sealed class RunCommandTests
         FakeAppHostGuard guard = new(alreadyRunning: true);
         FakeAppHostSessionRunner sessionRunner = new();
         FakeContainerRunner containerRunner = new();
-        RunCommand command = new(new RecordingOutputSink(), guard, new FakeLocalToolLocator("aspire"), sessionRunner, containerRunner, new RepoPaths("/repo"));
+        RunCommand command = new(new RecordingOutputSink(), guard, new FakeLocalToolLocator("aspire"), sessionRunner, containerRunner, new RepoPaths("/repo"), new FakeRunSettingsReader());
 
         int exitCode = await ((ICommand<RunSettings>)command).ExecuteAsync(
             context: null!, settings: new RunSettings(), TestContext.Current.CancellationToken);
@@ -48,7 +48,7 @@ public sealed class RunCommandTests
         FakeAppHostSessionRunner sessionRunner = new();
         FakeContainerRunner containerRunner = new();
         RunCommand command = new(
-            new RecordingOutputSink(), new FakeAppHostGuard(alreadyRunning: false), new FakeLocalToolLocator("aspire"), sessionRunner, containerRunner, new RepoPaths("/repo"));
+            new RecordingOutputSink(), new FakeAppHostGuard(alreadyRunning: false), new FakeLocalToolLocator("aspire"), sessionRunner, containerRunner, new RepoPaths("/repo"), new FakeRunSettingsReader());
 
         int exitCode = await ((ICommand<RunSettings>)command).ExecuteAsync(
             context: null!, settings: new RunSettings(), TestContext.Current.CancellationToken);
@@ -64,7 +64,7 @@ public sealed class RunCommandTests
         FakeAppHostSessionRunner sessionRunner = new();
         FakeContainerRunner containerRunner = new();
         RunCommand command = new(
-            new RecordingOutputSink(), new FakeAppHostGuard(alreadyRunning: false), new FakeLocalToolLocator(), sessionRunner, containerRunner, new RepoPaths("/repo"));
+            new RecordingOutputSink(), new FakeAppHostGuard(alreadyRunning: false), new FakeLocalToolLocator(), sessionRunner, containerRunner, new RepoPaths("/repo"), new FakeRunSettingsReader());
 
         int exitCode = await ((ICommand<RunSettings>)command).ExecuteAsync(
             context: null!, settings: new RunSettings(), TestContext.Current.CancellationToken);
@@ -85,7 +85,7 @@ public sealed class RunCommandTests
         FakeAppHostSessionRunner sessionRunner = new(exitCode: 3);
         FakeContainerRunner containerRunner = new();
         RunCommand command = new(
-            new RecordingOutputSink(), new FakeAppHostGuard(alreadyRunning: false), new FakeLocalToolLocator("aspire"), sessionRunner, containerRunner, new RepoPaths("/repo"));
+            new RecordingOutputSink(), new FakeAppHostGuard(alreadyRunning: false), new FakeLocalToolLocator("aspire"), sessionRunner, containerRunner, new RepoPaths("/repo"), new FakeRunSettingsReader());
 
         int exitCode = await ((ICommand<RunSettings>)command).ExecuteAsync(
             context: null!, settings: new RunSettings(), TestContext.Current.CancellationToken);
@@ -99,7 +99,7 @@ public sealed class RunCommandTests
         FakeAppHostSessionRunner sessionRunner = new();
         FakeContainerRunner containerRunner = new(_ => new ProcessResult(2, string.Empty, "container script failed"));
         RunCommand command = new(
-            new RecordingOutputSink(), new FakeAppHostGuard(alreadyRunning: false), new FakeLocalToolLocator(), sessionRunner, containerRunner, new RepoPaths("/repo"));
+            new RecordingOutputSink(), new FakeAppHostGuard(alreadyRunning: false), new FakeLocalToolLocator(), sessionRunner, containerRunner, new RepoPaths("/repo"), new FakeRunSettingsReader());
 
         int exitCode = await ((ICommand<RunSettings>)command).ExecuteAsync(
             context: null!, settings: new RunSettings(), TestContext.Current.CancellationToken);

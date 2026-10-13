@@ -44,11 +44,11 @@ internal sealed class TestAuthHandler(
             return Task.FromResult(AuthenticateResult.NoResult());
         }
 
-        List<Claim> claims = [new Claim(ClaimTypes.NameIdentifier, subjectId!)];
+        List<Claim> claims = [new Claim(ClaimTypes.NameIdentifier, subjectId.ToString())];
         if (Request.Headers.TryGetValue(RoleHeaderName, out Microsoft.Extensions.Primitives.StringValues role)
             && !string.IsNullOrEmpty(role))
         {
-            claims.Add(new Claim(ClaimTypes.Role, role!));
+            claims.Add(new Claim(ClaimTypes.Role, role.ToString()));
         }
 
         ClaimsIdentity identity = new(claims, SchemeName);

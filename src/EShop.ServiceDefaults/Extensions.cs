@@ -30,14 +30,11 @@ namespace Hj.EShop.ServiceDefaults;
 
 public static class Extensions
 {
-    // Standard path for minimal hosting. StoreFront uses Startup because AddCms/
-    // AddCommerce fail under WebApplication.CreateBuilder; service registration stays
-    // shared, but the entry point differs.
+    // StoreFront uses the Startup.cs overload below instead of this minimal-hosting one.
     public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder)
         where TBuilder : IHostApplicationBuilder
     {
-        // Do not call builder.ConfigureOpenTelemetry() here; that would duplicate
-        // ConfigureOpenTelemetryServices and can register UseOtlpExporter twice.
+        // Do not also call ConfigureOpenTelemetry() here - it would duplicate ConfigureOpenTelemetryServices and could register UseOtlpExporter twice.
         builder.Logging.ConfigureOpenTelemetryLogging();
 
         AddServiceDefaults(builder.Services, builder.Configuration, builder.Environment.ApplicationName);
@@ -45,8 +42,7 @@ public static class Extensions
         return builder;
     }
 
-    // Startup.cs hosting entry point: call from ConfigureServices. Logging is configured
-    // separately via ConfigureOpenTelemetryLogging from Program.cs.
+    // Startup.cs hosting: call from ConfigureServices; call ConfigureOpenTelemetryLogging separately from Program.cs.
     public static void AddServiceDefaults(IServiceCollection services, IConfiguration configuration, string applicationName)
     {
         ConfigureOpenTelemetryServices(services, configuration, applicationName);
@@ -55,9 +51,7 @@ public static class Extensions
 
         services.AddServiceDiscovery();
 
-        // Enriches every resilience pipeline's telemetry (e.g. ServiceBusQueueConsumer's
-        // retry pipeline in EShop.Messaging, not just the HttpClient one below) with
-        // exception summaries and metadata.
+        // Enriches every resilience pipeline's telemetry, not just the HttpClient one below (e.g. EShop.Messaging's ServiceBusQueueConsumer retry pipeline).
         services.AddResilienceEnricher();
 
         services.ConfigureHttpClientDefaults(http =>
@@ -65,6 +59,7 @@ public static class Extensions
             http.AddStandardResilienceHandler();
 
             http.AddServiceDiscovery();
+
         });
     }
 
@@ -146,7 +141,6 @@ public static class Extensions
 
     private static void AddDefaultHealthChecks(IServiceCollection services)
     {
-        // ADR 0018: harden health endpoints for non-Development exposure.
         services.AddRequestTimeouts(
             configure: static timeouts => timeouts.AddPolicy("HealthChecks", TimeSpan.FromSeconds(5)));
 

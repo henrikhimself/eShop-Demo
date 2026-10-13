@@ -80,7 +80,7 @@ public sealed class SubmissionEndpointsTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         SubmissionSummary? summary = await response.Content.ReadFromJsonAsync<SubmissionSummary>(TestJsonOptions.Default, TestContext.Current.CancellationToken);
         Assert.NotNull(summary);
-        Assert.Equal(SubmissionStatus.Pending, summary!.Status);
+        Assert.Equal(SubmissionStatus.Pending, summary.Status);
 
         ServiceBusMessage sentMessage = Assert.Single(factory.ServiceBusClient.SentMessages);
         SubmissionRequestMessage message = JsonSerializer.Deserialize<SubmissionRequestMessage>(sentMessage.Body.ToString())!;
@@ -154,6 +154,28 @@ public sealed class SubmissionEndpointsTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task PostSubmit_TransientPublishFailure_RetriesAndSucceeds()
+    {
+        // Simulates a Service Bus namespace that is briefly unreachable: the first two
+        // attempts fail, and SendWithRetryAsync's bounded retry (MaxRetryAttempts: 2, so
+        // 3 attempts total) absorbs both failures without the Seller seeing a 500.
+        (HttpClient client, Guid draftId) = await CreateSubmittableDraftAsync("seller-submit-transientfail");
+        factory.ServiceBusClient.FailuresBeforeSuccess = 2;
+        factory.ServiceBusClient.ExceptionToThrowOnSend = new ServiceBusException("Simulated transient broker unavailability.", ServiceBusFailureReason.ServiceBusy);
+
+        HttpResponseMessage response = await client.PostAsync(
+            new Uri($"/bff/api/drafts/movies/{draftId}/submit", UriKind.Relative), content: null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Single(factory.ServiceBusClient.SentMessages);
+
+        HttpResponseMessage getDraftResponse = await client.GetAsync(
+            new Uri($"/bff/api/drafts/movies/{draftId}", UriKind.Relative), TestContext.Current.CancellationToken);
+        MovieDraftDetail draft = (await getDraftResponse.Content.ReadFromJsonAsync<MovieDraftDetail>(TestJsonOptions.Default, TestContext.Current.CancellationToken))!;
+        Assert.Equal(DraftStatus.PendingReview, draft.Status);
+    }
+
+    [Fact]
     public async Task PostSubmit_PublishFailureIsNotAServiceBusException_StillReturnsInternalServerErrorButKeepsCommittedState()
     {
         // Any exception from the transport (a socket error, a credential failure, a
@@ -190,7 +212,7 @@ public sealed class SubmissionEndpointsTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         SubmissionSummary? summary = await response.Content.ReadFromJsonAsync<SubmissionSummary>(TestJsonOptions.Default, TestContext.Current.CancellationToken);
         Assert.NotNull(summary);
-        Assert.Equal(SubmissionStatus.Pending, summary!.Status);
+        Assert.Equal(SubmissionStatus.Pending, summary.Status);
 
         ServiceBusMessage sentMessage = Assert.Single(factory.ServiceBusClient.SentMessages);
         SubmissionRequestMessage message = JsonSerializer.Deserialize<SubmissionRequestMessage>(sentMessage.Body.ToString())!;
@@ -388,7 +410,7 @@ public sealed class SubmissionEndpointsTests : IAsyncLifetime
         response.EnsureSuccessStatusCode();
         List<SubmissionSummary>? submissions = await response.Content.ReadFromJsonAsync<List<SubmissionSummary>>(TestJsonOptions.Default, TestContext.Current.CancellationToken);
         Assert.NotNull(submissions);
-        Assert.Equal(2, submissions!.Count);
+        Assert.Equal(2, submissions.Count);
         Assert.True(submissions[0].SubmittedAtUtc >= submissions[1].SubmittedAtUtc);
     }
 
@@ -462,7 +484,7 @@ public sealed class SubmissionEndpointsTests : IAsyncLifetime
 
     private static async Task UploadImageAsync(HttpClient client, Guid draftId)
     {
-        using MultipartFormDataContent form = new();
+        using MultipartFormDataContent form = [];
         using ByteArrayContent fileContent = new([1, 2, 3]);
         fileContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
         form.Add(fileContent, "file", "cover.jpg");

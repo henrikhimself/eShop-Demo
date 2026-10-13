@@ -1,0 +1,6 @@
+root = false
+
+[*.cs]
+# CA1515: Consider making public types internal.
+# Content types must be publicly accessible, as the Optimizely proxy mechanism relies on public content type definitions.
+dotnet_diagnostic.CA1515.severity = none

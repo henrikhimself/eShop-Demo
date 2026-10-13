@@ -1,5 +1,9 @@
 {
   "appHost": {
-    "language": "csharp"
+    "language": "csharp",
+    "path": "src/EShop.AppHost/EShop.AppHost.csproj"
+  },
+  "features": {
+    "defaultWatchEnabled": "false"
   }
 }

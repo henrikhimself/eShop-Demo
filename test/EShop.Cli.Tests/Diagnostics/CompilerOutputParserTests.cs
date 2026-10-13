@@ -41,6 +41,23 @@ public sealed class CompilerOutputParserTests
     }
 
     [Fact]
+    public void ParseDotnetBuildOutput_ExtractsNuGetProjectDiagnostics()
+    {
+        string output =
+            "/repo/App/App.csproj : error NU1902: Warning As Error: Package has a known vulnerability [/repo/EShop.slnx]\n"
+            + "/repo/App/App.csproj : error NU1903: Warning As Error: Package has a known high severity vulnerability [/repo/EShop.slnx]\n";
+
+        IReadOnlyList<Diagnostic> diagnostics = CompilerOutputParser.ParseDotnetBuildOutput(output);
+
+        Assert.Equal(
+            [
+                "/repo/App/App.csproj : error NU1902: Warning As Error: Package has a known vulnerability [/repo/EShop.slnx]",
+                "/repo/App/App.csproj : error NU1903: Warning As Error: Package has a known high severity vulnerability [/repo/EShop.slnx]",
+            ],
+            diagnostics.Select(d => d.Text));
+    }
+
+    [Fact]
     public void ParseDotnetBuildOutput_ExcludesPathsUnderObjDirectory()
     {
         string output = "obj/Debug/net10.0/Foo.cs(1,1): error CS0001: generated code error\n";
