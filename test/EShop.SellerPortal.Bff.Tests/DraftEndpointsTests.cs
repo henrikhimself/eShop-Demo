@@ -95,7 +95,7 @@ public sealed class DraftEndpointsTests : IAsyncLifetime
         response.EnsureSuccessStatusCode();
         List<DraftSummary>? drafts = await response.Content.ReadFromJsonAsync<List<DraftSummary>>(TestJsonOptions.Default, TestContext.Current.CancellationToken);
         Assert.NotNull(drafts);
-        Assert.Equal([visibleDraftId], drafts!.Select(d => d.Id));
+        Assert.Equal([visibleDraftId], drafts.Select(d => d.Id));
     }
 
     [Fact]
@@ -112,7 +112,7 @@ public sealed class DraftEndpointsTests : IAsyncLifetime
         response.EnsureSuccessStatusCode();
         List<DraftSummary>? drafts = await response.Content.ReadFromJsonAsync<List<DraftSummary>>(TestJsonOptions.Default, TestContext.Current.CancellationToken);
         Assert.NotNull(drafts);
-        Assert.Equal(DraftKind.Movie, drafts!.Single(d => d.Id == movieDraftId).Kind);
+        Assert.Equal(DraftKind.Movie, drafts.Single(d => d.Id == movieDraftId).Kind);
         Assert.Equal(DraftKind.Merchandise, drafts.Single(d => d.Id == merchandiseDraftId).Kind);
     }
 
@@ -128,7 +128,7 @@ public sealed class DraftEndpointsTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         MovieDraftDetail? detail = await response.Content.ReadFromJsonAsync<MovieDraftDetail>(TestJsonOptions.Default, TestContext.Current.CancellationToken);
         Assert.NotNull(detail);
-        Assert.Equal(DraftStatus.Draft, detail!.Status);
+        Assert.Equal(DraftStatus.Draft, detail.Status);
         Assert.Empty(detail.FormatVariants);
         Assert.Null(detail.CoverImage);
     }
@@ -153,7 +153,7 @@ public sealed class DraftEndpointsTests : IAsyncLifetime
         response.EnsureSuccessStatusCode();
         MovieDraftDetail? updated = await response.Content.ReadFromJsonAsync<MovieDraftDetail>(TestJsonOptions.Default, TestContext.Current.CancellationToken);
         Assert.NotNull(updated);
-        Assert.Equal("Updated Title", updated!.Title);
+        Assert.Equal("Updated Title", updated.Title);
         Assert.Equal(2027, updated.YearOfRelease);
         Assert.Equal([MovieFormat.BluRay], updated.FormatVariants.Select(v => v.Format));
     }
@@ -200,7 +200,7 @@ public sealed class DraftEndpointsTests : IAsyncLifetime
             new Uri($"/bff/api/drafts/movies/{created.Id}", UriKind.Relative), TestContext.Current.CancellationToken);
         MovieDraftDetail? unchanged = await getResponse.Content.ReadFromJsonAsync<MovieDraftDetail>(TestJsonOptions.Default, TestContext.Current.CancellationToken);
         Assert.NotNull(unchanged);
-        Assert.Equal([MovieFormat.Dvd], unchanged!.FormatVariants.Select(v => v.Format));
+        Assert.Equal([MovieFormat.Dvd], unchanged.FormatVariants.Select(v => v.Format));
     }
 
     [Theory]

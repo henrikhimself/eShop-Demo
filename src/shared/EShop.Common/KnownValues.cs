@@ -32,5 +32,7 @@ public static class KnownValues
 
     public static readonly string KeycloakPublicOrigin = $"https://{KnownNames.ReverseProxyIdentityHostName}:{KnownNames.ReverseProxyHttpsPort}";
 
-    public static readonly string KeycloakAuthority = $"{KeycloakPublicOrigin}/realms/{KnownNames.KeycloakRealmEShop}";
+    public static readonly string KeycloakSellerAuthority = $"{KeycloakPublicOrigin}/realms/{KnownNames.KeycloakRealmSeller}";
+
+    public static readonly string KeycloakStorefrontAuthority = $"{KeycloakPublicOrigin}/realms/{KnownNames.KeycloakRealmStorefront}";
 }

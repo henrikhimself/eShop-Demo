@@ -18,13 +18,8 @@ using Hj.EShop.ServiceDefaults;
 using Hj.EShop.StoreFront.Web;
 using Hj.EShop.StoreFront.Web.Initialization;
 
-// Classic hosting model, not this repo's usual minimal-hosting pattern - see
-// doc/CHRONICLE.md/doc/MEMORY.md for why (AddCms()/AddCommerce() don't work under
-// WebApplication.CreateBuilder).
-//
-// Host.CreateDefaultBuilder's own bootstrap config only reads DOTNET_-prefixed
-// environment variables, not ASPNETCORE_ENVIRONMENT directly; launchSettings.json sets
-// both for exactly this reason, so no code-level workaround is needed here.
+// Storefront uses classic hosting.
+// Host.CreateDefaultBuilder reads DOTNET_-prefixed bootstrap variables; launchSettings sets both.
 static IHostBuilder CreateHostBuilder(string[] args)
 {
     return Host.CreateDefaultBuilder(args)
@@ -33,8 +28,7 @@ static IHostBuilder CreateHostBuilder(string[] args)
         .ConfigureWebHostDefaults(webBuilder => webBuilder.UseStartup<Startup>());
 }
 
-// Same configuration sources Host.CreateDefaultBuilder itself would set up
-// because StorefrontMigrationPreflight must run before the real host.
+// The preflight runs before the real host, so it recreates the host configuration sources.
 string? environmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
 IConfigurationRoot preflightConfiguration = new ConfigurationBuilder()
     .AddJsonFile("appsettings.json", optional: true)

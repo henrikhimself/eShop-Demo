@@ -47,6 +47,6 @@ public sealed class SellerInventoryReportSimulatorConsumerTests
 
         Assert.Equal(MessageHandlingResult.Handled, result);
         Assert.True(store.TryGet(message.SellerId, message.Sku, out SellerPendingInventoryReport? report));
-        Assert.Equal(message.Quantity, report!.Message.Quantity);
+        Assert.Equal(message.Quantity, report.Message.Quantity);
     }
 }

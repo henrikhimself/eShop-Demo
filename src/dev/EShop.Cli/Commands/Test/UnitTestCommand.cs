@@ -21,9 +21,10 @@ using Spectre.Console.Cli;
 
 namespace Hj.EShop.Cli.Commands.Test;
 
-internal sealed class UnitTestCommand(IOutputSink output, IToolExecutor toolExecutor, RepoPaths paths) : AsyncCommand<TestSettings>
+internal sealed class UnitTestCommand(
+    IOutputSink output, IToolExecutor toolExecutor, RepoPaths paths, ITestSettingsReader testSettingsReader) : AsyncCommand<TestSettings>
 {
-    protected override async Task<int> ExecuteAsync(CommandContext context, TestSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, TestSettings settings, CancellationToken cancellationToken)
     {
         output.Heading(1, "Test Result");
 
@@ -58,6 +59,8 @@ internal sealed class UnitTestCommand(IOutputSink output, IToolExecutor toolExec
         // See doc/CHRONICLE.md - container tool arguments must stay repo-relative.
         string relativeTestResultsDir = Path.GetRelativePath(paths.Root, paths.TestResultsDir);
 
+        IReadOnlyList<string> testParams = await testSettingsReader.GetTestParamsAsync(cancellationToken);
+
         ProcessResult test;
         using (output.BeginStep("dotnet test"))
         {
@@ -67,9 +70,7 @@ internal sealed class UnitTestCommand(IOutputSink output, IToolExecutor toolExec
                     [
                         "test", "--solution", relativeSolution, "--report-trx", "--hangdump", "--hangdump-timeout", "30s",
                         "--results-directory", relativeTestResultsDir,
-
-                        // See doc/CHRONICLE.md - Integration-trait tests are opt-in only.
-                        "--filter-not-trait", "Category=Integration",
+                        .. testParams,
                     ],
                     WorkingDirectory: paths.Root),
                 cancellationToken);

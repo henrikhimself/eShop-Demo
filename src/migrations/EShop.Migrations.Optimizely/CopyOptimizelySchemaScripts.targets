@@ -2,14 +2,15 @@
 
   <!-- Shared by EShop.StoreFront.MigrationRunner.csproj and
        EShop.StoreFront.MigrationRunner.Tests.csproj (see
-       doc/adr/0023-explicit-database-schema-migration-resources.md and doc/CHRONICLE.md) -
+       doc/adr/0023-explicit-database-schema-migration-resources.md and
+       doc/adr/0027-optimizely-shipped-sql-scripts-for-storefront-schema.md) -
        copies the real Optimizely SQL scripts (episerver.cms.core/episerver.commerce.core
        NuGet packages' own tools/ folder) into the importing project's build output, so it
        ships/tests against them without needing the NuGet cache present at runtime. Merges
        two source packages into each destination folder: episerver.commerce.core's
        tools/epiupdates_CMS/sql ships CMS-targeting scripts despite living inside the
-       Commerce package (confirmed by decompiling EPiServer.Net.Cli's UpdateDatabase - see
-       doc/CHRONICLE.md), so it's merged into the "Cms" destination alongside
+       Commerce package (confirmed by decompiling EPiServer.Net.Cli's UpdateDatabase),
+       so it's merged into the "Cms" destination alongside
        episerver.cms.core's own tools/epiupdates/sql, not into "Commerce".
 
        The importing project must set $(OptimizelySchemaScriptsDestinationName) before

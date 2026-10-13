@@ -47,7 +47,7 @@ public sealed class AppHostResourceTests
 
         string[] resourceNames = [.. builder.Resources.Select(resource => resource.Name)];
 
-        // PLAN-2.md §3/§6.1: the local reverse proxy is dev-only - Azure Container Apps
+        // The local reverse proxy is dev-only - Azure Container Apps
         // ingress is the production browser edge.
         Assert.DoesNotContain(KnownNames.ResourceDevReverseProxy, resourceNames);
     }
@@ -58,7 +58,7 @@ public sealed class AppHostResourceTests
         IDistributedApplicationTestingBuilder builder = await DistributedApplicationTestingBuilder
             .CreateAsync<Projects.EShop_AppHost>(cancellationToken: TestContext.Current.CancellationToken);
 
-        // PLAN-2.md §3: the reverse proxy is now the only local browser ingress for
+        // The reverse proxy is now the only local browser ingress for
         // these two resources - neither should call WithExternalHttpEndpoints() itself
         // in run mode any more.
         IResource sellerPortalWeb = builder.Resources.Single(resource => resource.Name == KnownNames.ResourceSellerPortalWeb);
@@ -113,11 +113,8 @@ public sealed class AppHostResourceTests
         }
     }
 
-    // ADR 0023, extended to Optimizely (see doc/CHRONICLE.md): Optimizely's own
-    // DatabaseSchemaHost crashes the whole app at startup on a missing schema, and
-    // .WaitFor has no effect once deployed to Azure Container Apps - so unlike the
-    // Seller Portal Bff, the Storefront web resource must not rely on AppHost-level
-    // ordering at all (no .WaitFor on either migration runner).
+    // ADR 0023 and ADR 0027: Optimizely's DatabaseSchemaHost crashes on a missing schema,
+    // and Azure Container Apps ignores .WaitFor ordering; Storefront must not use it.
     [Fact]
     public async Task AppHost_StorefrontWeb_DoesNotWaitForMigrationRunners()
     {

@@ -18,10 +18,6 @@ using Xunit;
 
 namespace Hj.EShop.StoreFront.MigrationRunner.Tests;
 
-// No real SQL Server needed, unlike the rest of this project - keeps at least one fast
-// unit test in this assembly rather than every test here requiring
-// ESHOP_TEST_SQL_CONNECTION_STRING to run at all (a zero-non-integration-test assembly
-// makes `eshop test` fail outright - see EShop.Migrations.Orchestration.Tests' SchemaMarkerTests).
 public sealed class StorefrontComponentParserTests
 {
     [Theory]

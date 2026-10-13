@@ -23,9 +23,10 @@ namespace Hj.EShop.Cli.Commands.Test;
 
 // Runs `eshop test coverage`. Report-only: pass/fail comes from the test run,
 // not a coverage threshold.
-internal sealed class CoverageTestCommand(IOutputSink output, IToolExecutor toolExecutor, RepoPaths paths) : AsyncCommand<TestSettings>
+internal sealed class CoverageTestCommand(
+    IOutputSink output, IToolExecutor toolExecutor, RepoPaths paths, ITestSettingsReader testSettingsReader) : AsyncCommand<TestSettings>
 {
-    protected override async Task<int> ExecuteAsync(CommandContext context, TestSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, TestSettings settings, CancellationToken cancellationToken)
     {
         output.Heading(1, "Coverage Result");
 
@@ -41,6 +42,8 @@ internal sealed class CoverageTestCommand(IOutputSink output, IToolExecutor tool
         string relativeCoverageDir = Path.GetRelativePath(paths.Root, coverageDir);
         string relativeTestResultsDir = Path.GetRelativePath(paths.Root, paths.TestResultsDir);
 
+        IReadOnlyList<string> testParams = await testSettingsReader.GetTestParamsAsync(cancellationToken);
+
         ProcessResult test;
         using (output.BeginStep("dotnet-coverage collect"))
         {
@@ -51,6 +54,7 @@ internal sealed class CoverageTestCommand(IOutputSink output, IToolExecutor tool
                         "dotnet-coverage", "collect", "-o", relativeCoberturaPath, "-f", "cobertura", "--",
                         "dotnet", "test", "--solution", relativeSolution, "--report-trx", "--hangdump", "--hangdump-timeout", "30s",
                         "--results-directory", relativeTestResultsDir,
+                        .. testParams,
                     ],
                     WorkingDirectory: paths.Root),
                 cancellationToken);

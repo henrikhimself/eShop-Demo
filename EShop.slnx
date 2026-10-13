@@ -29,7 +29,6 @@
     <Project Path="test/EShop.Messaging.Tests/EShop.Messaging.Tests.csproj" />
     <Project Path="test/EShop.Migrations.Optimizely.Tests/EShop.Migrations.Optimizely.Tests.csproj" />
     <Project Path="test/EShop.SellerPortal.Bff.Tests/EShop.SellerPortal.Bff.Tests.csproj" />
-    <Project Path="test/EShop.SellerPortal.MigrationRunner.Tests/EShop.SellerPortal.MigrationRunner.Tests.csproj" />
     <Project Path="test/EShop.StoreFront.MigrationRunner.Tests/EShop.StoreFront.MigrationRunner.Tests.csproj" />
     <Project Path="test/EShop.StoreFront.Web.Tests/EShop.StoreFront.Web.Tests.csproj" />
     <Project Path="test/EShop.Testing.Common/EShop.Testing.Common.csproj" />

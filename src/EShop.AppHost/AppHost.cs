@@ -119,8 +119,6 @@ if (!isProductionDeployment)
         .WithEnvironment("KC_HOSTNAME", KnownValues.KeycloakPublicOrigin)
         .WithEnvironment("KC_PROXY_HEADERS", "xforwarded")
         .WithRealmImport("./Realms")
-
-        // See doc/CHRONICLE.md — persistent lifetime without WithDataVolume() avoids stale Keycloak signing keys while keeping realm-import edits live.
         .WithLifetime(ContainerLifetime.Persistent);
 
     IResourceBuilder<ParameterResource> sellerPortalOidcClientSecret = builder.AddParameter(KnownNames.ResourceSellerPortalOidcClientSecret, secret: true);
@@ -166,7 +164,7 @@ if (!isProductionDeployment)
         .WaitFor(sellerPortalWeb)
         .WaitFor(storefrontWeb);
 
-    // forwardPublicOrigin: true on all three - each target's OIDC redirect_uri construction depends on X-Forwarded-Host/-Proto reflecting the public origin, not an internal address (PLAN-2.md §5).
+    // forwardPublicOrigin: true on all three - each target's OIDC redirect_uri construction depends on X-Forwarded-Host/-Proto reflecting the public origin, not an internal address.
     reverseProxy
         .WithReverseProxyReference(keycloak.GetEndpoint("http"), KnownNames.ReverseProxyIdentityHostName, true)
         .WithReverseProxyReference(sellerPortalWeb.GetEndpoint("http"), KnownNames.ReverseProxySellerPortalHostName, true)

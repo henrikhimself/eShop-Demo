@@ -5,10 +5,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <!-- EPiServer.CMS.Core/EPiServer.Commerce.Core 13.1.3/15.2.0 each declare an upper
          bound of Microsoft.Data.SqlClient < 7.0.0, predating this repo's 7.0.1 pin
-         (ADR 0013). This project only uses EPiServer.CMS.Core/Commerce.Core for their
-         tools/ folder, never their C# API surface, and the actual migration runner code
-         (raw SqlConnection/SqlCommand) is verified end to end against a real SQL Server
-         with 7.0.1 - see doc/CHRONICLE.md. -->
+         (ADR 0013). This project reads only their tools/ folders and uses its direct
+         Microsoft.Data.SqlClient reference for migration execution. -->
     <NoWarn>NU1608</NoWarn>
   </PropertyGroup>
 

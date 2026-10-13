@@ -29,7 +29,7 @@ internal sealed class CleanCommand(IOutputSink output, IAppHostGuard appHostGuar
 {
     private static readonly string[] _directoryNamesToSkip = ["node_modules", ".git", "tmp", ".cache"];
 
-    protected override async Task<int> ExecuteAsync(CommandContext context, DefaultSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, DefaultSettings settings, CancellationToken cancellationToken)
     {
         output.Heading(1, "Clean Result");
 

@@ -37,13 +37,13 @@ internal partial class SellerSubmissionCancellationConsumer(
         SubmissionCancelledMessage message = JsonSerializer.Deserialize<SubmissionCancelledMessage>(body.ToString())
             ?? throw new InvalidOperationException("The submission cancellation message body was empty.");
 
-        if (!store.Remove(message.SubmissionId))
+        SellerSubmissionCancellationResult result = store.Cancel(message.SubmissionId);
+        if (result is SellerSubmissionCancellationResult.Remembered)
         {
-            // Expected race, not corruption: the submission may already be resolved
-            // (Approved/Rejected), or its cancellation arrived after a restart drained
-            // the queue.
-            LogReceivedCancellationForUnknownSubmission(logger, message.SubmissionId);
-            return MessageHandlingResult.UnknownRecord;
+            // The request and cancellation queues have no shared ordering. Retain a
+            // short-lived marker so a request that drains next is not shown as pending.
+            LogRememberedCancellation(logger, message.SubmissionId);
+            return MessageHandlingResult.Handled;
         }
 
         await hubContext.Clients.All.SendAsync(SellerSubmissionsHub.SubmissionsChangedEvent, cancellationToken);
@@ -53,7 +53,7 @@ internal partial class SellerSubmissionCancellationConsumer(
 
     [LoggerMessage(
         EventId = 1002,
-        Level = LogLevel.Warning,
-        Message = "Received a submission cancellation for unknown or already-resolved submission {SubmissionId}.")]
-    private static partial void LogReceivedCancellationForUnknownSubmission(ILogger logger, Guid submissionId);
+        Level = LogLevel.Information,
+        Message = "Remembered a cancellation while waiting for submission {SubmissionId}.")]
+    private static partial void LogRememberedCancellation(ILogger logger, Guid submissionId);
 }

@@ -50,8 +50,7 @@ internal sealed class SellerPortalDbContext(DbContextOptions<SellerPortalDbConte
                 .HasForeignKey(d => d.SellerId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ValueGeneratedNever required for a client-generated (Guid.CreateVersion7)
-            // owned-entity key - see doc/CHRONICLE.md. Any new owned entity needs this too.
+            // Client-generated owned-entity keys require ValueGeneratedNever.
             draft.OwnsMany(d => d.Images, image =>
             {
                 image.WithOwner().HasForeignKey(i => i.DraftId);
@@ -70,8 +69,7 @@ internal sealed class SellerPortalDbContext(DbContextOptions<SellerPortalDbConte
 
         modelBuilder.Entity<Submission>(submission =>
         {
-            // Restrict, not Cascade - see doc/CHRONICLE.md (SQL Server rejects multiple
-            // cascade paths reaching Submissions; also matches intent).
+            // SQL Server rejects multiple cascade paths reaching Submissions.
             submission.HasOne<Seller>()
                 .WithMany(s => s.Submissions)
                 .HasForeignKey(s => s.SellerId)

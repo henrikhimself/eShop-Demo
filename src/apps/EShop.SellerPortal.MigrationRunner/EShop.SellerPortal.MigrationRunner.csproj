@@ -20,8 +20,4 @@
     <ProjectReference Include="../EShop.SellerPortal.Bff/EShop.SellerPortal.Bff.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <InternalsVisibleTo Include="EShop.SellerPortal.MigrationRunner.Tests" />
-  </ItemGroup>
-
 </Project>

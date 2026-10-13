@@ -46,6 +46,8 @@ public sealed class ContainerRunnerTests
         Assert.Contains("1000:1000", request.Arguments);
         Assert.Contains("--group-add", request.Arguments);
         Assert.Contains("999", request.Arguments);
+        Assert.Contains("--name", request.Arguments);
+        Assert.Contains("--rm", request.Arguments);
         Assert.Contains(RepoPaths.UtilityImageTag, request.Arguments);
         Assert.Contains("dotnet", request.Arguments);
         Assert.Contains("build", request.Arguments);
@@ -167,6 +169,28 @@ public sealed class ContainerRunnerTests
         Assert.True(imageProvisioner.EnsureBuiltCalled);
     }
 
+    [Fact]
+    public async Task RunAsync_Cancelled_ForceRemovesNamedContainerWithoutCancelledToken()
+    {
+        CancellingProcessRunner processRunner = new();
+        ContainerRunner runner = new(
+            processRunner,
+            new FakeUtilityImageProvisioner(),
+            new FakeLinuxIdentityProvider(identity: null),
+            new RepoPaths("/repo"));
+        using CancellationTokenSource cancellation = new();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => runner.RunAsync(new ToolInvocation("dotnet", ["test"]), cancellation.Token));
+
+        Assert.Equal(2, processRunner.Invocations.Count);
+        ProcessRequest runRequest = processRunner.Invocations[0].Request;
+        int nameIndex = runRequest.Arguments.ToList().IndexOf("--name");
+        string containerName = runRequest.Arguments[nameIndex + 1];
+        Assert.Equal(["rm", "--force", containerName], processRunner.Invocations[1].Request.Arguments);
+        Assert.False(processRunner.Invocations[1].CancellationToken.CanBeCanceled);
+    }
+
     private sealed class FakeUtilityImageProvisioner : IUtilityImageProvisioner
     {
         public bool EnsureBuiltCalled { get; private set; }
@@ -183,6 +207,22 @@ public sealed class ContainerRunnerTests
         public Task<LinuxIdentity?> GetIdentityAsync(CancellationToken cancellationToken)
         {
             return Task.FromResult(identity);
+        }
+    }
+
+    private sealed class CancellingProcessRunner : IProcessRunner
+    {
+        public List<(ProcessRequest Request, CancellationToken CancellationToken)> Invocations { get; } = [];
+
+        public Task<ProcessResult> RunAsync(ProcessRequest request, CancellationToken cancellationToken)
+        {
+            Invocations.Add((request, cancellationToken));
+            if (request.Arguments[0] == "run")
+            {
+                return Task.FromException<ProcessResult>(new OperationCanceledException(cancellationToken));
+            }
+
+            return Task.FromResult(new ProcessResult(0, string.Empty, string.Empty));
         }
     }
 }

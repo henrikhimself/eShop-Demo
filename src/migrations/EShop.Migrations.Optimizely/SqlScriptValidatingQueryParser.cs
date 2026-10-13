@@ -18,8 +18,8 @@ using System.Text;
 
 namespace Hj.EShop.Migrations.Optimizely;
 
-// See doc/CHRONICLE.md — every Optimizely schema script opens with a --BEGINVALIDATINGQUERY/--ENDVALIDATINGQUERY block.
-// Reads from a shared TextReader (not a file path) so OptimizelySqlScriptRunner can continue reading the script body from the exact position this parser stopped at.
+// Optimizely scripts begin with a --BEGINVALIDATINGQUERY/--ENDVALIDATINGQUERY block.
+// The shared reader leaves the script body at the exact position this parser reaches.
 public static class SqlScriptValidatingQueryParser
 {
     private const string BeginMarker = "--BEGINVALIDATINGQUERY";

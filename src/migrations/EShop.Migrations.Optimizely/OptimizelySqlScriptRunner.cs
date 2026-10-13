@@ -20,8 +20,7 @@ using Microsoft.Data.SqlClient;
 
 namespace Hj.EShop.Migrations.Optimizely;
 
-// Runs a sorted set of Optimizely schema scripts against an open connection, in one transaction for the whole batch.
-// See doc/CHRONICLE.md — reimplements EPiServer.Net.Cli's ScriptRunner/ScriptValidatorParser algorithm in raw ADO.NET instead of shelling out to it.
+// Runs sorted Optimizely schema scripts in one transaction, using raw ADO.NET rather than the vendor CLI.
 public static class OptimizelySqlScriptRunner
 {
     // Every file in `files` MUST have a validating-query block (see SqlScriptValidatingQueryParser/SqlStatusCode); a script without one is an error, not "run unconditionally".

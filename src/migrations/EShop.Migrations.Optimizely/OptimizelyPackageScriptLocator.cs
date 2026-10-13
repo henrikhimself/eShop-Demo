@@ -16,28 +16,38 @@
 
 namespace Hj.EShop.Migrations.Optimizely;
 
-// Locates a package's schema scripts under its tools/ folder: a baseline full-schema script, plus incrementals under one or more "epiupdates*/sql" subfolders.
-// See doc/CHRONICLE.md — a Commerce package's own "epiupdates_CMS" folder targets the CMS database, not Commerce.
-// Takes the resolved tools/ folder path as a parameter rather than deriving it from the NuGet cache, so this class has no dependency on how that resolution happens.
+// Locates baseline and incremental scripts under a package's tools folder.
+// A Commerce package's epiupdates_CMS folder targets the CMS database, not Commerce.
+// Takes the resolved tools folder path to avoid depending on NuGet-cache resolution.
 public static class OptimizelyPackageScriptLocator
 {
     public static OptimizelyPackageScripts Locate(
         string toolsDirectoryPath, string baselineScriptFileName, params string[] incrementalFolderNames)
     {
+        if (!Directory.Exists(toolsDirectoryPath))
+        {
+            throw new DirectoryNotFoundException($"Optimizely tools directory was not found: {toolsDirectoryPath}");
+        }
+
         string baselinePath = Path.Combine(toolsDirectoryPath, baselineScriptFileName);
-        FileInfo? baseline = File.Exists(baselinePath) ? new FileInfo(baselinePath) : null;
+        if (!File.Exists(baselinePath))
+        {
+            throw new FileNotFoundException($"Optimizely baseline script was not found: {baselinePath}", baselinePath);
+        }
 
         List<FileInfo> incrementals = [];
         foreach (string folderName in incrementalFolderNames)
         {
             string sqlFolder = Path.Combine(toolsDirectoryPath, folderName, "sql");
-            if (Directory.Exists(sqlFolder))
+            if (!Directory.Exists(sqlFolder))
             {
-                incrementals.AddRange(new DirectoryInfo(sqlFolder).GetFiles("*.sql"));
+                throw new DirectoryNotFoundException($"Optimizely incremental script directory was not found: {sqlFolder}");
             }
+
+            incrementals.AddRange(new DirectoryInfo(sqlFolder).GetFiles("*.sql"));
         }
 
-        return new OptimizelyPackageScripts(baseline, SortByVersion(incrementals));
+        return new OptimizelyPackageScripts(new FileInfo(baselinePath), SortByVersion(incrementals));
     }
 
     // Each incremental script's file name is a version number (e.g. "12.23.2.sql").

@@ -16,6 +16,5 @@
 
 namespace Hj.EShop.Migrations.Optimizely;
 
-// IncrementalScripts is sorted ascending by version (see OptimizelyPackageScriptLocator).
-// See doc/CHRONICLE.md — BaselineScript is idempotent (no-ops via AlreadyIn), so it's always safe to include first.
-public sealed record OptimizelyPackageScripts(FileInfo? BaselineScript, IReadOnlyList<FileInfo> IncrementalScripts);
+// IncrementalScripts is sorted ascending by version; the idempotent baseline runs first.
+public sealed record OptimizelyPackageScripts(FileInfo BaselineScript, IReadOnlyList<FileInfo> IncrementalScripts);

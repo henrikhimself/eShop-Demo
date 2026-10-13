@@ -21,7 +21,7 @@ namespace Hj.EShop.Cli.Commands.Generate;
 
 internal sealed class GenerateTypesCommand(IOutputSink output, IApiSchemaGenerator generator) : AsyncCommand<DefaultSettings>
 {
-    protected override async Task<int> ExecuteAsync(CommandContext context, DefaultSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, DefaultSettings settings, CancellationToken cancellationToken)
     {
         output.Heading(1, "Generate Types Result");
 

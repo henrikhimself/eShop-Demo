@@ -26,7 +26,7 @@ namespace Hj.EShop.Cli.Commands.Diagram;
 internal sealed class RenderDiagramCommand(IOutputSink output, IToolExecutor toolExecutor, RepoPaths paths)
     : AsyncCommand<RenderDiagramSettings>
 {
-    protected override async Task<int> ExecuteAsync(CommandContext context, RenderDiagramSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, RenderDiagramSettings settings, CancellationToken cancellationToken)
     {
         output.Heading(1, "Render PlantUML Result");
 

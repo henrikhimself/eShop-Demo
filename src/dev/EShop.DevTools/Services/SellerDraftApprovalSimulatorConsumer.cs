@@ -37,8 +37,10 @@ internal sealed class SellerDraftApprovalSimulatorConsumer(
         SubmissionRequestMessage message = JsonSerializer.Deserialize<SubmissionRequestMessage>(body.ToString())
             ?? throw new InvalidOperationException("The submission request message body was empty.");
 
-        store.Add(message);
-        await hubContext.Clients.All.SendAsync(SellerSubmissionsHub.SubmissionsChangedEvent, cancellationToken);
+        if (store.Add(message))
+        {
+            await hubContext.Clients.All.SendAsync(SellerSubmissionsHub.SubmissionsChangedEvent, cancellationToken);
+        }
 
         return MessageHandlingResult.Handled;
     }

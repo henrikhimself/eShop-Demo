@@ -19,8 +19,7 @@ using Spectre.Console.Cli;
 
 namespace Hj.EShop.Cli.Commands.Diagram;
 
-// See doc/CHRONICLE.md - derives from DefaultSettings, not GlobalSettings directly,
-// since the "diagram" branch itself is declared with DefaultSettings as its type.
+// Derives from the parent command's DefaultSettings type.
 internal sealed class RenderDiagramSettings : DefaultSettings
 {
     [CommandArgument(0, "<FILE>")]

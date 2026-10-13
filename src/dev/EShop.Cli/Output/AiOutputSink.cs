@@ -29,9 +29,10 @@ namespace Hj.EShop.Cli.Output;
 // silence as a hang and kill it. heartbeatInterval (default 1 minute; overridable
 // only by tests) makes BeginStep write a liveness line on that cadence for as long as
 // the step is open.
-internal sealed class AiOutputSink(TextWriter writer, TimeSpan? heartbeatInterval = null) : IOutputSink
+internal sealed class AiOutputSink(TextWriter writer, TimeSpan? heartbeatInterval = null, TimeProvider? timeProvider = null) : IOutputSink
 {
     private readonly TimeSpan _heartbeatInterval = heartbeatInterval ?? TimeSpan.FromMinutes(1);
+    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
     public void Heading(int level, string text)
     {
@@ -92,7 +93,7 @@ internal sealed class AiOutputSink(TextWriter writer, TimeSpan? heartbeatInterva
     public IDisposable BeginStep(string name)
     {
         writer.WriteLine($"Step: {name}");
-        return new HeartbeatHandle(writer, name, _heartbeatInterval);
+        return new HeartbeatHandle(writer, name, _heartbeatInterval, _timeProvider);
     }
 
     public IOutputProgress BeginProgress(string description, long? total)
@@ -127,13 +128,13 @@ internal sealed class AiOutputSink(TextWriter writer, TimeSpan? heartbeatInterva
         private readonly TextWriter _writer;
         private readonly string _name;
         private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
-        private readonly Timer _timer;
+        private readonly ITimer _timer;
 
-        public HeartbeatHandle(TextWriter writer, string name, TimeSpan interval)
+        public HeartbeatHandle(TextWriter writer, string name, TimeSpan interval, TimeProvider timeProvider)
         {
             _writer = writer;
             _name = name;
-            _timer = new Timer(_ => WriteHeartbeat(), null, interval, interval);
+            _timer = timeProvider.CreateTimer(_ => WriteHeartbeat(), null, interval, interval);
         }
 
         public void Dispose()

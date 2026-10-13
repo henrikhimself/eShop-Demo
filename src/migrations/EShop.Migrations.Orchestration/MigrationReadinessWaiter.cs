@@ -19,7 +19,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Hj.EShop.Migrations.Orchestration;
 
-// See doc/CHRONICLE.md — needed for hosts that can't degrade to "start anyway, report Unhealthy" (e.g. Optimizely's DatabaseSchemaHost); Aspire's .WaitFor has no effect once deployed.
+// See doc/adr/0023-explicit-database-schema-migration-resources.md.
 public static partial class MigrationReadinessWaiter
 {
     private const int DefaultMaxAttempts = 30;

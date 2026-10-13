@@ -31,7 +31,7 @@ internal sealed class RestoreCommand(IOutputSink output, IToolExecutor toolExecu
     // See doc/CHRONICLE.md - container tool arguments must stay repo-relative.
     private static string RelativeBinlogPath => Path.Combine("tmp", BinlogFileName);
 
-    protected override async Task<int> ExecuteAsync(CommandContext context, DefaultSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, DefaultSettings settings, CancellationToken cancellationToken)
     {
         output.Heading(1, "Restore Result");
 

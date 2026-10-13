@@ -16,9 +16,7 @@
 
 namespace Hj.EShop.Cli.Commands;
 
-// See doc/CHRONICLE.md - Spectre.Console.Cli needs a concrete settings type per
-// command; not sealed, since a leaf command under a DefaultSettings branch (e.g.
-// "diagram render") must derive from it.
+// Spectre.Console.Cli needs a concrete settings type per command; nested commands derive from this type.
 internal class DefaultSettings : GlobalSettings
 {
 }

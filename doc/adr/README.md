@@ -40,3 +40,6 @@ and the result of the decision.
 - [0023 - Explicit database schema migration resources](./0023-explicit-database-schema-migration-resources.md)
 - [0024 - Search microservice boundary](./0024-search-microservice-boundary.md)
 - [0025 - Local-development reverse proxy for stable browser hosts](./0025-local-development-reverse-proxy.md)
+- [0026 - Server-Sent Events for Seller Portal notifications](./0026-server-sent-events-for-seller-portal-notifications.md)
+- [0027 - Optimizely shipped SQL scripts for Storefront schema](./0027-optimizely-shipped-sql-scripts-for-storefront-schema.md)
+- [0028 - Separate local Keycloak realms by application](./0028-separate-local-keycloak-realms-by-application.md)

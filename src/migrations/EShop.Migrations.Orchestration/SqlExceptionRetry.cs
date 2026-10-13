@@ -19,7 +19,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Hj.EShop.Migrations.Orchestration;
 
-// See doc/CHRONICLE.md — retries any SqlException directly (not via an EF Core execution strategy) because not every cold-start failure is classified as transient, and non-EF runners have no execution strategy at all.
+// Retries every SqlException: non-EF runners have no execution strategy, and cold-start failures are not always classified as transient.
 public static partial class SqlExceptionRetry
 {
     public static async Task RunAsync(Func<Task> operation, int maxAttempts, ILogger logger)

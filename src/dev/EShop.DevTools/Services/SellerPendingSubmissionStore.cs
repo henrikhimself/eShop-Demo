@@ -25,18 +25,47 @@ namespace Hj.EShop.DevTools.Services;
 // them after publishing the outcome.
 internal sealed class SellerPendingSubmissionStore
 {
+    private static readonly TimeSpan _cancellationRetention = TimeSpan.FromMinutes(10);
+
     // Keyed by SubmissionId; pairs the message with its receipt time (not present on
     // SubmissionRequestMessage) for the tool page's submitted-at column.
     private readonly ConcurrentDictionary<Guid, SellerPendingSubmission> _submissions = new();
+    private readonly ConcurrentDictionary<Guid, DateTimeOffset> _cancelledSubmissionExpiry = new();
+    private readonly TimeProvider _timeProvider;
 
-    public void Add(SubmissionRequestMessage message)
+    public SellerPendingSubmissionStore(TimeProvider? timeProvider = null)
     {
-        _submissions[message.SubmissionId] = new SellerPendingSubmission(message, DateTimeOffset.UtcNow);
+        _timeProvider = timeProvider ?? TimeProvider.System;
+    }
+
+    public bool Add(SubmissionRequestMessage message)
+    {
+        PruneExpiredCancellations();
+
+        if (_cancelledSubmissionExpiry.TryRemove(message.SubmissionId, out _))
+        {
+            return false;
+        }
+
+        return _submissions.TryAdd(message.SubmissionId, new SellerPendingSubmission(message, _timeProvider.GetUtcNow()));
     }
 
     public bool TryGet(Guid submissionId, [NotNullWhen(true)] out SellerPendingSubmission? submission)
     {
         return _submissions.TryGetValue(submissionId, out submission);
+    }
+
+    public SellerSubmissionCancellationResult Cancel(Guid submissionId)
+    {
+        PruneExpiredCancellations();
+
+        if (_submissions.TryRemove(submissionId, out _))
+        {
+            return SellerSubmissionCancellationResult.Removed;
+        }
+
+        _cancelledSubmissionExpiry[submissionId] = _timeProvider.GetUtcNow().Add(_cancellationRetention);
+        return SellerSubmissionCancellationResult.Remembered;
     }
 
     public bool Remove(Guid submissionId)
@@ -46,8 +75,27 @@ internal sealed class SellerPendingSubmissionStore
 
     public IReadOnlyCollection<SellerPendingSubmission> GetAll()
     {
+        PruneExpiredCancellations();
         return [.. _submissions.Values.OrderBy(s => s.ReceivedAtUtc)];
     }
+
+    private void PruneExpiredCancellations()
+    {
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+        foreach ((Guid submissionId, DateTimeOffset expiresAtUtc) in _cancelledSubmissionExpiry)
+        {
+            if (expiresAtUtc <= now)
+            {
+                _cancelledSubmissionExpiry.TryRemove(new KeyValuePair<Guid, DateTimeOffset>(submissionId, expiresAtUtc));
+            }
+        }
+    }
+}
+
+internal enum SellerSubmissionCancellationResult
+{
+    Removed,
+    Remembered,
 }
 
 internal sealed record SellerPendingSubmission(SubmissionRequestMessage Message, DateTimeOffset ReceivedAtUtc);

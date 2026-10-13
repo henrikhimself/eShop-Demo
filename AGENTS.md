@@ -25,6 +25,7 @@ Before proposing or implementing functionality, architecture, or system landscap
 * Update `doc/c4/` when `doc/SPEC.md` or `doc/System landscape.md` changes.
 * Write `doc/SPEC.md`, `doc/System landscape.md`, and ADR files under `doc/adr/` in Simplified Technical English (ASD-STE100). Other documentation files in `doc` are exempt.
 * Keep `doc/TODO.md` current for open and deferred questions.
+* Keep `doc/RISKS.md` current for open and accepted risks.
 * Read `doc/MEMORY.md` at session start and update it at a good pause point.
 * Record process history and discarded alternatives in `doc/CHRONICLE.md` (append-only).
 * Read `doc/adr/README.md` and relevant ADRs before related changes.
@@ -54,7 +55,7 @@ A bootstrap script builds and runs the CLI:
 ```
 
 ```bash
-# Build the solution and report every diagnostic in one pass
+# Build the solution and report every diagnostic
 ./scripts/eshop.sh build --agent
 ```
 

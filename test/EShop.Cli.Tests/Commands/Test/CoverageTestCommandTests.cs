@@ -26,6 +26,7 @@ namespace Hj.EShop.Cli.Tests.Commands.Test;
 public sealed class CoverageTestCommandTests : IDisposable
 {
     private readonly string _root = Directory.CreateTempSubdirectory("eshop-cli-tests-").FullName;
+    private readonly FakeTestSettingsReader _testSettingsReader = new();
 
     [Fact]
     public async Task ExecuteAsync_TestRunSucceeds_ReturnsZero()
@@ -42,7 +43,7 @@ public sealed class CoverageTestCommandTests : IDisposable
             return new ProcessResult(0, string.Empty, string.Empty);
         });
         RecordingOutputSink output = new();
-        CoverageTestCommand command = new(output, toolExecutor, paths);
+        CoverageTestCommand command = new(output, toolExecutor, paths, _testSettingsReader);
 
         int exitCode = await ((ICommand<TestSettings>)command).ExecuteAsync(
             context: null!, settings: new TestSettings(), TestContext.Current.CancellationToken);
@@ -55,13 +56,31 @@ public sealed class CoverageTestCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_PassesConfiguredParamsToNestedDotnetTest()
+    {
+        RepoPaths paths = new(_root);
+        FakeToolExecutor toolExecutor = new();
+        CoverageTestCommand command = new(
+            new RecordingOutputSink(),
+            toolExecutor,
+            paths,
+            new FakeTestSettingsReader("/p:EnableSourceControlManagerQueries=false", "/p:EnableSourceLink=false"));
+
+        await ((ICommand<TestSettings>)command).ExecuteAsync(context: null!, settings: new TestSettings(), TestContext.Current.CancellationToken);
+
+        ToolInvocation collect = Assert.Single(toolExecutor.Invocations, i => i.Arguments.Contains("dotnet-coverage"));
+        Assert.Contains("/p:EnableSourceControlManagerQueries=false", collect.Arguments);
+        Assert.Contains("/p:EnableSourceLink=false", collect.Arguments);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ToolInvocations_UseRelativePathsForEveryFileArgument()
     {
         // Uses relative paths for tool arguments - under --tools container, absolute
         // host paths point outside the container's /workspace mount.
         RepoPaths paths = new(_root);
         FakeToolExecutor toolExecutor = new();
-        CoverageTestCommand command = new(new RecordingOutputSink(), toolExecutor, paths);
+        CoverageTestCommand command = new(new RecordingOutputSink(), toolExecutor, paths, _testSettingsReader);
 
         await ((ICommand<TestSettings>)command).ExecuteAsync(context: null!, settings: new TestSettings(), TestContext.Current.CancellationToken);
 
@@ -83,7 +102,7 @@ public sealed class CoverageTestCommandTests : IDisposable
             ? new ProcessResult(1, string.Empty, "failed")
             : new ProcessResult(0, string.Empty, string.Empty));
         RecordingOutputSink output = new();
-        CoverageTestCommand command = new(output, toolExecutor, paths);
+        CoverageTestCommand command = new(output, toolExecutor, paths, _testSettingsReader);
 
         int exitCode = await ((ICommand<TestSettings>)command).ExecuteAsync(
             context: null!, settings: new TestSettings(), TestContext.Current.CancellationToken);
@@ -101,7 +120,7 @@ public sealed class CoverageTestCommandTests : IDisposable
         await File.WriteAllTextAsync(staleTrx, "<stale/>", TestContext.Current.CancellationToken);
 
         FakeToolExecutor toolExecutor = new();
-        CoverageTestCommand command = new(new RecordingOutputSink(), toolExecutor, paths);
+        CoverageTestCommand command = new(new RecordingOutputSink(), toolExecutor, paths, _testSettingsReader);
 
         await ((ICommand<TestSettings>)command).ExecuteAsync(context: null!, settings: new TestSettings(), TestContext.Current.CancellationToken);
 

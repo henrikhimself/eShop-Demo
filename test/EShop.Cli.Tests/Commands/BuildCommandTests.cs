@@ -61,6 +61,13 @@ public sealed class BuildCommandTests : IDisposable
 
         Assert.Equal(0, exitCode);
         Assert.Contains(output.Calls, call => call.Contains("Build finished with 0 errors.", StringComparison.Ordinal));
+        Assert.Contains(toolExecutor.Invocations, invocation => invocation.Tool == "rumdl");
+        Assert.Contains(toolExecutor.Invocations, invocation => invocation.Tool == "pnpm" && invocation.Arguments.Contains("lint"));
+        Assert.Contains(toolExecutor.Invocations, invocation => invocation.Tool == "pnpm" && invocation.Arguments.Contains("tsc"));
+        Assert.Contains(toolExecutor.Invocations, invocation => invocation.Tool == "dotnet" && invocation.Arguments.Contains("format"));
+        Assert.Contains(
+            toolExecutor.Invocations,
+            invocation => invocation.Tool == "dotnet" && invocation.Arguments.Contains("has-pending-model-changes"));
     }
 
     [Fact]
@@ -90,6 +97,48 @@ public sealed class BuildCommandTests : IDisposable
         Assert.Equal(1, exitCode);
         Assert.Contains(output.Calls, call => call.Contains("Foo.cs(1,1): error CS0001: broken", StringComparison.Ordinal));
         Assert.Contains(output.Calls, call => call.Contains("Build finished with 1 errors.", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_DotnetBuildFails_FailsFastAndReportsNuGetDiagnostic()
+    {
+        FakeToolExecutor toolExecutor = new(invocation =>
+            invocation.Tool == "dotnet" && invocation.Arguments.Contains("build")
+                ? new ProcessResult(
+                    1,
+                    "src/apps/EShop.StoreFront.Web/EShop.StoreFront.Web.csproj : error NU1903: Warning As Error: Package has a known vulnerability\n",
+                    string.Empty)
+                : new ProcessResult(0, string.Empty, string.Empty));
+        RecordingOutputSink output = new();
+        BuildCommand command = new(output, toolExecutor, _paths, _buildSettingsReader);
+
+        int exitCode = await ((ICommand<DefaultSettings>)command).ExecuteAsync(
+            context: null!, settings: new DefaultSettings(), TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, exitCode);
+        Assert.Contains(output.Calls, call => call.Contains("error NU1903", StringComparison.Ordinal));
+        Assert.Contains(output.Calls, call => call.Contains("validation checks were not run", StringComparison.Ordinal));
+        Assert.DoesNotContain(toolExecutor.Invocations, invocation => invocation.Tool == "rumdl" || invocation.Tool == "shellcheck"
+            || invocation.Tool == "pnpm" || invocation.Arguments.Contains("format")
+            || invocation.Arguments.Contains("has-pending-model-changes"));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_DotnetBuildFailsWithoutDiagnostic_ReportsProcessOutput()
+    {
+        FakeToolExecutor toolExecutor = new(invocation =>
+            invocation.Tool == "dotnet" && invocation.Arguments.Contains("build")
+                ? new ProcessResult(1, string.Empty, "The package source is unavailable.")
+                : new ProcessResult(0, string.Empty, string.Empty));
+        RecordingOutputSink output = new();
+        BuildCommand command = new(output, toolExecutor, _paths, _buildSettingsReader);
+
+        int exitCode = await ((ICommand<DefaultSettings>)command).ExecuteAsync(
+            context: null!, settings: new DefaultSettings(), TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, exitCode);
+        Assert.Contains(output.Calls, call => call.Contains("dotnet build failed", StringComparison.Ordinal)
+            && call.Contains("The package source is unavailable.", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -171,6 +220,36 @@ public sealed class BuildCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_EfValidationFailsForAnotherReason_ReportsNeutralDiagnostic()
+    {
+        FakeToolExecutor toolExecutor = new(invocation =>
+        {
+            if (invocation.Tool == "dotnet" && invocation.Arguments.Contains("has-pending-model-changes"))
+            {
+                return new ProcessResult(1, string.Empty, "The specified deps.json does not exist.");
+            }
+
+            if (invocation.Tool == "pnpm" && invocation.Arguments.Contains("openapi-typescript"))
+            {
+                File.WriteAllText(Path.Combine(_paths.TmpDir, "api-schema.d.ts"), "committed content");
+            }
+
+            return new ProcessResult(0, string.Empty, string.Empty);
+        });
+        await File.WriteAllTextAsync(_paths.GeneratedApiSchema, "committed content", TestContext.Current.CancellationToken);
+        RecordingOutputSink output = new();
+        BuildCommand command = new(output, toolExecutor, _paths, _buildSettingsReader);
+
+        int exitCode = await ((ICommand<DefaultSettings>)command).ExecuteAsync(
+            context: null!, settings: new DefaultSettings(), TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, exitCode);
+        Assert.Contains(output.Calls, call => call.Contains("EF Core migration model validation failed", StringComparison.Ordinal)
+            && call.Contains("deps.json", StringComparison.Ordinal));
+        Assert.DoesNotContain(output.Calls, call => call.Contains("pending changes not captured", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task ExecuteAsync_RunsIndependentToolsConcurrently_NotSequentially()
     {
         FakeToolExecutor toolExecutor = new(
@@ -183,7 +262,7 @@ public sealed class BuildCommandTests : IDisposable
 
                 return new ProcessResult(0, string.Empty, string.Empty);
             },
-            invocation => invocation.Tool == "rumdl" || (invocation.Tool == "dotnet" && invocation.Arguments.Contains("build"))
+            invocation => invocation.Tool == "rumdl" || (invocation.Tool == "dotnet" && invocation.Arguments.Contains("format"))
                 ? TimeSpan.FromMilliseconds(200)
                 : TimeSpan.Zero);
         await File.WriteAllTextAsync(_paths.GeneratedApiSchema, "committed content", TestContext.Current.CancellationToken);

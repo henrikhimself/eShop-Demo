@@ -21,7 +21,7 @@ describe("bff proxy route", () => {
   it("forwards the reverse proxy's own X-Forwarded-Host/X-Forwarded-Proto headers", async () => {
     // The reverse proxy (forwardPublicOrigin: true) always overwrites these headers
     // itself before this handler ever runs - a raw Host header is this app's own
-    // internal address once it's proxied, not the public origin (PLAN-2.md §5.1).
+    // internal address once it's proxied, not the public origin.
     const request = new NextRequest("http://internal.example/bff/api/drafts", {
       headers: {
         host: "internal.example",

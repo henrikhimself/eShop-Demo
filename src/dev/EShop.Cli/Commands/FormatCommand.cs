@@ -28,7 +28,7 @@ namespace Hj.EShop.Cli.Commands;
 internal sealed class FormatCommand(IOutputSink output, IToolExecutor toolExecutor, IApiSchemaGenerator apiSchemaGenerator, RepoPaths paths)
     : AsyncCommand<DefaultSettings>
 {
-    protected override async Task<int> ExecuteAsync(CommandContext context, DefaultSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, DefaultSettings settings, CancellationToken cancellationToken)
     {
         output.Heading(1, "Format Result");
 

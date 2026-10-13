@@ -22,9 +22,7 @@ using Xunit;
 
 namespace Hj.EShop.Cli.Tests.Execution;
 
-// Uses the real "dotnet" on PATH rather than a Docker/network-dependent tool - dotnet
-// is already a hard prerequisite for building/running this test suite at all, so this
-// stays in the fast default run rather than moving to Integration/.
+// Uses the required local dotnet executable, avoiding Docker and network dependencies.
 public sealed class ProcessRunnerTests
 {
     [Fact]

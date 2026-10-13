@@ -24,9 +24,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Hj.EShop.SellerPortal.MigrationRunner;
 
-// Pulled out of Program.cs so a test can drive this against a real SQL Server without a
-// full Host - internal, reachable via InternalsVisibleTo like SellerPortalDbContext.
-// Named distinctly from the project/namespace to avoid shadowing it.
+// Separates the migration operation from host startup and keeps the runner's schema work
+// narrowly focused. Named distinctly from the project/namespace to avoid shadowing it.
 internal static partial class SchemaMigrator
 {
     public static async Task<int> RunAsync(SellerPortalDbContext dbContext, ILogger logger, CancellationToken cancellationToken)

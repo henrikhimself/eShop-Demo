@@ -31,7 +31,7 @@ internal sealed class RunCommand(
     RepoPaths paths,
     IRunSettingsReader runSettingsReader) : AsyncCommand<RunSettings>
 {
-    protected override async Task<int> ExecuteAsync(CommandContext context, RunSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, RunSettings settings, CancellationToken cancellationToken)
     {
         output.Heading(1, "Run AppHost");
 

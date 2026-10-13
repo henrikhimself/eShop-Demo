@@ -96,7 +96,7 @@ public sealed class SubmissionImageDeletionConsumerTests : IAsyncLifetime
 
         Assert.Equal(MessageHandlingResult.Handled, result);
         Assert.True(channel.Reader.TryRead(out SubmissionSummary? publishedSummary));
-        Assert.Equal(submission.Id, publishedSummary!.Id);
+        Assert.Equal(submission.Id, publishedSummary.Id);
         Assert.Equal(SubmissionStatus.Approved, publishedSummary.Status);
     }
 

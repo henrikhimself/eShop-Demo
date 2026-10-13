@@ -30,7 +30,7 @@ internal sealed class BuildCommand(
 {
     private const string FormatReportFileName = "build-format.json";
 
-    protected override async Task<int> ExecuteAsync(CommandContext context, DefaultSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, DefaultSettings settings, CancellationToken cancellationToken)
     {
         output.Heading(1, "Build Result");
 
@@ -39,27 +39,45 @@ internal sealed class BuildCommand(
         string relativeSolution = Path.GetRelativePath(paths.Root, paths.Solution);
         string relativeWebDir = Path.GetRelativePath(paths.Root, paths.SellerPortalWebDir);
 
-        // None of these five tasks touch each other's files, so they can run
-        // concurrently.
-        Task<NetChainResult> netChainTask = RunNetChainAsync(relativeSolution, cancellationToken);
+        NetBuildResult netBuild = await RunNetBuildAsync(relativeSolution, cancellationToken);
+        IReadOnlyList<Diagnostic> buildDiagnostics = DiagnosticReport.Merge(netBuild.CompilerDiagnostics, netBuild.SarifDiagnostics);
+        if (!netBuild.BuildResult.Succeeded)
+        {
+            if (buildDiagnostics.Count == 0)
+            {
+                buildDiagnostics = [CreateStepFailureDiagnostic("dotnet build", netBuild.BuildResult)];
+            }
+
+            await output.FlushPendingStepsAsync();
+            output.Text(string.Join('\n', buildDiagnostics));
+            output.Text("Build stopped because dotnet build failed; validation checks were not run.");
+            output.Text($"Build finished with {buildDiagnostics.Count} errors.");
+            return 1;
+        }
+
+        // These checks all depend on a successful .NET build or touch independent files,
+        // so they can run concurrently once the build gate has passed.
+        Task<(ProcessResult Result, IReadOnlyList<Diagnostic> Diagnostics)> formatTask =
+            CollectFormatDiagnosticsAsync(relativeSolution, cancellationToken);
+        Task<(bool Succeeded, IReadOnlyList<Diagnostic> Diagnostics)> schemaTask = CheckGeneratedSchemaAsync(cancellationToken);
+        Task<(ProcessResult Result, IReadOnlyList<Diagnostic> Diagnostics)> efMigrationsTask = RunEfMigrationsCheckAsync(cancellationToken);
         Task<(ProcessResult Result, IReadOnlyList<Diagnostic> Diagnostics)> rumdlTask = RunRumdlAsync(cancellationToken);
         Task<(ProcessResult? Result, IReadOnlyList<Diagnostic> Diagnostics)> shellcheckTask = RunShellcheckAsync(cancellationToken);
         Task<(ProcessResult Result, IReadOnlyList<Diagnostic> Diagnostics)> lintTask = RunPnpmLintAsync(relativeWebDir, cancellationToken);
         Task<(ProcessResult Result, IReadOnlyList<Diagnostic> Diagnostics)> tscTask = RunPnpmTscAsync(relativeWebDir, cancellationToken);
-        await Task.WhenAll(netChainTask, rumdlTask, shellcheckTask, lintTask, tscTask);
+        await Task.WhenAll(formatTask, schemaTask, efMigrationsTask, rumdlTask, shellcheckTask, lintTask, tscTask);
 
         // Settles the spinner before printing results - see IOutputSink.FlushPendingStepsAsync.
         await output.FlushPendingStepsAsync();
 
-        NetChainResult netChain = netChainTask.Result;
         (ProcessResult rumdlResult, IReadOnlyList<Diagnostic> rumdlDiagnostics) = rumdlTask.Result;
         (ProcessResult? shellcheckResult, IReadOnlyList<Diagnostic> shellcheckDiagnostics) = shellcheckTask.Result;
         (ProcessResult lintResult, IReadOnlyList<Diagnostic> lintDiagnostics) = lintTask.Result;
         (ProcessResult tscResult, IReadOnlyList<Diagnostic> tscDiagnostics) = tscTask.Result;
 
         IReadOnlyList<Diagnostic> allDiagnostics = DiagnosticReport.Merge(
-            netChain.CompilerDiagnostics, netChain.SarifDiagnostics, netChain.FormatDiagnostics, rumdlDiagnostics,
-            shellcheckDiagnostics, lintDiagnostics, tscDiagnostics, netChain.SchemaDiagnostics, netChain.EfMigrationsDiagnostics);
+            buildDiagnostics, formatTask.Result.Diagnostics, rumdlDiagnostics, shellcheckDiagnostics, lintDiagnostics,
+            tscDiagnostics, schemaTask.Result.Diagnostics, efMigrationsTask.Result.Diagnostics);
 
         if (allDiagnostics.Count > 0)
         {
@@ -68,18 +86,15 @@ internal sealed class BuildCommand(
 
         output.Text($"Build finished with {allDiagnostics.Count} errors.");
 
-        bool anyStepFailed = !netChain.BuildResult.Succeeded || !netChain.FormatResult.Succeeded || !rumdlResult.Succeeded
-            || shellcheckResult is { Succeeded: false } || !lintResult.Succeeded || !tscResult.Succeeded || !netChain.SchemaCheckSucceeded
-            || !netChain.EfMigrationsResult.Succeeded;
+        bool anyStepFailed = !formatTask.Result.Result.Succeeded || !rumdlResult.Succeeded || shellcheckResult is { Succeeded: false }
+            || !lintResult.Succeeded || !tscResult.Succeeded || !schemaTask.Result.Succeeded || !efMigrationsTask.Result.Result.Succeeded;
 
         return allDiagnostics.Count > 0 || anyStepFailed ? 1 : 0;
     }
 
-    // dotnet clean -> dotnet build -> [dotnet format analyzers || the schema check] -
-    // format and the schema check only need build's output, not each other's, but
-    // clean/build/format all touch the same solution's obj/bin state and can't run
-    // alongside each other safely.
-    private async Task<NetChainResult> RunNetChainAsync(string relativeSolution, CancellationToken cancellationToken)
+    // dotnet clean and dotnet build both touch the solution's obj/bin state, so they
+    // must complete before the validation phase reads those artifacts.
+    private async Task<NetBuildResult> RunNetBuildAsync(string relativeSolution, CancellationToken cancellationToken)
     {
         using (output.BeginStep("dotnet clean"))
         {
@@ -89,11 +104,7 @@ internal sealed class BuildCommand(
                 cancellationToken);
         }
 
-        // Extra "dotnet build" arguments (currently: disabling SourceLink's git queries,
-        // since this repository has no remote for it to resolve - see appsettings.json's
-        // "build:params") live in the CLI's own settings, not in the vendored
-        // lib/DotNet-ReverseProxy or lib/Aspire-RemoteContainers projects, since a re-vendor
-        // from a fresh zip would drop any setting made there.
+        // CLI-owned build parameters avoid changes to vendored projects.
         IReadOnlyList<string> extraBuildParams = await buildSettingsReader.GetBuildParamsAsync(cancellationToken);
 
         ProcessResult buildResult;
@@ -113,24 +124,12 @@ internal sealed class BuildCommand(
 
         IReadOnlyList<Diagnostic> compilerDiagnostics =
             CompilerOutputParser.ParseDotnetBuildOutput(buildResult.StandardOutput + buildResult.StandardError);
-        IReadOnlyList<Diagnostic> sarifDiagnostics = CollectSarifDiagnostics();
-
-        Task<(ProcessResult Result, IReadOnlyList<Diagnostic> Diagnostics)> formatTask =
-            CollectFormatDiagnosticsAsync(relativeSolution, cancellationToken);
-        Task<(bool Succeeded, IReadOnlyList<Diagnostic> Diagnostics)> schemaTask = CheckGeneratedSchemaAsync(cancellationToken);
-        Task<(ProcessResult Result, IReadOnlyList<Diagnostic> Diagnostics)> efMigrationsTask = RunEfMigrationsCheckAsync(cancellationToken);
-        await Task.WhenAll(formatTask, schemaTask, efMigrationsTask);
-
-        return new NetChainResult(
-            buildResult, compilerDiagnostics, sarifDiagnostics, formatTask.Result.Result, formatTask.Result.Diagnostics,
-            schemaTask.Result.Succeeded, schemaTask.Result.Diagnostics,
-            efMigrationsTask.Result.Result, efMigrationsTask.Result.Diagnostics);
+        return new NetBuildResult(buildResult, compilerDiagnostics, CollectSarifDiagnostics());
     }
 
     // Catches the class of bug where a developer changes an EF entity/mapping but
-    // forgets to add the corresponding migration. Runs after the solution build (not
-    // alongside `dotnet clean`) since it triggers its own build of the Bff project
-    // and would otherwise race against clean deleting that project's obj/bin.
+    // forgets to add the corresponding migration. Runs only after a successful
+    // solution build because --no-build reads the Bff project's compiled output.
     private async Task<(ProcessResult Result, IReadOnlyList<Diagnostic> Diagnostics)> RunEfMigrationsCheckAsync(CancellationToken cancellationToken)
     {
         string relativeBffProject = Path.GetRelativePath(paths.Root, paths.SellerPortalBffProject);
@@ -145,16 +144,22 @@ internal sealed class BuildCommand(
                 cancellationToken);
         }
 
-        return result.Succeeded
-            ? (result, [])
-            : (
+        if (result.Succeeded)
+        {
+            return (result, []);
+        }
+
+        string processOutput = (result.StandardOutput + result.StandardError).Trim();
+        return processOutput.Contains("Changes have been made to the model since the last migration.", StringComparison.Ordinal)
+            ? (
                 result,
                 [
                     new Diagnostic(
                         $"{relativeBffProject}(1,1): error: EF Core model has pending changes not captured by a "
                             + "migration - run `dotnet ef migrations add <Name>` and commit the result.\n"
-                            + (result.StandardOutput + result.StandardError).Trim()),
-                ]);
+                            + processOutput),
+                ])
+            : (result, [CreateStepFailureDiagnostic("EF Core migration model validation", result)]);
     }
 
     private async Task<(ProcessResult Result, IReadOnlyList<Diagnostic> Diagnostics)> RunRumdlAsync(CancellationToken cancellationToken)
@@ -186,16 +191,16 @@ internal sealed class BuildCommand(
         return (result, CompilerOutputParser.ParseTypeScriptCompilerOutput(result.StandardOutput + result.StandardError));
     }
 
-    private sealed record NetChainResult(
+    private static Diagnostic CreateStepFailureDiagnostic(string stepName, ProcessResult result)
+    {
+        string output = (result.StandardOutput + result.StandardError).Trim();
+        return new Diagnostic($"error: {stepName} failed.{(output.Length == 0 ? string.Empty : $"\n{output}")}");
+    }
+
+    private sealed record NetBuildResult(
         ProcessResult BuildResult,
         IReadOnlyList<Diagnostic> CompilerDiagnostics,
-        IReadOnlyList<Diagnostic> SarifDiagnostics,
-        ProcessResult FormatResult,
-        IReadOnlyList<Diagnostic> FormatDiagnostics,
-        bool SchemaCheckSucceeded,
-        IReadOnlyList<Diagnostic> SchemaDiagnostics,
-        ProcessResult EfMigrationsResult,
-        IReadOnlyList<Diagnostic> EfMigrationsDiagnostics);
+        IReadOnlyList<Diagnostic> SarifDiagnostics);
 
     private void CleanStaleArtifacts()
     {

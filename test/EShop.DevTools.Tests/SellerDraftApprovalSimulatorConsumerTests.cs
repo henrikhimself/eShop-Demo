@@ -52,6 +52,6 @@ public sealed class SellerDraftApprovalSimulatorConsumerTests
 
         Assert.Equal(MessageHandlingResult.Handled, result);
         Assert.True(store.TryGet(message.SubmissionId, out SellerPendingSubmission? submission));
-        Assert.Equal(message.TitleSnapshot, submission!.Message.TitleSnapshot);
+        Assert.Equal(message.TitleSnapshot, submission.Message.TitleSnapshot);
     }
 }

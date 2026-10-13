@@ -3,8 +3,7 @@ const XSRF_HEADER_NAME = "X-XSRF-TOKEN";
 const XSRF_TOKEN_URL = "/bff/api/antiforgery/token";
 const LOGIN_URL = "/bff/login";
 
-// Must match AntiforgeryEndpointFilter.cs's InvalidHeaderName exactly. See
-// doc/CHRONICLE.md — antiforgery 400-vs-403 distinction.
+// Must match AntiforgeryEndpointFilter.cs's InvalidHeaderName exactly.
 const ANTIFORGERY_INVALID_HEADER = "X-Antiforgery-Invalid";
 
 function readCookie(name: string): string | undefined {

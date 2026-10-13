@@ -21,8 +21,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Hj.EShop.StoreFront.MigrationRunner;
 
-// See doc/CHRONICLE.md (ADR 0023 follow-up) - this runner applies Optimizely's own SQL
-// scripts instead of calling Database.MigrateAsync(), unlike the Seller Portal's runner.
+// See doc/adr/0027-optimizely-shipped-sql-scripts-for-storefront-schema.md.
 internal static partial class StorefrontSchemaMigrator
 {
     public static async Task<int> RunAsync(StorefrontMigrationOptions options, ILogger logger, CancellationToken cancellationToken)
@@ -67,13 +66,7 @@ internal static partial class StorefrontSchemaMigrator
             OptimizelyPackageScripts scripts = OptimizelyPackageScriptLocator.Locate(
                 options.ToolsDirectory, options.BaselineScriptFileName, [.. options.IncrementalFolderNames]);
 
-            List<FileInfo> files = [];
-            if (scripts.BaselineScript is not null)
-            {
-                files.Add(scripts.BaselineScript);
-            }
-
-            files.AddRange(scripts.IncrementalScripts);
+            List<FileInfo> files = [scripts.BaselineScript, .. scripts.IncrementalScripts];
 
             // Retried like the connection-open above: a cold-starting SQL Server can also
             // reset a mid-batch connection during the transaction OptimizelySqlScriptRunner

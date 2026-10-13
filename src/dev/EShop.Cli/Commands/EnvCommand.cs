@@ -21,25 +21,10 @@ using Spectre.Console.Cli;
 
 namespace Hj.EShop.Cli.Commands;
 
-// Prints the same .cache/-sandboxed environment variables ToolExecutor.RunLocalAsync
-// sets for a locally-run dev tool (see LocalToolEnvironment) as `export` statements a
-// developer's own shell can eval - for running a utility the CLI does not wrap itself
-// against the same sandbox (e.g. so it never touches the developer's real $HOME). The
-// optional host Aspire CLI path lets AppHost MSBuild find its CLI bundle after HOME
-// changes to the sandbox.
-//
-// Only ever calls IOutputSink.Text with plain "export KEY='VALUE'"/"# ..." lines -
-// never Heading/Table/Status/Code, whose Human-mode rendering (rule, markup, emoji) is
-// not valid shell - so the output stays safe to eval under both output modes.
-//
-// Never `source scripts/eshop.sh env` directly: that wrapper script `cd`s to the repo
-// root and ends with `exec`, which would replace the calling shell process instead of
-// returning to it. Use `eval "$(./scripts/eshop.sh env)"` instead - it runs the script
-// in a subshell via command substitution and only evals the printed export lines into
-// the caller's own shell.
+// Emits shell-safe exports for the local-tool .cache sandbox. Use `eval "$(./scripts/eshop.sh env)"`; sourcing the wrapper replaces the caller's shell.
 internal sealed class EnvCommand(IOutputSink output, ILocalToolLocator localToolLocator, RepoPaths paths) : AsyncCommand<DefaultSettings>
 {
-    protected override Task<int> ExecuteAsync(CommandContext context, DefaultSettings settings, CancellationToken cancellationToken)
+    public override Task<int> ExecuteAsync(CommandContext context, DefaultSettings settings, CancellationToken cancellationToken)
     {
         output.Text("# eval \"$(./scripts/eshop.sh env)\" - sets the .cache/ sandbox eshop.sh uses for local tools.");
         foreach ((string key, string value) in LocalToolEnvironment.Build(paths, localToolLocator))

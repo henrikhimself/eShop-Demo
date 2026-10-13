@@ -16,8 +16,7 @@
 
 namespace Hj.EShop.Migrations.Optimizely;
 
-// The status codes an Optimizely SQL script's own validating query returns (the first column between --BEGINVALIDATINGQUERY and --ENDVALIDATINGQUERY).
-// See doc/CHRONICLE.md — values mirror Optimizely's own convention exactly.
+// Values returned by an Optimizely script's validating query.
 public enum SqlStatusCode
 {
     // The validating query returned something other than -1, 0, or 1 - never expected

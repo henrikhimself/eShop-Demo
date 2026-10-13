@@ -34,11 +34,7 @@ internal static class AuthEndpoints
 
         endpoints.MapGet("/bff/logout", (HttpContext context) =>
         {
-            // OnValidatePrincipal (AuthConfiguration.cs) already rejected this session
-            // (or there never was one) - Keycloak has nothing left to end, and any
-            // id_token_hint sent (stale, or now missing) just dead-ends on its own
-            // error page instead of redirecting back. Sign out locally instead of
-            // attempting that round trip - see doc/CHRONICLE.md.
+            // A rejected or missing id_token_hint dead-ends at Keycloak; sign out locally.
             AuthenticationProperties properties = new() { RedirectUri = "/" };
             return context.User.Identity?.IsAuthenticated == true
                 ? Results.SignOut(properties, [CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme])

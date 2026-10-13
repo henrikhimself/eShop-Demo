@@ -14,8 +14,8 @@
 // limitations under the License.
 // </copyright>
 
-using Hj.EShop.Cli.Output;
 using Hj.EShop.Cli.Execution;
+using Hj.EShop.Cli.Output;
 
 namespace Hj.EShop.Cli.Tests.Fakes;
 

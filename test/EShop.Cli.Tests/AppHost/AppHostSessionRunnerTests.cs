@@ -48,7 +48,7 @@ public sealed class AppHostSessionRunnerTests
         using CancellationTokenSource cancellation = new();
         Task<int> runTask = runner.RunAsync([], cancellation.Token);
 
-        await Task.Delay(TimeSpan.FromMilliseconds(100), TestContext.Current.CancellationToken);
+        await toolExecutor.FirstInvocationStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
         Assert.Equal(["start"], toolExecutor.Invocations.Select(i => i.Arguments[0]));
 
         await cancellation.CancelAsync();
@@ -120,5 +120,43 @@ public sealed class AppHostSessionRunnerTests
         await runner.RunAsync(["--launch-profile", "https"], TestContext.Current.CancellationToken);
 
         Assert.Contains(toolExecutor.Invocations[0].Arguments, arg => arg == "--launch-profile");
+    }
+
+    [Fact]
+    public async Task RunAsync_RedirectedInputBlocks_CancellationStopsAppHostExactlyOnce()
+    {
+        FakeToolExecutor toolExecutor = new();
+        BlockingConsoleInput consoleInput = new();
+        AppHostSessionRunner runner = new(
+            new RecordingOutputSink(), toolExecutor, new ConsoleKeyReader(consoleInput), new RepoPaths("/repo"), new FakeRunSettingsReader());
+        using CancellationTokenSource cancellation = new();
+
+        Task<int> runTask = runner.RunAsync([], cancellation.Token);
+        await consoleInput.ReadStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        await cancellation.CancelAsync();
+        await runTask;
+
+        Assert.Equal(["start", "stop"], toolExecutor.Invocations.Select(i => i.Arguments[0]));
+    }
+
+    private sealed class BlockingConsoleInput : IConsoleInput
+    {
+        public TaskCompletionSource ReadStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public bool IsInputRedirected => true;
+
+        public bool KeyAvailable => false;
+
+        public char ReadKey()
+        {
+            throw new NotSupportedException();
+        }
+
+        public ValueTask<int> ReadAsync(Memory<char> buffer)
+        {
+            ReadStarted.TrySetResult();
+            return new ValueTask<int>(new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously).Task);
+        }
     }
 }

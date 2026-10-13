@@ -36,18 +36,12 @@ prematurely.
   temporary-image cleanup that already exists follows the code's own final-state
   handling, not the ADR's literal wording. Reconcile the wording, or confirm the code's
   handling is what was actually intended.
-- Migration artifact and runner path for the Optimizely CMS and Commerce databases (see
-  [ADR 0023](./adr/0023-explicit-database-schema-migration-resources.md)) is decided,
-  implemented, and wired into `AppHost.cs`: `EShop.StoreFront.MigrationRunner` applies
-  Optimizely's own shipped SQL scripts directly (raw ADO.NET, the same lock/marker model
-  as `EShop.SellerPortal.MigrationRunner`'s EF-based approach). Verified end to end
-  against a real SQL Server using the real `EPiServer.CMS.Core`/`EPiServer.Commerce.Core`
-  scripts (not just synthetic fixtures), and inside a real `eshop run` session - see
-  `doc/CHRONICLE.md`. `EShop.StoreFront.Web`'s own readiness against a not-yet-migrated
-  database is resolved too: a pre-flight check against the shared schema marker, not
-  `.WaitFor` or a health check (Optimizely's own `DatabaseSchemaHost` crashes the app at
-  startup on a missing schema, and `.WaitFor` has no effect once deployed to Azure
-  Container Apps) - also verified live.
+- Storefront schema migration follows [ADR 0023](./adr/0023-explicit-database-schema-migration-resources.md):
+  `EShop.StoreFront.MigrationRunner` applies the Optimizely-shipped CMS and Commerce SQL
+  scripts using the shared lock and marker model. Before Storefront starts, its preflight
+  checks the shared schema marker instead of `.WaitFor` or a health check, because
+  Optimizely's `DatabaseSchemaHost` cannot start against a missing schema and `.WaitFor`
+  does not control Azure Container Apps startup.
 - Exact deployment step that starts migration resources and observes their completion
   before dependent app revisions become active (see
   [ADR 0023](./adr/0023-explicit-database-schema-migration-resources.md)) - not yet
@@ -112,25 +106,6 @@ prematurely.
   where the reverse proxy's own health endpoint should live instead (for example a
   dedicated internal-only port/host), then a `RequireHost` restriction on the proxy
   routes so no public hostname can shadow a target's own health endpoint this way.
-- Keycloak's AppHost resource now has `ContainerLifetime.Persistent` (see
-  [ADR 0025](./adr/0025-local-development-reverse-proxy.md)), so an ordinary `aspire
-  start`/`eshop run` restart reuses the same container and no longer rotates its
-  signing keys - the common trigger for the stale `id_token_hint` logout bug below is
-  fixed. The trade-off: Keycloak's own `--import-realm` only imports a realm that does
-  not already exist, so an edit to `src/EShop.AppHost/Realms/eshop-realm.json` (a new
-  user, role, or client change) no longer takes effect on the next restart by itself -
-  a developer must first stop and remove the persisted `keycloak` container so the next
-  start reimports from a clean state. Not yet documented in `DEVELOP.md`.
-- The stale `id_token_hint` logout bug (`doc/CHRONICLE.md`'s "Auth-ticket
-  token-retention saga", step 3: "A kept id_token can still go stale enough for
-  Keycloak to reject it as id_token_hint") still
-  reproduces for its narrower remaining trigger: a real Keycloak data loss (a lost or
-  force-recreated container, not just a restart - see the persistence bullet above).
-  `OidcSignOutTokenRefresh` still only checks the saved id_token's own `exp` claim,
-  never re-validating against Keycloak. `SellerPortalStaleIdTokenLogoutTests`
-  (`test/EShop.AppHost.E2ETests`) reproduces this narrower case and has no passing
-  assertion yet - fixing it needs `OidcSignOutTokenRefresh` to also handle Keycloak
-  rejecting the id_token_hint itself, not just an expired `exp` claim.
 - The Storefront's later phases are identified but not started: a custom Optimizely
   Shell tool for Merchandiser submission review (amends
   [ADR 0008](./adr/0008-submission-content-with-native-approval.md) - native approval
@@ -142,9 +117,5 @@ prematurely.
   Also scaffold the Profile microservice.
 - Extend `eshop build`/`restore`/`format` coverage notes if `EShop.StoreFront.Web` ever
   gains its own frontend build step (it has none yet - no separate JS/TS build).
-- `SQLitePCLRaw.bundle_e_sqlite3` (2.1.12) currently sits ahead of
-  [ADR 0013](./adr/0013-pinned-dependency-versions-and-7-day-quarantine.md)'s 7-day
-  quarantine on purpose, as a documented security exception (see `doc/CHRONICLE.md`
-  and `doc/MEMORY.md`'s "Non-obvious current constraints"). The quarantine-compliant
-  2.1.11 has a disclosed high-severity CVE, GHSA-2m69-gcr7-jv3q. Revisit it once a
-  version exists that both fixes the vulnerability and clears the 7-day quarantine.
+- Centralize the Storefront migration runners' script-directory configuration instead of
+  repeating it in AppHost resource configuration.

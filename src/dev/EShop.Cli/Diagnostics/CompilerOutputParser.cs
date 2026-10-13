@@ -38,7 +38,7 @@ internal static partial class CompilerOutputParser
             .ToArray();
     }
 
-    [GeneratedRegex(@"^[^:]+\([0-9]+,[0-9]+\):\s*(error|warning)")]
+    [GeneratedRegex(@"^[^:]+(?:\([0-9]+,[0-9]+\))?\s*:\s*(error|warning)\b")]
     private static partial Regex DiagnosticLine();
 
     [GeneratedRegex("\x1b\\[[0-9;]*[a-zA-Z]")]

@@ -19,7 +19,7 @@ async function proxy(
   const headers = new Headers(request.headers);
   // The reverse proxy (forwardPublicOrigin: true, see AppHost.cs) always overwrites
   // X-Forwarded-Host/-Proto with the public seller.eshop.local:8443 origin before this
-  // handler ever sees the request - a client can't override them (PLAN-2.md §5.1).
+  // handler ever sees the request - a client can't override them.
   // The raw Host header is *not* usable here instead: with forwardPublicOrigin: true
   // the proxy forwards this app's own internal Host, not the public one.
   const forwardedHost = request.headers.get("x-forwarded-host");

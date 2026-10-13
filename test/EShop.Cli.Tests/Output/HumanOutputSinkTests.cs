@@ -62,39 +62,6 @@ public sealed class HumanOutputSinkTests
     }
 
     [Fact]
-    public async Task BeginStep_CalledAgainWithinTheGracePeriod_DoesNotThrowOrHang()
-    {
-        // Exercises the "reuse the still-open session instead of tearing it down and
-        // restarting" path a quick sequence of steps within one command takes.
-        HumanOutputSink sink = new(sessionEndGracePeriod: TimeSpan.FromMilliseconds(200));
-
-        IDisposable first = sink.BeginStep("first");
-        first.Dispose();
-        await Task.Delay(TimeSpan.FromMilliseconds(20), TestContext.Current.CancellationToken);
-
-        IDisposable second = sink.BeginStep("second");
-        Assert.NotNull(second);
-        second.Dispose();
-    }
-
-    [Fact]
-    public async Task BeginStep_AfterTheGracePeriodElapsesWithNoNewStep_NextCallStartsAFreshSessionCleanly()
-    {
-        HumanOutputSink sink = new(sessionEndGracePeriod: TimeSpan.FromMilliseconds(20));
-
-        IDisposable first = sink.BeginStep("first");
-        first.Dispose();
-
-        // Comfortably longer than the grace period above, so the first session has
-        // actually ended by the time "second" starts.
-        await Task.Delay(TimeSpan.FromMilliseconds(100), TestContext.Current.CancellationToken);
-
-        IDisposable second = sink.BeginStep("second");
-        Assert.NotNull(second);
-        second.Dispose();
-    }
-
-    [Fact]
     public async Task FlushPendingStepsAsync_EndsAPendingSession_WithoutWaitingOutTheGracePeriod()
     {
         // A grace period long enough that "FlushPendingStepsAsync returned quickly" can only

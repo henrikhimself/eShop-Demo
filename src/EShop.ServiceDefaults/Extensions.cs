@@ -141,7 +141,6 @@ public static class Extensions
 
     private static void AddDefaultHealthChecks(IServiceCollection services)
     {
-        // ADR 0018: harden health endpoints for non-Development exposure.
         services.AddRequestTimeouts(
             configure: static timeouts => timeouts.AddPolicy("HealthChecks", TimeSpan.FromSeconds(5)));
 

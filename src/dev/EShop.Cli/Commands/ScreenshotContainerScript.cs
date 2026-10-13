@@ -16,15 +16,7 @@
 
 namespace Hj.EShop.Cli.Commands;
 
-// Generates the Node script `eshop screenshot` runs inside the utility container, via
-// the Playwright driver the Containerfile installs globally (not a package.json
-// dependency). Uses `storageState`, not an on-disk `launchPersistentContext` Chrome
-// profile: the Seller Portal's auth cookie (Program.cs's AddCookie call) is a session
-// cookie with no client-visible expiry, which Chromium deletes from its cookie store
-// on a clean exit regardless of profile persistence - storageState serializes cookies
-// explicitly instead. Uses .cjs, not .mjs/.js: Node's ESM resolver doesn't honor
-// NODE_PATH, only CommonJS's `require` does, and the globally-installed `playwright`
-// package resolves via NODE_PATH, not a local node_modules.
+// Generates the container's Playwright script. Use storageState because session cookies do not survive a profile restart; use CommonJS because the global Playwright install resolves through NODE_PATH.
 internal static class ScreenshotContainerScript
 {
     public const string FileName = "screenshot-runner.cjs";

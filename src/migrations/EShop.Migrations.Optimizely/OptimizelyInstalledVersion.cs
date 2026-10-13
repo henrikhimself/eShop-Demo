@@ -18,7 +18,7 @@ using System.Reflection;
 
 namespace Hj.EShop.Migrations.Optimizely;
 
-// See doc/CHRONICLE.md — every assembly in an Optimizely release train ships the same version as the NuGet package, so it's read from the assembly instead of duplicated as a config literal.
+// An Optimizely release-train assembly version matches its NuGet package version.
 public static class OptimizelyInstalledVersion
 {
     public static string Get(string assemblyName)

@@ -49,10 +49,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="EShop.SellerPortal.Bff.Tests" />
-    <!-- EShop.SellerPortal.MigrationRunner needs the internal SellerPortalDbContext to
-         apply migrations - see doc/CHRONICLE.md. -->
     <InternalsVisibleTo Include="EShop.SellerPortal.MigrationRunner" />
-    <InternalsVisibleTo Include="EShop.SellerPortal.MigrationRunner.Tests" />
   </ItemGroup>
 
 </Project>

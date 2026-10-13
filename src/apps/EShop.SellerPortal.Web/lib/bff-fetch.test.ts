@@ -124,6 +124,38 @@ describe("bffFetch", () => {
     expect(readCookieForTest("XSRF-TOKEN")).toBe("fresh-token");
   });
 
+  it("retries a FormData upload without losing its file after antiforgery refresh", async () => {
+    document.cookie = "XSRF-TOKEN=stale-token; path=/";
+    const imageBytes = new Uint8Array([137, 80, 78, 71]);
+    const image = new File([imageBytes], "cover.png", { type: "image/png" });
+    const body = new FormData();
+    body.append("image", image);
+    const receivedBodies: FormData[] = [];
+
+    fetchMock.mockImplementation(async (input: string, init?: RequestInit) => {
+      if (input === "/bff/api/antiforgery/token") {
+        document.cookie = "XSRF-TOKEN=fresh-token; path=/";
+        return new Response(null, { status: 204 });
+      }
+
+      const formData = init?.body;
+      expect(formData).toBeInstanceOf(FormData);
+      receivedBodies.push(formData as FormData);
+      const headers = new Headers(init?.headers);
+      return headers.get("X-XSRF-TOKEN") === "stale-token"
+        ? new Response(null, { status: 400, headers: { "X-Antiforgery-Invalid": "true" } })
+        : new Response(null, { status: 200 });
+    });
+
+    const response = await bffFetch("/bff/api/drafts/movies/1/images", { method: "POST", body });
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(receivedBodies).toHaveLength(2);
+    await expectFormDataImage(receivedBodies[0]!);
+    await expectFormDataImage(receivedBodies[1]!);
+  });
+
   it("does not retry a 400 that isn't flagged as an antiforgery failure", async () => {
     document.cookie = "XSRF-TOKEN=existing-token; path=/";
     fetchMock.mockResolvedValue(new Response(null, { status: 400 }));
@@ -134,6 +166,15 @@ describe("bffFetch", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
+
+async function expectFormDataImage(formData: FormData): Promise<void> {
+  const image = formData.get("image");
+
+  expect(image).toBeInstanceOf(File);
+  expect((image as File).name).toBe("cover.png");
+  expect((image as File).type).toBe("image/png");
+  expect(new Uint8Array(await (image as File).arrayBuffer())).toEqual(new Uint8Array([137, 80, 78, 71]));
+}
 
 function readCookieForTest(name: string): string | undefined {
   return document.cookie

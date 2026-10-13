@@ -20,9 +20,16 @@ The identity provider product is Keycloak for local development. See
 [ADR 0010](./adr/0010-keycloak-identity-provider.md) for this decision. Aspire hosts a
 Keycloak container for local development.
 
-The local Keycloak setup creates development identities for each non-Shopper actor in
-[`SPEC.md`](./SPEC.md). The Shopper stays unseeded until the Storefront needs Shopper
-login.
+The local Keycloak setup has two realms. The `seller` realm contains the Seller Portal
+client and the Seller development identity. The `storefront` realm contains the
+Storefront client and the Content Editor, Marketer, Merchandiser, Customer Service
+Agent, and Site Administrator development identities. The Shopper stays unseeded until
+the Storefront needs Shopper login.
+
+The two local realms have different issuer values and browser sessions. A local Seller
+session does not sign a user in to the Storefront. See
+[ADR 0028](./adr/0028-separate-local-keycloak-realms-by-application.md) for this local
+identity boundary.
 
 A deployed instance uses Microsoft Entra External ID instead. See
 [ADR 0020](./adr/0020-entra-external-id-production-identity-provider.md) for this

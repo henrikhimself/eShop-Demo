@@ -8,9 +8,7 @@ import type { SubmissionSummary } from "@/lib/types";
 // the portal layout (persists across client-side navigation) and toasts
 // Approved/Rejected outcomes as they're pushed from the BFF.
 export function SubmissionEvents() {
-  // Dedupes on the id:status pair to avoid a duplicate toast when the same approval
-  // broadcasts twice (see doc/CHRONICLE.md). A resubmission gets a new id, so this
-  // never suppresses a genuinely new notification.
+  // Dedupes duplicate approval broadcasts; a resubmission has a new id.
   const notifiedRef = useRef(new Set<string>());
 
   useEffect(() => {

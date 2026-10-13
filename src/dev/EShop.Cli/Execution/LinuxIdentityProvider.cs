@@ -19,14 +19,8 @@ using System.Runtime.InteropServices;
 
 namespace Hj.EShop.Cli.Execution;
 
-// uid/gid come from a direct libc call via source-generated marshalling (requires
-// <AllowUnsafeBlocks> in the .csproj). The Docker socket's group id has no BCL
-// equivalent, so it's read via `stat` through IProcessRunner instead of a hand-rolled
-// `stat` struct P/Invoke, whose layout differs across libc/kernel builds.
-//
-// See doc/CHRONICLE.md ("Constraints baked into that image") - rootless Docker
-// short-circuits to uid/gid 0 with no socket gid at all, since a host-side `stat` on
-// the socket reports a gid meaningless inside the container's own id space.
+// getuid/getgid use source-generated marshalling; stat reads the socket group because it has no BCL equivalent.
+// Rootless Docker uses uid/gid 0 without a socket group: the host-reported gid is meaningless in the container's id space.
 internal sealed partial class LinuxIdentityProvider(IProcessRunner processRunner) : ILinuxIdentityProvider
 {
     public async Task<LinuxIdentity?> GetIdentityAsync(CancellationToken cancellationToken)

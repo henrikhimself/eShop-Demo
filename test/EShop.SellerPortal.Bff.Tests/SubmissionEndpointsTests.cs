@@ -80,7 +80,7 @@ public sealed class SubmissionEndpointsTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         SubmissionSummary? summary = await response.Content.ReadFromJsonAsync<SubmissionSummary>(TestJsonOptions.Default, TestContext.Current.CancellationToken);
         Assert.NotNull(summary);
-        Assert.Equal(SubmissionStatus.Pending, summary!.Status);
+        Assert.Equal(SubmissionStatus.Pending, summary.Status);
 
         ServiceBusMessage sentMessage = Assert.Single(factory.ServiceBusClient.SentMessages);
         SubmissionRequestMessage message = JsonSerializer.Deserialize<SubmissionRequestMessage>(sentMessage.Body.ToString())!;
@@ -212,7 +212,7 @@ public sealed class SubmissionEndpointsTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         SubmissionSummary? summary = await response.Content.ReadFromJsonAsync<SubmissionSummary>(TestJsonOptions.Default, TestContext.Current.CancellationToken);
         Assert.NotNull(summary);
-        Assert.Equal(SubmissionStatus.Pending, summary!.Status);
+        Assert.Equal(SubmissionStatus.Pending, summary.Status);
 
         ServiceBusMessage sentMessage = Assert.Single(factory.ServiceBusClient.SentMessages);
         SubmissionRequestMessage message = JsonSerializer.Deserialize<SubmissionRequestMessage>(sentMessage.Body.ToString())!;
@@ -410,7 +410,7 @@ public sealed class SubmissionEndpointsTests : IAsyncLifetime
         response.EnsureSuccessStatusCode();
         List<SubmissionSummary>? submissions = await response.Content.ReadFromJsonAsync<List<SubmissionSummary>>(TestJsonOptions.Default, TestContext.Current.CancellationToken);
         Assert.NotNull(submissions);
-        Assert.Equal(2, submissions!.Count);
+        Assert.Equal(2, submissions.Count);
         Assert.True(submissions[0].SubmittedAtUtc >= submissions[1].SubmittedAtUtc);
     }
 

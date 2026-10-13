@@ -73,16 +73,28 @@ internal static class AuthConfiguration
                         string? identityProvider = configuration["Identity:Provider"];
                         bool alwaysConfirmWithProvider = identityProvider != KnownNames.IdentityProviderEntraExternalId;
 
-                        RefreshOutcome outcome = await OidcSignOutTokenRefresh.ValidateAsync(
-                            context.Properties.GetTokenValue("id_token"),
-                            context.Properties.GetTokenValue("refresh_token"),
-                            oidcOptions.Backchannel,
-                            oidcConfiguration is null ? null : new Uri(oidcConfiguration.TokenEndpoint),
-                            oidcOptions.ClientId ?? string.Empty,
-                            oidcOptions.ClientSecret,
-                            alwaysConfirmWithProvider,
-                            TimeProvider.System,
-                            context.HttpContext.RequestAborted);
+                        RefreshOutcome outcome;
+                        try
+                        {
+                            outcome = await OidcSignOutTokenRefresh.ValidateAsync(
+                                context.Properties.GetTokenValue("id_token"),
+                                context.Properties.GetTokenValue("refresh_token"),
+                                oidcOptions.Backchannel,
+                                oidcConfiguration is null ? null : new Uri(oidcConfiguration.TokenEndpoint),
+                                oidcOptions.ClientId ?? string.Empty,
+                                oidcOptions.ClientSecret,
+                                alwaysConfirmWithProvider,
+                                context.HttpContext.RequestServices.GetRequiredService<IRefreshTokenCoordinator>(),
+                                TimeProvider.System,
+                                context.HttpContext.RequestAborted);
+                        }
+                        catch (RefreshTokenCoordinationException exception)
+                        {
+                            context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
+                                .CreateLogger(nameof(AuthConfiguration))
+                                .LogWarning(exception, "Rejecting the session because refresh-token coordination failed.");
+                            outcome = RefreshOutcome.Rejected;
+                        }
 
                         if (outcome.Kind == RefreshOutcomeKind.Refreshed)
                         {
@@ -141,6 +153,12 @@ internal static class AuthConfiguration
 
         // The "storefront-ticket:" prefix avoids colliding with other tickets in the same
         // shared Redis "cache" resource.
+        services.AddSingleton<IRefreshTokenCoordinator>(sp => webHostEnvironment.ShouldUseRealInfrastructure()
+            ? new RefreshTokenExchangeCoordinator(
+                new RedisRefreshTokenCoordinationStore(sp.GetRequiredService<IConnectionMultiplexer>().GetDatabase()),
+                "storefront-refresh:",
+                TimeProvider.System)
+            : new UnavailableRefreshTokenCoordinator());
         services.AddSingleton<ITicketStore>(
             sp => new HybridCacheTicketStore(sp.GetRequiredService<HybridCache>(), "storefront-ticket:"));
         services.AddOptions<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -169,12 +187,12 @@ internal static class AuthConfiguration
         // Uses the stable reverse-proxy identity host, not the internal Keycloak
         // discovery endpoint - Keycloak's own KC_HOSTNAME is set to the same host in
         // AppHost.cs, so discovery/issuer/redirects all agree.
-        options.Authority = KnownValues.KeycloakAuthority;
+        options.Authority = KnownValues.KeycloakStorefrontAuthority;
         options.ClientId = KnownNames.StorefrontOidcClientId;
         options.ClientSecret = configuration["Keycloak:ClientSecret"];
 
         // Surfaces every realm role as a ClaimTypes.Role claim via the Storefront
-        // client's role mapper, statically registered in eshop-realm.json.
+        // client's role mapper, statically registered in storefront-realm.json.
         options.ClaimActions.MapJsonKey(ClaimTypes.Role, "role");
 
         // The reverse proxy's self-signed dev CA is not trusted by Storefront's own

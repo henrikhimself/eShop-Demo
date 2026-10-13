@@ -79,12 +79,12 @@ duplicate unverified per-browser steps.
 - **Unrecognized or misspelled host through the proxy**: the proxy returns no route
   (HTTP 404). This is expected behavior, not a bug - the proxy only routes the three
   canonical hosts documented in `doc/System landscape.md`.
-- **An edit to `src/EShop.AppHost/Realms/eshop-realm.json` does not take effect**: the
-  Keycloak container now stays running (and keeps its own database) across an ordinary
-  `aspire start`/`eshop run` restart, so Keycloak's own realm import - which only
-  imports a realm that does not already exist - skips your edit. Fix: stop `aspire
-  start`/`eshop run`, remove the `keycloak` container (`docker rm -f`, or your
-  container tool's equivalent), then start again for a clean import.
+- **An edit to a file in `src/EShop.AppHost/Realms/` does not take effect**: the
+  Keycloak container stays running and keeps its database across an ordinary `aspire
+  start`/`eshop run` restart. Keycloak imports a realm only when that realm does not
+  already exist. Fix: stop `aspire start`/`eshop run`, remove the `keycloak` container
+  (`docker rm -f`, or your container tool's equivalent), then start again for a clean
+  import. The clean import creates the separate `seller` and `storefront` realms.
 
 ## Developer CLI
 

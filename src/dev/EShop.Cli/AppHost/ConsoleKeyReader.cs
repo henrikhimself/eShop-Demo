@@ -16,26 +16,40 @@
 
 namespace Hj.EShop.Cli.AppHost;
 
-internal sealed class ConsoleKeyReader : IConsoleKeyReader
+internal sealed class ConsoleKeyReader(IConsoleInput consoleInput) : IConsoleKeyReader
 {
     public async Task<char?> ReadKeyAsync(CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-            if (Console.IsInputRedirected)
+            if (consoleInput.IsInputRedirected)
             {
-                int read = Console.In.Read();
-                return read < 0 ? null : (char)read;
+                return await ReadRedirectedKeyAsync(cancellationToken);
             }
 
-            if (Console.KeyAvailable)
+            if (consoleInput.KeyAvailable)
             {
-                return Console.ReadKey(intercept: true).KeyChar;
+                return consoleInput.ReadKey();
             }
 
             await Task.Delay(TimeSpan.FromMilliseconds(50), cancellationToken);
         }
 
         return null;
+    }
+
+    private async Task<char?> ReadRedirectedKeyAsync(CancellationToken cancellationToken)
+    {
+        char[] buffer = new char[1];
+        Task<int> readTask = consoleInput.ReadAsync(buffer).AsTask();
+        var cancellationTask = Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+        Task completedTask = await Task.WhenAny(readTask, cancellationTask);
+        if (completedTask == cancellationTask)
+        {
+            await cancellationTask;
+        }
+
+        int read = await readTask;
+        return read == 0 ? null : buffer[0];
     }
 }

@@ -30,6 +30,30 @@ public static class OidcSignOutTokenRefresh
         return token.ValidTo <= timeProvider.GetUtcNow().UtcDateTime;
     }
 
+    public static Task<RefreshOutcome> ValidateAsync(
+        string? idToken,
+        string? refreshToken,
+        HttpClient httpClient,
+        Uri? tokenEndpoint,
+        string clientId,
+        string? clientSecret,
+        bool alwaysConfirmWithProvider,
+        TimeProvider timeProvider,
+        CancellationToken cancellationToken)
+    {
+        return ValidateAsync(
+            idToken,
+            refreshToken,
+            httpClient,
+            tokenEndpoint,
+            clientId,
+            clientSecret,
+            alwaysConfirmWithProvider,
+            PassthroughRefreshTokenCoordinator.Instance,
+            timeProvider,
+            cancellationToken);
+    }
+
     public static async Task<RefreshOutcome> ValidateAsync(
         string? idToken,
         string? refreshToken,
@@ -38,6 +62,7 @@ public static class OidcSignOutTokenRefresh
         string clientId,
         string? clientSecret,
         bool alwaysConfirmWithProvider,
+        IRefreshTokenCoordinator refreshTokenCoordinator,
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
@@ -56,10 +81,16 @@ public static class OidcSignOutTokenRefresh
             return RefreshOutcome.Rejected;
         }
 
-        RefreshedTokens? refreshed = await TryRefreshTokensAsync(
-            httpClient, tokenEndpoint, clientId, clientSecret, refreshToken, cancellationToken);
+        return await refreshTokenCoordinator.RefreshAsync(
+            refreshToken,
+            async refreshCancellationToken =>
+            {
+                RefreshedTokens? refreshed = await TryRefreshTokensAsync(
+                    httpClient, tokenEndpoint, clientId, clientSecret, refreshToken, refreshCancellationToken);
 
-        return refreshed is null ? RefreshOutcome.Rejected : RefreshOutcome.Refreshed(refreshed);
+                return refreshed is null ? RefreshOutcome.Rejected : RefreshOutcome.Refreshed(refreshed);
+            },
+            cancellationToken);
     }
 
     private static async Task<RefreshedTokens?> TryRefreshTokensAsync(
@@ -98,6 +129,19 @@ public static class OidcSignOutTokenRefresh
             // From the caller's perspective, an unreachable provider is equivalent to a
             // rejected refresh.
             return null;
+        }
+    }
+
+    private sealed class PassthroughRefreshTokenCoordinator : IRefreshTokenCoordinator
+    {
+        public static PassthroughRefreshTokenCoordinator Instance { get; } = new();
+
+        public Task<RefreshOutcome> RefreshAsync(
+            string refreshToken,
+            Func<CancellationToken, Task<RefreshOutcome>> refreshAsync,
+            CancellationToken cancellationToken)
+        {
+            return refreshAsync(cancellationToken);
         }
     }
 

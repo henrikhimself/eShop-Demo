@@ -52,9 +52,11 @@ registrar.Register(typeof(IPrerequisiteChecker), typeof(PrerequisiteChecker));
 registrar.Register(typeof(IDevCertificateInstaller), typeof(DevCertificateInstaller));
 registrar.Register(typeof(IApiSchemaGenerator), typeof(ApiSchemaGenerator));
 registrar.Register(typeof(IAppHostGuard), typeof(AppHostGuard));
+registrar.Register(typeof(IConsoleInput), typeof(ConsoleInput));
 registrar.Register(typeof(IConsoleKeyReader), typeof(ConsoleKeyReader));
 registrar.Register(typeof(IAppHostSessionRunner), typeof(AppHostSessionRunner));
 registrar.Register(typeof(IBuildSettingsReader), typeof(BuildSettingsReader));
+registrar.Register(typeof(ITestSettingsReader), typeof(TestSettingsReader));
 registrar.Register(typeof(IRunSettingsReader), typeof(RunSettingsReader));
 
 // Deferred and memoized: IOutputSink can only resolve correctly after

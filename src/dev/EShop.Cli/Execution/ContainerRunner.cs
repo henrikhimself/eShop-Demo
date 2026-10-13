@@ -20,12 +20,7 @@ using Hj.EShop.Common;
 
 namespace Hj.EShop.Cli.Execution;
 
-// Docker.sock is always bind-mounted, even for non-interactive runs - some tools run
-// inside the utility container (e.g. Testcontainers-based e2e tests) themselves talk
-// to the host's Docker daemon (see doc/CHRONICLE.md's "Docker-outside-of-Docker
-// networking" section). Its host path is configurable via ESHOP_DOCKER (see
-// DockerSocketPathResolver) for hosts where it isn't /var/run/docker.sock, e.g.
-// rootless Docker.
+// Docker tools inside the utility container access the host daemon through this bind mount. ESHOP_DOCKER supports non-default and rootless socket paths.
 internal sealed class ContainerRunner(
     IProcessRunner processRunner,
     IUtilityImageProvisioner imageProvisioner,
@@ -36,7 +31,8 @@ internal sealed class ContainerRunner(
     {
         await imageProvisioner.EnsureBuiltAsync(cancellationToken);
 
-        List<string> arguments = ["run", "--rm"];
+        string containerName = $"eshop-utility-{Guid.NewGuid():N}";
+        List<string> arguments = ["run", "--name", containerName, "--rm"];
         arguments.AddRange(TtyFlags(invocation.Interactive));
         arguments.AddRange(["--network", "host"]);
         foreach (string hostName in KnownValues.ReverseProxyHostNames.Values)
@@ -76,11 +72,24 @@ internal sealed class ContainerRunner(
         arguments.Add(invocation.Tool);
         arguments.AddRange(invocation.Arguments);
 
-        return await processRunner.RunAsync(
-            new ProcessRequest(
-                "docker", arguments, invocation.WorkingDirectory,
-                Interactive: invocation.Interactive, OutputLineHandler: invocation.OutputLineHandler),
-            cancellationToken);
+        try
+        {
+            return await processRunner.RunAsync(
+                new ProcessRequest(
+                    "docker", arguments, invocation.WorkingDirectory,
+                    Interactive: invocation.Interactive, OutputLineHandler: invocation.OutputLineHandler),
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            // ProcessRunner kills the local Docker client. Docker owns the named
+            // container after creation, so force-remove it independently of the
+            // cancelled invocation to stop its work and wait for removal.
+            await processRunner.RunAsync(
+                new ProcessRequest("docker", ["rm", "--force", containerName], invocation.WorkingDirectory),
+                CancellationToken.None);
+            throw;
+        }
     }
 
     private static IReadOnlyList<string> TtyFlags(bool interactive)

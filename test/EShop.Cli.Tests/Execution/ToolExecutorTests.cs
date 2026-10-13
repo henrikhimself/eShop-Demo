@@ -188,7 +188,7 @@ public sealed class ToolExecutorTests
 
         ProcessRequest request = Assert.Single(processRunner.Invocations);
         Assert.NotNull(request.EnvironmentVariables);
-        Assert.Equal("1", request.EnvironmentVariables!["NO_COLOR"]);
+        Assert.Equal("1", request.EnvironmentVariables["NO_COLOR"]);
         Assert.Equal(paths.CacheHomeDir, request.EnvironmentVariables["HOME"]);
     }
 
@@ -212,8 +212,8 @@ public sealed class ToolExecutorTests
         Assert.NotNull(request.EnvironmentVariables);
         Assert.Equal(
             Path.Combine(paths.CacheHomeDir, ".aspnet", "dev-certs", "trust"),
-            request.EnvironmentVariables!["SSL_CERT_DIR"]);
-        Assert.Equal(paths.CacheHomeDir, request.EnvironmentVariables!["HOME"]);
+            request.EnvironmentVariables["SSL_CERT_DIR"]);
+        Assert.Equal(paths.CacheHomeDir, request.EnvironmentVariables["HOME"]);
         Assert.Equal(paths.CacheHomeDir, request.EnvironmentVariables["DOTNET_CLI_HOME"]);
         Assert.Equal(paths.NuGetPackagesDir, request.EnvironmentVariables["NUGET_PACKAGES"]);
         Assert.Equal(paths.NpmCacheDir, request.EnvironmentVariables["npm_config_cache"]);
@@ -241,7 +241,7 @@ public sealed class ToolExecutorTests
 
         ToolInvocation recorded = Assert.Single(containerRunner.Invocations);
         Assert.NotNull(recorded.EnvironmentVariables);
-        Assert.Equal("1", recorded.EnvironmentVariables!["NO_COLOR"]);
+        Assert.Equal("1", recorded.EnvironmentVariables["NO_COLOR"]);
         Assert.DoesNotContain("AspireCliPath", recorded.EnvironmentVariables);
     }
 
@@ -263,7 +263,7 @@ public sealed class ToolExecutorTests
 
         ProcessRequest request = Assert.Single(processRunner.Invocations);
         Assert.NotNull(request.OutputLineHandler);
-        request.OutputLineHandler!(new ProcessOutputLine(ProcessOutputStream.StandardError, "downloading package"));
+        request.OutputLineHandler(new ProcessOutputLine(ProcessOutputStream.StandardError, "downloading package"));
         Assert.Contains("Debug(\"pnpm\", StandardError, \"downloading package\")", output.Calls);
     }
 
@@ -287,7 +287,7 @@ public sealed class ToolExecutorTests
 
         ToolInvocation invocation = Assert.Single(containerRunner.Invocations);
         Assert.NotNull(invocation.OutputLineHandler);
-        invocation.OutputLineHandler!(new ProcessOutputLine(ProcessOutputStream.StandardOutput, "captured"));
+        invocation.OutputLineHandler(new ProcessOutputLine(ProcessOutputStream.StandardOutput, "captured"));
         Assert.Contains("Debug(\"node\", StandardOutput, \"captured\")", output.Calls);
         Assert.Equal("1", invocation.EnvironmentVariables!["NO_COLOR"]);
     }

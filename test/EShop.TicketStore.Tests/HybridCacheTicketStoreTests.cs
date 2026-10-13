@@ -36,7 +36,7 @@ public sealed class HybridCacheTicketStoreTests
         AuthenticationTicket? retrieved = await store.RetrieveAsync(key);
 
         Assert.NotNull(retrieved);
-        Assert.Equal("a-seller", retrieved!.Principal.FindFirstValue(ClaimTypes.NameIdentifier));
+        Assert.Equal("a-seller", retrieved.Principal.FindFirstValue(ClaimTypes.NameIdentifier));
     }
 
     [Fact]

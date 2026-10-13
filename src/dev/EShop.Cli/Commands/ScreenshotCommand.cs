@@ -29,7 +29,7 @@ namespace Hj.EShop.Cli.Commands;
 internal sealed class ScreenshotCommand(IOutputSink output, IToolExecutor toolExecutor, RepoPaths paths)
     : AsyncCommand<ScreenshotSettings>
 {
-    protected override async Task<int> ExecuteAsync(CommandContext context, ScreenshotSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, ScreenshotSettings settings, CancellationToken cancellationToken)
     {
         output.Heading(1, "Screenshot Result");
 

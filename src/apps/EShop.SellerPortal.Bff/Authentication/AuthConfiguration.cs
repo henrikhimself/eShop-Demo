@@ -35,8 +35,7 @@ internal static class AuthConfiguration
 {
     public static void AddAuthConfiguration(this WebApplicationBuilder builder)
     {
-        // See doc/CHRONICLE.md ("Building the OpenAPI-as-frontend-type-source pipeline")
-        // - only AddOpenIdConnect needs guarding during build-time doc generation.
+        // See doc/adr/0014-bff-openapi-source-of-truth-for-frontend-types.md.
         AuthenticationBuilder authenticationBuilder = builder.Services
             .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
             .AddCookie(options =>
@@ -62,9 +61,7 @@ internal static class AuthConfiguration
                     return Task.CompletedTask;
                 };
 
-                // See doc/CHRONICLE.md ("System invariants and constraints", the
-                // id_token_hint entries) - this is the one place that must catch a stale
-                // id_token, including for logout.
+                // See doc/CHRONICLE.md — Keycloak id_token_hint behavior.
                 options.Events.OnValidatePrincipal = async context =>
                 {
                     OpenIdConnectOptions oidcOptions = context.HttpContext.RequestServices
@@ -74,22 +71,32 @@ internal static class AuthConfiguration
                         ? null
                         : await oidcOptions.ConfigurationManager.GetConfigurationAsync(context.HttpContext.RequestAborted);
 
-                    // Always confirmed against the provider here (not just at sign-out)
-                    // for Keycloak only - see doc/CHRONICLE.md. Entra's URLs are assumed
-                    // stable, so it's skipped there.
+                    // Keycloak alone confirms tokens with the provider; Entra URLs are assumed stable.
                     string? identityProvider = builder.Configuration["Identity:Provider"];
                     bool alwaysConfirmWithProvider = identityProvider != KnownNames.IdentityProviderEntraExternalId;
 
-                    RefreshOutcome outcome = await OidcSignOutTokenRefresh.ValidateAsync(
-                        context.Properties.GetTokenValue("id_token"),
-                        context.Properties.GetTokenValue("refresh_token"),
-                        oidcOptions.Backchannel,
-                        configuration is null ? null : new Uri(configuration.TokenEndpoint),
-                        oidcOptions.ClientId ?? string.Empty,
-                        oidcOptions.ClientSecret,
-                        alwaysConfirmWithProvider,
-                        TimeProvider.System,
-                        context.HttpContext.RequestAborted);
+                    RefreshOutcome outcome;
+                    try
+                    {
+                        outcome = await OidcSignOutTokenRefresh.ValidateAsync(
+                            context.Properties.GetTokenValue("id_token"),
+                            context.Properties.GetTokenValue("refresh_token"),
+                            oidcOptions.Backchannel,
+                            configuration is null ? null : new Uri(configuration.TokenEndpoint),
+                            oidcOptions.ClientId ?? string.Empty,
+                            oidcOptions.ClientSecret,
+                            alwaysConfirmWithProvider,
+                            context.HttpContext.RequestServices.GetRequiredService<IRefreshTokenCoordinator>(),
+                            TimeProvider.System,
+                            context.HttpContext.RequestAborted);
+                    }
+                    catch (RefreshTokenCoordinationException exception)
+                    {
+                        context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
+                            .CreateLogger(nameof(AuthConfiguration))
+                            .LogWarning(exception, "Rejecting the session because refresh-token coordination failed.");
+                        outcome = RefreshOutcome.Rejected;
+                    }
 
                     if (outcome.Kind == RefreshOutcomeKind.Refreshed)
                     {
@@ -138,8 +145,7 @@ internal static class AuthConfiguration
         builder.Services.AddAuthorizationBuilder()
             .AddPolicy("SellerOnly", policy => policy.RequireRole("Seller"));
 
-        // See doc/CHRONICLE.md ("Deferring a DI-resolved dependency..."). Skipped in
-        // "Fake" and during build-time OpenAPI generation, matching Program.cs's guard.
+        // Skipped in "Fake" and during build-time OpenAPI generation, matching Program.cs's guard.
         if (builder.Environment.ShouldUseRealInfrastructure())
         {
             builder.Services.AddOptions<KeyManagementOptions>()
@@ -155,6 +161,12 @@ internal static class AuthConfiguration
         // HybridCache is registered in Program.cs. The key prefix keeps this app's
         // tickets from colliding with EShop.StoreFront.Web's in the shared Redis
         // instance.
+        builder.Services.AddSingleton<IRefreshTokenCoordinator>(sp => builder.Environment.ShouldUseRealInfrastructure()
+            ? new RefreshTokenExchangeCoordinator(
+                new RedisRefreshTokenCoordinationStore(sp.GetRequiredService<IConnectionMultiplexer>().GetDatabase()),
+                "seller-portal-refresh:",
+                TimeProvider.System)
+            : new UnavailableRefreshTokenCoordinator());
         builder.Services.AddSingleton<ITicketStore>(sp =>
             new HybridCacheTicketStore(sp.GetRequiredService<HybridCache>(), "seller-portal-ticket:"));
         builder.Services.AddOptions<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -180,7 +192,7 @@ internal static class AuthConfiguration
         // The stable reverse-proxy identity host (ADR 0025), not the internal
         // "services:keycloak:https:0" discovery endpoint. Keycloak's own KC_HOSTNAME is
         // set to the same host in AppHost.cs, so discovery/issuer/redirects all agree.
-        options.Authority = KnownValues.KeycloakAuthority;
+        options.Authority = KnownValues.KeycloakSellerAuthority;
         options.ClientId = KnownNames.SellerPortalOidcClientId;
         options.ClientSecret = configuration["Keycloak:ClientSecret"];
 

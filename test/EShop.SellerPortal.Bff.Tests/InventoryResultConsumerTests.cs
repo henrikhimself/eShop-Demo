@@ -126,7 +126,7 @@ public sealed class InventoryResultConsumerTests : IAsyncLifetime
 
         Assert.Equal(MessageHandlingResult.Handled, result);
         Assert.True(channel.Reader.TryRead(out InventorySummary? publishedSummary));
-        Assert.Equal("SKU-1", publishedSummary!.Sku);
+        Assert.Equal("SKU-1", publishedSummary.Sku);
         Assert.Equal("A Movie", publishedSummary.TitleSnapshot);
         Assert.Equal(confirmed ? InventorySyncStatus.Confirmed : InventorySyncStatus.Failed, publishedSummary.SyncStatus);
         Assert.Equal(error, publishedSummary.LastError);

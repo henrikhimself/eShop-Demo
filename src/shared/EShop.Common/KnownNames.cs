@@ -69,7 +69,8 @@ public static class KnownNames
     public const string ResourceKeycloak = "keycloak";
     public const string ResourceKeycloakAdminUsername = "keycloak-admin-username";
     public const string ResourceKeycloakAdminPassword = "keycloak-admin-password";
-    public const string KeycloakRealmEShop = "eshop";
+    public const string KeycloakRealmSeller = "seller";
+    public const string KeycloakRealmStorefront = "storefront";
     public const string IdentityProviderKeycloakName = "Keycloak";
     public const string IdentityProviderKeycloakClientSecret = "Keycloak__ClientSecret";
 

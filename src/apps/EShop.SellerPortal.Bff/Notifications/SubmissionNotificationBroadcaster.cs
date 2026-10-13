@@ -20,8 +20,7 @@ using Hj.EShop.SellerPortal.Bff.Contracts;
 
 namespace Hj.EShop.SellerPortal.Bff.Notifications;
 
-// See doc/CHRONICLE.md - "Rejected alternatives" - for why this is SSE fan-out, not
-// SignalR: single-process, no replay, no cross-instance fan-out.
+// See doc/adr/0026-server-sent-events-for-seller-portal-notifications.md.
 internal sealed class SubmissionNotificationBroadcaster
 {
     private readonly ConcurrentDictionary<Guid, List<Channel<SubmissionSummary>>> _subscribersBySellerId = new();

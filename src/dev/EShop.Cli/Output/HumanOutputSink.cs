@@ -14,8 +14,8 @@
 // limitations under the License.
 // </copyright>
 
-using Spectre.Console;
 using Hj.EShop.Cli.Execution;
+using Spectre.Console;
 
 namespace Hj.EShop.Cli.Output;
 
@@ -134,6 +134,7 @@ internal sealed class HumanOutputSink(TimeSpan? sessionEndGracePeriod = null) : 
                 _session = null;
             }
         }
+
     }
 
     private sealed class HumanOutputProgress : IOutputProgress

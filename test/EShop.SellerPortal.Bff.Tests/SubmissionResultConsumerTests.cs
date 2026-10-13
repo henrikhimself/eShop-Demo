@@ -100,7 +100,7 @@ public sealed class SubmissionResultConsumerTests : IAsyncLifetime
             m => Assert.Equal(draft.Id, JsonSerializer.Deserialize<BlobDeletionMessage>(m.Body.ToString())!.DraftId));
 
         Assert.True(channel.Reader.TryRead(out SubmissionSummary? publishedSummary));
-        Assert.Equal(submission.Id, publishedSummary!.Id);
+        Assert.Equal(submission.Id, publishedSummary.Id);
         Assert.Equal(SubmissionStatus.Approved, publishedSummary.Status);
         Assert.Equal("SKU-APPROVED", publishedSummary.AssignedSku);
     }
@@ -183,7 +183,7 @@ public sealed class SubmissionResultConsumerTests : IAsyncLifetime
         Assert.Empty(serviceBusClient.SentMessages);
 
         Assert.True(channel.Reader.TryRead(out SubmissionSummary? publishedSummary));
-        Assert.Equal(submission.Id, publishedSummary!.Id);
+        Assert.Equal(submission.Id, publishedSummary.Id);
         Assert.Equal(SubmissionStatus.Rejected, publishedSummary.Status);
         Assert.Equal("Needs a better description.", publishedSummary.RejectionReason);
     }
@@ -268,7 +268,7 @@ public sealed class SubmissionResultConsumerTests : IAsyncLifetime
 
         Assert.Equal(MessageHandlingResult.Handled, result);
         Assert.True(inventoryChannel.Reader.TryRead(out InventorySummary? summary));
-        Assert.Equal("SKU-NEW", summary!.Sku);
+        Assert.Equal("SKU-NEW", summary.Sku);
         Assert.Equal(draft.Title, summary.TitleSnapshot);
         Assert.Null(summary.ReportedQuantity);
         Assert.Null(summary.SyncStatus);
@@ -307,7 +307,7 @@ public sealed class SubmissionResultConsumerTests : IAsyncLifetime
         await consumer.HandleMessageAsync(body, TestContext.Current.CancellationToken);
 
         Assert.True(inventoryChannel.Reader.TryRead(out InventorySummary? summary));
-        Assert.Equal("SKU-EXISTING", summary!.Sku);
+        Assert.Equal("SKU-EXISTING", summary.Sku);
         Assert.Equal(42, summary.ReportedQuantity);
         Assert.Equal(InventorySyncStatus.Confirmed, summary.SyncStatus);
         _ = draft;
