@@ -27,7 +27,15 @@ public static class EpicwebAiAssistantCmsExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.AddAIAssistant()
+        services.AddAIAssistant(
+            setupAction: options =>
+            {
+                options.ProviderName = "CustomAI";
+                options.AIModel = "claude-sonnet-5-5";
+                options.EnableChat = true;
+                options.ChatRoles = ["WebEditors", "CmsEditors", "WebAdmins", "CmsAdmins"];
+                options.MaxToolIterations = 8;
+            })
             .RegisterMcpToolType(typeof(BuiltinTools))
             .RegisterMcpToolType(typeof(BuiltinChatTools))
             .RegisterMcpToolType(typeof(BuiltinPublishChatTools))
