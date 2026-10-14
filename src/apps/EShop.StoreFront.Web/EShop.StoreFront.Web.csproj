@@ -40,6 +40,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../nonfree/EShop.StoreFront.EpicwebAI.Cms/EShop.StoreFront.EpicwebAI.Cms.csproj" />
     <ProjectReference Include="../../shared/EShop.Common/EShop.Common.csproj" />
     <ProjectReference Include="../../shared/EShop.TicketStore/EShop.TicketStore.csproj" />
     <ProjectReference Include="../../migrations/EShop.Migrations.Common/EShop.Migrations.Common.csproj" />

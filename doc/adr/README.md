@@ -43,3 +43,4 @@ and the result of the decision.
 - [0026 - Server-Sent Events for Seller Portal notifications](./0026-server-sent-events-for-seller-portal-notifications.md)
 - [0027 - Optimizely shipped SQL scripts for Storefront schema](./0027-optimizely-shipped-sql-scripts-for-storefront-schema.md)
 - [0028 - Separate local Keycloak realms by application](./0028-separate-local-keycloak-realms-by-application.md)
+- [0029 - OSI-approved licenses and nonfree exceptions](./0029-osi-approved-licenses-and-nonfree-exceptions.md)

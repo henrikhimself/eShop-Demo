@@ -5,6 +5,21 @@ constraints belong in `MEMORY.md`; accepted architecture decisions belong in ADR
 
 ## Architectural decisions and design reasoning
 
+### Storefront AI assistance
+
+- The team selected a private bridge between the Storefront Epicweb AI Assistant and
+  Anthropic Claude Sonnet 5.5. It replaces the package `ApiUrl` target because
+  `ServiceUrl` is forwarded to Epicweb's hosted service and cannot reach an Aspire-internal
+  endpoint. The selected scope includes full CMS tool-enabled chat. The bridge runs in
+  local development and as an internal Azure Container App. The AppHost user-secrets store
+  supplies the local Anthropic key. Claude access is limited to the WebEditors,
+  CmsEditors, WebAdmins, and CmsAdmins roles. No user receives the Epicweb AIEditors role.
+  All Storefront data can go to Anthropic. Image generation and vision are not supported.
+  Deployment secret provisioning and rotation remain deferred. Epicweb does not include
+  original Claude tool-use input in its later tool-result request. The bridge therefore
+  uses the shared cache for short-lived tool-call correlation state, which it deletes after
+  the matching result.
+
 ### Marketplace and Seller workflow
 
 - The marketplace uses one shared SKU with competing Seller offers (ADR 0006). A Seller
@@ -113,6 +128,16 @@ constraints belong in `MEMORY.md`; accepted architecture decisions belong in ADR
 - The reverse-proxy Keycloak resource intentionally has persistent container lifetime but
   no data volume. A data volume would stop realm-import edits from being applied; without
   it, restarts do not retain stale signing keys.
+
+### Storefront Epicweb CMS package boundary
+
+- The `EShop.StoreFront.EpicwebAI.Cms` project owns the Epicweb package references and
+  the fixed CMS registration of core, read, publish, and update tools plus the chat hub.
+  The Storefront consumes this boundary through a project reference. It keeps the CMS
+  host free of direct Epicweb package references without changing its tool set or hub
+  mapping. The project also has direct Optimizely CMS references so its isolated NuGet
+  restore selects the centrally pinned CMS dependency graph; its specific ImageSharp audit
+  suppressions are the existing RISK-001 accepted risk.
 
 ## Archived Historical Summary
 

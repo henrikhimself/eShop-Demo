@@ -58,6 +58,8 @@ public static class KnownNames
     public const string ResourceStorefrontCmsMigrationRunner = "storefront-cms-db-migration-runner";
     public const string ResourceStorefrontCommerceMigrationRunner = "storefront-commerce-db-migration-runner";
     public const string ResourceStorefrontWeb = "storefront-web";
+    public const string ResourceStorefrontEpicwebAi = "storefront-epicweb-ai";
+    public const string ResourceStorefrontEpicwebAiAnthropicApiKey = "epicweb-aiassistant-anthropic-apikey";
     public const string ResourceStorefrontOidcClientSecret = "storefront-oidc-client-secret";
     public const string ResourceStorefrontEntraClientId = "storefront-entra-client-id";
     public const string ResourceStorefrontEntraClientSecret = "storefront-entra-client-secret";

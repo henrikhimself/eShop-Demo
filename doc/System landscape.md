@@ -103,6 +103,29 @@ not yet decided if each submission kind needs its own content type.
 
 The team defers CMS content types for checkout until the team designs checkout.
 
+### AI assistance bridge
+
+The Storefront uses an internal AI assistance bridge to use Anthropic Claude. The bridge
+translates the Epicweb AI Assistant protocol to the Anthropic API. The bridge is a private
+service. It has no browser ingress.
+
+The bridge supports CMS chat with the registered content tools. The bridge can request a
+content read, update, or publish tool. The CMS authorization and approval rules stay the
+authority for each tool action. The `WebEditors`, `CmsEditors`, `WebAdmins`, and
+`CmsAdmins` roles can use Claude. AI access gives no additional CMS permission. The
+identity provider does not assign the Epicweb `AIEditors` role to a user.
+
+The system can send all Storefront content and data categories to Anthropic. The bridge
+does not support image generation or vision. It rejects these actions.
+
+The bridge runs in local development and in the deployed Azure Container Apps environment.
+The Storefront sends AI requests to the bridge through its internal endpoint. The bridge
+uses the shared cache for short-lived Claude tool-call correlation. It deletes this state
+when it receives the tool result. The state has a short expiry for restart and failure
+recovery. The Anthropic API key belongs only to the bridge. The AppHost keeps the local key in its user-secrets
+store and injects it only into the bridge. The deployed secret provisioning and rotation
+mechanism remains open work. See ADR 0029 and `TODO.md`.
+
 ## Profile microservice
 
 The Profile microservice is a customer-centric microservice. The Profile microservice

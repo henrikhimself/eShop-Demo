@@ -36,6 +36,7 @@ public sealed class AppHostResourceTests
         Assert.Contains(KnownNames.ResourceStorefrontCmsMigrationRunner, resourceNames);
         Assert.Contains(KnownNames.ResourceStorefrontCommerceMigrationRunner, resourceNames);
         Assert.Contains(KnownNames.ResourceStorefrontWeb, resourceNames);
+        Assert.Contains(KnownNames.ResourceStorefrontEpicwebAi, resourceNames);
         Assert.Contains(KnownNames.ResourceDevReverseProxy, resourceNames);
     }
 
@@ -63,9 +64,11 @@ public sealed class AppHostResourceTests
         // in run mode any more.
         IResource sellerPortalWeb = builder.Resources.Single(resource => resource.Name == KnownNames.ResourceSellerPortalWeb);
         IResource storefrontWeb = builder.Resources.Single(resource => resource.Name == KnownNames.ResourceStorefrontWeb);
+        IResource storefrontEpicwebAi = builder.Resources.Single(resource => resource.Name == KnownNames.ResourceStorefrontEpicwebAi);
 
         Assert.All(sellerPortalWeb.Annotations.OfType<EndpointAnnotation>(), endpoint => Assert.False(endpoint.IsExternal));
         Assert.All(storefrontWeb.Annotations.OfType<EndpointAnnotation>(), endpoint => Assert.False(endpoint.IsExternal));
+        Assert.All(storefrontEpicwebAi.Annotations.OfType<EndpointAnnotation>(), endpoint => Assert.False(endpoint.IsExternal));
     }
 
     [Fact]

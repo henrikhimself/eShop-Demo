@@ -119,3 +119,7 @@ prematurely.
   gains its own frontend build step (it has none yet - no separate JS/TS build).
 - Centralize the Storefront migration runners' script-directory configuration instead of
   repeating it in AppHost resource configuration.
+- Select and validate the deployment provisioning and rotation mechanism for the Anthropic
+  API key before `EShop.StoreFront.Web.EpicwebAI` deploys. The AppHost user-secrets store
+  supplies the local key. The key must exist only in the bridge runtime and must not enter
+  Storefront configuration.

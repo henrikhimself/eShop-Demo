@@ -19,6 +19,8 @@
     <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.6.0" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.21.0" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.30.0" />
+    <PackageVersion Include="Epicweb.Optimizely.AIAssistant" Version="4.2.4" />
+    <PackageVersion Include="Epicweb.Optimizely.AIAssistant.Tools" Version="4.0.1" />
     <PackageVersion Include="EPiServer.Azure" Version="13.3.0" />
     <PackageVersion Include="EPiServer.CMS" Version="13.3.0" />
     <PackageVersion Include="EPiServer.CMS.Core" Version="13.3.0" />

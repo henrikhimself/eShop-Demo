@@ -29,6 +29,7 @@
     <ProjectReference Include="../apps/EShop.SellerPortal.MigrationRunner/EShop.SellerPortal.MigrationRunner.csproj" />
     <ProjectReference Include="../apps/EShop.StoreFront.MigrationRunner/EShop.StoreFront.MigrationRunner.csproj" />
     <ProjectReference Include="../apps/EShop.StoreFront.Web/EShop.StoreFront.Web.csproj" />
+    <ProjectReference Include="../nonfree/EShop.StoreFront.EpicwebAI.Bridge/EShop.StoreFront.Web.EpicwebAI.csproj" />
   </ItemGroup>
 
   <ItemGroup>

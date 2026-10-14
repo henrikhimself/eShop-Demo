@@ -18,6 +18,17 @@
 - Storefront is scaffolded with classic `Startup.cs` hosting. It uses explicit Optimizely
   SQL-script migration resources and an external OIDC identity provider. Catalog content
   types, the Profile microservice, and the search microservice are not implemented.
+- ADR 0029 selects a private Storefront AI bridge for Anthropic Claude Sonnet 5.5. It will
+  run locally and as an internal Azure Container App, with full CMS tool-enabled chat.
+  `EShop.StoreFront.EpicwebAI.Cms` owns the Epicweb CMS package dependencies and the
+  fixed tool and hub registrations. The Storefront consumes them through one project
+  reference.
+  The AppHost user-secrets store supplies the local Anthropic key. Deployment secret
+  provisioning and rotation remain open work in `TODO.md`. Claude access is limited to
+  the WebEditors, CmsEditors, WebAdmins, and CmsAdmins roles. No user receives the
+  Epicweb AIEditors role. All Storefront data can go to Anthropic. Image generation and
+  vision are not supported. The bridge uses the shared cache only for short-lived Claude
+  tool-call correlation state; it removes the state after the matching tool result.
 - Local Keycloak has separate `seller` and `storefront` realms. They use different
   issuers and browser sessions, so local cross-application single sign-on is intentional
   not supported. Production still uses Microsoft Entra External ID.
@@ -32,6 +43,10 @@
 
 - Code is authoritative for literal resource names, paths, keys, versions, and signatures.
   Architecture documents state decisions and link to code instead of duplicating literals.
+- A project that directly consumes a non-free component must be under `src/nonfree` and
+  its README must identify the paid product and the dependency, feature, or service that
+  makes it a paid-product consumer. A transitive project reference does not trigger this
+  rule (ADR 0029).
 - Use `scripts/eshop.sh <command> --agent` for repository workflows. The CLI selects local
   or utility-container tools; `--tools local` never falls back to the container.
 - Add DevTools pages under `Pages/Tools/<Name>/`, then link them from both the index and

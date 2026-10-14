@@ -21,6 +21,7 @@ using EPiServer.Web;
 using EPiServer.Web.Routing;
 using Hj.EShop.Common;
 using Hj.EShop.ServiceDefaults;
+using Hj.EShop.StoreFront.EpicwebAI.Cms;
 using Hj.EShop.StoreFront.Web.Features.HealthChecks;
 using Hj.EShop.StoreFront.Web.Foundation.Conventions;
 using Hj.EShop.StoreFront.Web.Initialization;
@@ -92,6 +93,8 @@ internal sealed class Startup(IConfiguration configuration, IWebHostEnvironment 
             .AddHealthChecks()
             .AddCheck<CmsHealthCheck>(nameof(CmsHealthCheck))
             .AddCheck<CommerceHealthCheck>(nameof(CommerceHealthCheck));
+
+        services.AddEpicwebAiAssistantCms();
     }
 
     public void Configure(IApplicationBuilder app)
@@ -114,6 +117,7 @@ internal sealed class Startup(IConfiguration configuration, IWebHostEnvironment 
         {
             o.MapDefaultEndpoints();
             o.MapContent();
+            o.MapEpicwebAiAssistantHub();
         });
     }
 }
