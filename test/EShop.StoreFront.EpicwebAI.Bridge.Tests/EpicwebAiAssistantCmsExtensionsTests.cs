@@ -21,7 +21,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Xunit;
 
-namespace Hj.EShop.StoreFront.Web.EpicwebAI.Tests;
+namespace Hj.EShop.StoreFront.EpicwebAI.Bridge.Tests;
 
 public sealed class EpicwebAiAssistantCmsExtensionsTests
 {

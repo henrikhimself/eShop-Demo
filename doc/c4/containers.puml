@@ -13,12 +13,9 @@ Person(siteAdmin, "Site Administrator")
 Person(devOps, "Developer/Operator")
 
 System_Ext(idp, "External Identity Provider", "Keycloak (local dev) / Microsoft Entra External ID (production)")
-System_Ext(anthropic, "Anthropic API", "Claude Sonnet 5.5")
-
 System_Boundary(eshop, "eShop") {
     Container(reverseProxy, "Reverse Proxy", "Development-only HTTPS ingress")
     Container(storefront, "Storefront", "Optimizely CMS + Commerce Connect")
-    Container(storefrontAiBridge, "Storefront AI assistance bridge", "ASP.NET Core minimal API")
     Container(searchSvc, "Storefront search microservice", "Microservice")
     Container(sellerPortal, "Seller Portal", "Web application")
     Container(profileSvc, "Profile microservice", "Microservice")
@@ -49,9 +46,6 @@ Rel(reverseProxy, storefront, "Routes browser HTTPS by host name (local developm
 Rel(reverseProxy, sellerPortal, "Routes browser HTTPS by host name (local development)")
 Rel(reverseProxy, idp, "Routes browser HTTPS by host name (local development)")
 Rel(storefront, storefrontCmsDb, "Reads/writes CMS data")
-Rel(storefront, storefrontAiBridge, "Sends Epicweb AI requests")
-Rel(storefrontAiBridge, anthropic, "Sends Claude requests")
-Rel(storefrontAiBridge, cache, "Keeps short-lived tool-call correlation state")
 Rel(storefront, storefrontCommerceDb, "Reads/writes Commerce data")
 Rel(storefront, searchSvc, "Uses catalog search API")
 Rel(searchSvc, storefrontSearch, "Indexes and queries catalog data")

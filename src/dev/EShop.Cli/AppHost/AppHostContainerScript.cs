@@ -23,10 +23,18 @@ namespace Hj.EShop.Cli.AppHost;
 // tree the moment PID 1 exits.
 internal static class AppHostContainerScript
 {
-    public static string Build(string relativeAppHostProject, IReadOnlyList<string> extraArguments)
+    public static string Build(
+        string relativeAppHostProject,
+        IReadOnlyList<string> extraArguments,
+        string relativeCliBinary,
+        IReadOnlyList<string> buildGlobalArguments,
+        IReadOnlyList<string> runGlobalArguments)
     {
         string quotedAppHost = ShellQuote(relativeAppHostProject);
         string quotedExtraArguments = string.Join(' ', extraArguments.Select(ShellQuote));
+        string quotedCliBinary = ShellQuote(relativeCliBinary);
+        string quotedBuildGlobalArguments = string.Join(' ', buildGlobalArguments.Select(ShellQuote));
+        string quotedRunGlobalArguments = string.Join(' ', runGlobalArguments.Select(ShellQuote));
 
         StringBuilder script = new();
         script.AppendLine("set -euo pipefail");
@@ -45,7 +53,7 @@ internal static class AppHostContainerScript
         script.AppendLine("  done");
         script.AppendLine("}");
         script.AppendLine($"aspire start --no-build --non-interactive --apphost {quotedAppHost} {quotedExtraArguments}");
-        script.AppendLine("echo \"Press 'q' to stop the AppHost and exit.\"");
+        script.AppendLine("echo \"Press 'b' to rebuild and restart, or 'q' to stop the AppHost and exit.\"");
 
         // The trap drives the exit itself rather than just flagging the interrupt: a
         // SIGINT/SIGTERM arriving while `read`/`wait` is blocked doesn't reliably make
@@ -56,6 +64,16 @@ internal static class AppHostContainerScript
         script.AppendLine("while IFS= read -rsn1 X_KEY; do");
         script.AppendLine("  case \"$X_KEY\" in");
         script.AppendLine("    q|Q) X_QUIT=1; break ;;");
+        script.AppendLine("    b|B)");
+        script.AppendLine("      trap - INT TERM");
+        script.AppendLine("      hj_stop");
+        script.AppendLine($"      {quotedCliBinary} {quotedBuildGlobalArguments} build");
+
+        // The restart is already inside the utility container that owns this session.
+        // Its Aspire CLI must run locally there; selecting a second container would
+        // recreate the PID-1 lifecycle that this continuous script prevents.
+        script.AppendLine($"      exec {quotedCliBinary} {quotedRunGlobalArguments} run {quotedExtraArguments}");
+        script.AppendLine("      ;;");
         script.AppendLine("  esac");
         script.AppendLine("done");
         script.AppendLine("if [ \"$X_QUIT\" = \"1\" ]; then");

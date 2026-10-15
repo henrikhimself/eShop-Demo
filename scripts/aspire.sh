@@ -24,4 +24,9 @@ cd "${X_ROOT}"
 X_ASPIRE_ENV="$(./scripts/eshop.sh env --agent)"
 eval "${X_ASPIRE_ENV}"
 
+printf '%s\n' 'SCRIPTS:'
+printf '\t%s\n' "aspire.sh - Runs the Aspire CLI in the repository-local sandbox that EShop.Cli uses for local tools"
+printf '\t%s\n' "eshop.sh - Bootstraps and runs EShop.Cli, which provides the project development workflows"
+printf '\n'
+
 exec "${X_ASPIRE_BIN}" "$@"

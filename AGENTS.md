@@ -82,7 +82,7 @@ lines into the caller's own shell.
 ### Running
 
 ```bash
-# Start the Aspire AppHost interactively (dashboard, live logs, hot reload); run `build` first, since `run` passes --no-build
+# Start the Aspire AppHost interactively (dashboard, live logs); run `build` first, since `run` passes --no-build
 ./scripts/eshop.sh run --agent
 ```
 
@@ -152,6 +152,17 @@ same login options to reuse that session. Delete `tmp/screenshot-profile` to for
 fresh login.
 
 Use `./scripts/eshop.sh screenshot -h` for available options such as output size, output path, and login credentials.
+
+## Storefront CMS MCP
+
+The `storefront-web` MCP server is the CMS-management surface of the running
+`storefront-web` Aspire resource (`EShop.StoreFront.Web`). It operates on the
+connected CMS database. It is not a Commerce Connect catalog, pricing, inventory, or
+order-management API.
+
+Use the MCP server to inspect CMS content types, their properties, property groups,
+display templates, blueprints, known content items, and preview URLs. Do not mutate or
+publish any content items without explicit user approval.
 
 ## Secrets
 

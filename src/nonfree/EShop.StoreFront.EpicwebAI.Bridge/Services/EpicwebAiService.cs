@@ -17,12 +17,12 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Hj.EShop.StoreFront.Web.EpicwebAI.Configuration;
-using Hj.EShop.StoreFront.Web.EpicwebAI.Models;
+using Hj.EShop.StoreFront.EpicwebAI.Bridge.Configuration;
+using Hj.EShop.StoreFront.EpicwebAI.Bridge.Models;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 
-namespace Hj.EShop.StoreFront.Web.EpicwebAI.Services;
+namespace Hj.EShop.StoreFront.EpicwebAI.Bridge.Services;
 
 internal sealed class EpicwebAiService(
     AnthropicMessagesClient anthropicMessagesClient,

@@ -8,10 +8,11 @@
 
   <ItemGroup>
     <PackageReference Include="xunit.v3.mtp-v2" />
+    <PackageReference Include="System.Security.Cryptography.Xml" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../src/nonfree/EShop.StoreFront.EpicwebAI.Bridge/EShop.StoreFront.Web.EpicwebAI.csproj" />
+    <ProjectReference Include="../../src/nonfree/EShop.StoreFront.EpicwebAI.Bridge/EShop.StoreFront.EpicwebAI.Bridge.csproj" />
     <ProjectReference Include="../../src/nonfree/EShop.StoreFront.EpicwebAI.Cms/EShop.StoreFront.EpicwebAI.Cms.csproj" />
   </ItemGroup>
 

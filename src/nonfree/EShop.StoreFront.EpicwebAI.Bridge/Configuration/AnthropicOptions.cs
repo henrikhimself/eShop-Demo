@@ -14,7 +14,7 @@
 // limitations under the License.
 // </copyright>
 
-namespace Hj.EShop.StoreFront.Web.EpicwebAI.Configuration;
+namespace Hj.EShop.StoreFront.EpicwebAI.Bridge.Configuration;
 
 internal sealed class AnthropicOptions
 {

@@ -24,7 +24,7 @@ public sealed class AppHostContainerScriptTests
     [Fact]
     public void Build_IncludesStartStopAndKeycloakPoll()
     {
-        string script = AppHostContainerScript.Build("src/EShop.AppHost/EShop.AppHost.csproj", []);
+        string script = BuildScript();
 
         Assert.Contains("aspire start --no-build --non-interactive --apphost 'src/EShop.AppHost/EShop.AppHost.csproj'", script, StringComparison.Ordinal);
         Assert.Contains("aspire stop --non-interactive --apphost 'src/EShop.AppHost/EShop.AppHost.csproj'", script, StringComparison.Ordinal);
@@ -35,18 +35,41 @@ public sealed class AppHostContainerScriptTests
     [Fact]
     public void Build_ExtraArguments_AreShellQuotedAndAppended()
     {
-        string script = AppHostContainerScript.Build("apphost.csproj", ["--launch-profile", "it's a test"]);
+        string script = AppHostContainerScript.Build(
+            "apphost.csproj", ["--launch-profile", "it's a test"], "eshop", ["--tools", "auto"], ["--tools", "local"]);
 
         Assert.Contains("'--launch-profile' 'it'\\''s a test'", script, StringComparison.Ordinal);
     }
 
     [Fact]
+    public void Build_RebuildKey_StopsBuildsAndExecsRun()
+    {
+        string script = BuildScript();
+
+        Assert.Contains("Press 'b' to rebuild and restart", script, StringComparison.Ordinal);
+        Assert.Contains("b|B)", script, StringComparison.Ordinal);
+        Assert.Contains("trap - INT TERM", script, StringComparison.Ordinal);
+        Assert.Contains("'.cache/cli-publish/linux-x64/EShop.Cli' '--tools' 'auto' '--agent' build", script, StringComparison.Ordinal);
+        Assert.Contains("exec '.cache/cli-publish/linux-x64/EShop.Cli' '--tools' 'local' '--agent' run", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Build_StdinEofDoesNotStopTheAppHost()
     {
-        string script = AppHostContainerScript.Build("apphost.csproj", []);
+        string script = BuildScript();
 
         Assert.Contains("X_QUIT=1", script, StringComparison.Ordinal);
         Assert.Contains("tail -f /dev/null &", script, StringComparison.Ordinal);
         Assert.Contains("wait $!", script, StringComparison.Ordinal);
+    }
+
+    private static string BuildScript()
+    {
+        return AppHostContainerScript.Build(
+            "src/EShop.AppHost/EShop.AppHost.csproj",
+            [],
+            ".cache/cli-publish/linux-x64/EShop.Cli",
+            ["--tools", "auto", "--agent"],
+            ["--tools", "local", "--agent"]);
     }
 }

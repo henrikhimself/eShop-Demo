@@ -30,10 +30,104 @@ public sealed class AppHostSessionRunnerTests
     public async Task RunAsync_QPressed_StartsThenStopsExactlyOnce()
     {
         FakeToolExecutor toolExecutor = new();
-        AppHostSessionRunner runner = new(new RecordingOutputSink(), toolExecutor, new FakeConsoleKeyReader('x', 'q'), new RepoPaths("/repo"), new FakeRunSettingsReader());
+        AppHostSessionRunner runner = new(new RecordingOutputSink(), toolExecutor, new FakeConsoleKeyReader('x', 'q'), new FakeBuildRunner(), new RepoPaths("/repo"), new FakeRunSettingsReader());
 
         await runner.RunAsync([], TestContext.Current.CancellationToken);
 
+        Assert.Equal(["start", "stop"], toolExecutor.Invocations.Select(i => i.Arguments[0]));
+    }
+
+    [Fact]
+    public async Task RunAsync_BPressed_RebuildsThenRestartsWithOriginalArguments()
+    {
+        FakeToolExecutor toolExecutor = new();
+        FakeBuildRunner buildRunner = new();
+        RecordingOutputSink output = new();
+        AppHostSessionRunner runner = new(
+            output, toolExecutor, new FakeConsoleKeyReader('B', 'q'), buildRunner, new RepoPaths("/repo"), new FakeRunSettingsReader());
+
+        int exitCode = await runner.RunAsync(["--launch-profile", "https"], TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal(1, buildRunner.CallCount);
+        Assert.Equal(["start", "stop", "start", "stop"], toolExecutor.Invocations.Select(i => i.Arguments[0]));
+        Assert.All(toolExecutor.Invocations.Where(i => i.Arguments[0] == "start"), invocation =>
+            Assert.Contains("--launch-profile", invocation.Arguments));
+        Assert.Contains(output.Calls, call => call.Contains("Press 'b' to rebuild and restart", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task RunAsync_BPressedAndStopFails_DoesNotBuildOrRestart()
+    {
+        FakeToolExecutor toolExecutor = new(invocation => invocation.Arguments.Contains("stop")
+            ? new ProcessResult(4, string.Empty, "aspire: failed to stop AppHost")
+            : new ProcessResult(0, string.Empty, string.Empty));
+        FakeBuildRunner buildRunner = new();
+        AppHostSessionRunner runner = new(
+            new RecordingOutputSink(), toolExecutor, new FakeConsoleKeyReader('b'), buildRunner, new RepoPaths("/repo"), new FakeRunSettingsReader());
+
+        int exitCode = await runner.RunAsync([], TestContext.Current.CancellationToken);
+
+        Assert.Equal(4, exitCode);
+        Assert.Equal(0, buildRunner.CallCount);
+        Assert.Equal(["start", "stop"], toolExecutor.Invocations.Select(i => i.Arguments[0]));
+    }
+
+    [Fact]
+    public async Task RunAsync_BPressedAndBuildFails_DoesNotRestart()
+    {
+        FakeToolExecutor toolExecutor = new();
+        FakeBuildRunner buildRunner = new(exitCode: 2);
+        AppHostSessionRunner runner = new(
+            new RecordingOutputSink(), toolExecutor, new FakeConsoleKeyReader('b'), buildRunner, new RepoPaths("/repo"), new FakeRunSettingsReader());
+
+        int exitCode = await runner.RunAsync([], TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, exitCode);
+        Assert.Equal(1, buildRunner.CallCount);
+        Assert.Equal(["start", "stop"], toolExecutor.Invocations.Select(i => i.Arguments[0]));
+    }
+
+    [Fact]
+    public async Task RunAsync_BPressedAndRestartFails_ReturnsRestartExitCode()
+    {
+        int startCount = 0;
+        FakeToolExecutor toolExecutor = new(invocation => invocation.Arguments.Contains("start") && ++startCount == 2
+            ? new ProcessResult(3, string.Empty, "aspire: failed to restart AppHost")
+            : new ProcessResult(0, string.Empty, string.Empty));
+        FakeBuildRunner buildRunner = new();
+        AppHostSessionRunner runner = new(
+            new RecordingOutputSink(), toolExecutor, new FakeConsoleKeyReader('b'), buildRunner, new RepoPaths("/repo"), new FakeRunSettingsReader());
+
+        int exitCode = await runner.RunAsync([], TestContext.Current.CancellationToken);
+
+        Assert.Equal(3, exitCode);
+        Assert.Equal(1, buildRunner.CallCount);
+        Assert.Equal(["start", "stop", "start"], toolExecutor.Invocations.Select(i => i.Arguments[0]));
+    }
+
+    [Fact]
+    public async Task RunAsync_CancellationDuringBuild_DoesNotRestartOrStopTwice()
+    {
+        TaskCompletionSource buildStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        FakeToolExecutor toolExecutor = new();
+        FakeBuildRunner buildRunner = new(async cancellationToken =>
+        {
+            buildStarted.TrySetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            return 0;
+        });
+        AppHostSessionRunner runner = new(
+            new RecordingOutputSink(), toolExecutor, new FakeConsoleKeyReader('b'), buildRunner, new RepoPaths("/repo"), new FakeRunSettingsReader());
+        using CancellationTokenSource cancellation = new();
+
+        Task<int> runTask = runner.RunAsync([], cancellation.Token);
+        await buildStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+        await cancellation.CancelAsync();
+
+        int exitCode = await runTask;
+
+        Assert.Equal(0, exitCode);
         Assert.Equal(["start", "stop"], toolExecutor.Invocations.Select(i => i.Arguments[0]));
     }
 
@@ -44,7 +138,7 @@ public sealed class AppHostSessionRunnerTests
         // harness) must not be treated the same as pressing 'q' - the AppHost stays
         // up until an explicit cancellation (Ctrl+C/SIGTERM) arrives.
         FakeToolExecutor toolExecutor = new();
-        AppHostSessionRunner runner = new(new RecordingOutputSink(), toolExecutor, new FakeConsoleKeyReader((char?)null), new RepoPaths("/repo"), new FakeRunSettingsReader());
+        AppHostSessionRunner runner = new(new RecordingOutputSink(), toolExecutor, new FakeConsoleKeyReader((char?)null), new FakeBuildRunner(), new RepoPaths("/repo"), new FakeRunSettingsReader());
         using CancellationTokenSource cancellation = new();
         Task<int> runTask = runner.RunAsync([], cancellation.Token);
 
@@ -61,7 +155,7 @@ public sealed class AppHostSessionRunnerTests
     public async Task RunAsync_CancellationRequested_StopsExactlyOnceAndDoesNotThrow()
     {
         FakeToolExecutor toolExecutor = new();
-        AppHostSessionRunner runner = new(new RecordingOutputSink(), toolExecutor, new FakeConsoleKeyReader(), new RepoPaths("/repo"), new FakeRunSettingsReader());
+        AppHostSessionRunner runner = new(new RecordingOutputSink(), toolExecutor, new FakeConsoleKeyReader(), new FakeBuildRunner(), new RepoPaths("/repo"), new FakeRunSettingsReader());
         using CancellationTokenSource cancellation = new();
         cancellation.CancelAfter(TimeSpan.FromMilliseconds(50));
 
@@ -76,7 +170,7 @@ public sealed class AppHostSessionRunnerTests
         FakeToolExecutor toolExecutor = new(invocation => invocation.Arguments.Contains("start")
             ? new ProcessResult(3, string.Empty, "aspire: failed to start AppHost")
             : new ProcessResult(0, string.Empty, string.Empty));
-        AppHostSessionRunner runner = new(new RecordingOutputSink(), toolExecutor, new FakeConsoleKeyReader('q'), new RepoPaths("/repo"), new FakeRunSettingsReader());
+        AppHostSessionRunner runner = new(new RecordingOutputSink(), toolExecutor, new FakeConsoleKeyReader('q'), new FakeBuildRunner(), new RepoPaths("/repo"), new FakeRunSettingsReader());
 
         int exitCode = await runner.RunAsync([], TestContext.Current.CancellationToken);
 
@@ -90,7 +184,7 @@ public sealed class AppHostSessionRunnerTests
         FakeToolExecutor toolExecutor = new(invocation => invocation.Arguments.Contains("stop")
             ? new ProcessResult(4, string.Empty, "aspire: failed to stop AppHost")
             : new ProcessResult(0, string.Empty, string.Empty));
-        AppHostSessionRunner runner = new(new RecordingOutputSink(), toolExecutor, new FakeConsoleKeyReader('q'), new RepoPaths("/repo"), new FakeRunSettingsReader());
+        AppHostSessionRunner runner = new(new RecordingOutputSink(), toolExecutor, new FakeConsoleKeyReader('q'), new FakeBuildRunner(), new RepoPaths("/repo"), new FakeRunSettingsReader());
 
         int exitCode = await runner.RunAsync([], TestContext.Current.CancellationToken);
 
@@ -104,7 +198,7 @@ public sealed class AppHostSessionRunnerTests
             ? new ProcessResult(0, "Dashboard: https://localhost:12345/login?t=abc\n", string.Empty)
             : new ProcessResult(0, string.Empty, string.Empty));
         RecordingOutputSink output = new();
-        AppHostSessionRunner runner = new(output, toolExecutor, new FakeConsoleKeyReader('q'), new RepoPaths("/repo"), new FakeRunSettingsReader());
+        AppHostSessionRunner runner = new(output, toolExecutor, new FakeConsoleKeyReader('q'), new FakeBuildRunner(), new RepoPaths("/repo"), new FakeRunSettingsReader());
 
         await runner.RunAsync([], TestContext.Current.CancellationToken);
 
@@ -115,7 +209,7 @@ public sealed class AppHostSessionRunnerTests
     public async Task RunAsync_ExtraArguments_ForwardedToAspireStart()
     {
         FakeToolExecutor toolExecutor = new();
-        AppHostSessionRunner runner = new(new RecordingOutputSink(), toolExecutor, new FakeConsoleKeyReader('q'), new RepoPaths("/repo"), new FakeRunSettingsReader());
+        AppHostSessionRunner runner = new(new RecordingOutputSink(), toolExecutor, new FakeConsoleKeyReader('q'), new FakeBuildRunner(), new RepoPaths("/repo"), new FakeRunSettingsReader());
 
         await runner.RunAsync(["--launch-profile", "https"], TestContext.Current.CancellationToken);
 
@@ -128,7 +222,7 @@ public sealed class AppHostSessionRunnerTests
         FakeToolExecutor toolExecutor = new();
         BlockingConsoleInput consoleInput = new();
         AppHostSessionRunner runner = new(
-            new RecordingOutputSink(), toolExecutor, new ConsoleKeyReader(consoleInput), new RepoPaths("/repo"), new FakeRunSettingsReader());
+            new RecordingOutputSink(), toolExecutor, new ConsoleKeyReader(consoleInput), new FakeBuildRunner(), new RepoPaths("/repo"), new FakeRunSettingsReader());
         using CancellationTokenSource cancellation = new();
 
         Task<int> runTask = runner.RunAsync([], cancellation.Token);

@@ -17,7 +17,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Hj.EShop.StoreFront.Web.EpicwebAI.Models;
+namespace Hj.EShop.StoreFront.EpicwebAI.Bridge.Models;
 
 internal sealed class EpicwebAiRequest
 {

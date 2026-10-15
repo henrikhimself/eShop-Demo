@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="EShop.StoreFront.Web.EpicwebAI.Tests" />
+    <InternalsVisibleTo Include="EShop.StoreFront.EpicwebAI.Bridge.Tests" />
   </ItemGroup>
 
 </Project>

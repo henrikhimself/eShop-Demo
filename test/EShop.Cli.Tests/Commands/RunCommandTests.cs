@@ -17,6 +17,7 @@
 using Hj.EShop.Cli.AppHost;
 using Hj.EShop.Cli.Commands;
 using Hj.EShop.Cli.Execution;
+using Hj.EShop.Cli.Output;
 using Hj.EShop.Cli.Repo;
 using Hj.EShop.Cli.Tests.Fakes;
 using Spectre.Console.Cli;
@@ -29,10 +30,9 @@ public sealed class RunCommandTests
     [Fact]
     public async Task ExecuteAsync_AlreadyRunning_FailsWithoutStartingAnything()
     {
-        FakeAppHostGuard guard = new(alreadyRunning: true);
         FakeAppHostSessionRunner sessionRunner = new();
         FakeContainerRunner containerRunner = new();
-        RunCommand command = new(new RecordingOutputSink(), guard, new FakeLocalToolLocator("aspire"), sessionRunner, containerRunner, new RepoPaths("/repo"), new FakeRunSettingsReader());
+        RunCommand command = CreateCommand(new FakeAppHostGuard(alreadyRunning: true), new FakeLocalToolLocator("aspire"), sessionRunner, containerRunner);
 
         int exitCode = await ((ICommand<RunSettings>)command).ExecuteAsync(
             context: null!, settings: new RunSettings(), TestContext.Current.CancellationToken);
@@ -47,8 +47,7 @@ public sealed class RunCommandTests
     {
         FakeAppHostSessionRunner sessionRunner = new();
         FakeContainerRunner containerRunner = new();
-        RunCommand command = new(
-            new RecordingOutputSink(), new FakeAppHostGuard(alreadyRunning: false), new FakeLocalToolLocator("aspire"), sessionRunner, containerRunner, new RepoPaths("/repo"), new FakeRunSettingsReader());
+        RunCommand command = CreateCommand(new FakeAppHostGuard(alreadyRunning: false), new FakeLocalToolLocator("aspire"), sessionRunner, containerRunner);
 
         int exitCode = await ((ICommand<RunSettings>)command).ExecuteAsync(
             context: null!, settings: new RunSettings(), TestContext.Current.CancellationToken);
@@ -63,8 +62,7 @@ public sealed class RunCommandTests
     {
         FakeAppHostSessionRunner sessionRunner = new();
         FakeContainerRunner containerRunner = new();
-        RunCommand command = new(
-            new RecordingOutputSink(), new FakeAppHostGuard(alreadyRunning: false), new FakeLocalToolLocator(), sessionRunner, containerRunner, new RepoPaths("/repo"), new FakeRunSettingsReader());
+        RunCommand command = CreateCommand(new FakeAppHostGuard(alreadyRunning: false), new FakeLocalToolLocator(), sessionRunner, containerRunner);
 
         int exitCode = await ((ICommand<RunSettings>)command).ExecuteAsync(
             context: null!, settings: new RunSettings(), TestContext.Current.CancellationToken);
@@ -79,13 +77,9 @@ public sealed class RunCommandTests
     [Fact]
     public async Task ExecuteAsync_LocalAspireSessionRunnerFails_PropagatesItsExitCode()
     {
-        // Locks down item 9's fix: RunCommand must not always return 0 - a real
-        // start failure (or non-zero exit from whichever path actually ran) must
-        // surface as the command's own exit code.
         FakeAppHostSessionRunner sessionRunner = new(exitCode: 3);
         FakeContainerRunner containerRunner = new();
-        RunCommand command = new(
-            new RecordingOutputSink(), new FakeAppHostGuard(alreadyRunning: false), new FakeLocalToolLocator("aspire"), sessionRunner, containerRunner, new RepoPaths("/repo"), new FakeRunSettingsReader());
+        RunCommand command = CreateCommand(new FakeAppHostGuard(alreadyRunning: false), new FakeLocalToolLocator("aspire"), sessionRunner, containerRunner);
 
         int exitCode = await ((ICommand<RunSettings>)command).ExecuteAsync(
             context: null!, settings: new RunSettings(), TestContext.Current.CancellationToken);
@@ -98,13 +92,29 @@ public sealed class RunCommandTests
     {
         FakeAppHostSessionRunner sessionRunner = new();
         FakeContainerRunner containerRunner = new(_ => new ProcessResult(2, string.Empty, "container script failed"));
-        RunCommand command = new(
-            new RecordingOutputSink(), new FakeAppHostGuard(alreadyRunning: false), new FakeLocalToolLocator(), sessionRunner, containerRunner, new RepoPaths("/repo"), new FakeRunSettingsReader());
+        RunCommand command = CreateCommand(new FakeAppHostGuard(alreadyRunning: false), new FakeLocalToolLocator(), sessionRunner, containerRunner);
 
         int exitCode = await ((ICommand<RunSettings>)command).ExecuteAsync(
             context: null!, settings: new RunSettings(), TestContext.Current.CancellationToken);
 
         Assert.Equal(2, exitCode);
+    }
+
+    private static RunCommand CreateCommand(
+        IAppHostGuard guard,
+        FakeLocalToolLocator localToolLocator,
+        FakeAppHostSessionRunner sessionRunner,
+        FakeContainerRunner containerRunner)
+    {
+        return new RunCommand(
+            new RecordingOutputSink(),
+            guard,
+            localToolLocator,
+            sessionRunner,
+            containerRunner,
+            new FakeGlobalOptionsAccessor(new GlobalOptions(ExecutionMode.Auto, OutputMode.Human)),
+            new RepoPaths("/repo"),
+            new FakeRunSettingsReader());
     }
 
     private sealed class FakeAppHostGuard(bool alreadyRunning) : IAppHostGuard

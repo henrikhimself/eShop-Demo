@@ -49,3 +49,9 @@ configuration.
 The tools run inside the CMS host. Optimizely CMS remains responsible for authorizing
 read, update, and publish actions, including its approval rules. This project does not
 grant CMS permissions.
+
+## Note
+
+Adding a project references causes registration of the "AIAssistantAccess" authorization
+policy. Deactivating the service and endpoint configuration in startup is not enough to
+fully deactivate this tool.

@@ -56,6 +56,25 @@ The bridge commits only the Anthropic API endpoint:
 start if it is missing. Anthropic generation requests have a two-minute total and
 per-attempt timeout.
 
+## Aspire AppHost
+
+Define the bridge resource:
+
+```cs
+IResourceBuilder<ParameterResource> epicwebAiAnthropicApiKey = builder.AddParameter(KnownNames.ResourceStorefrontEpicwebAiAnthropicApiKey, secret: true);
+IResourceBuilder<ProjectResource> storefrontEpicwebAi = builder
+    .AddProject<EShop_StoreFront_EpicwebAI_Bridge>(KnownNames.ResourceStorefrontEpicwebAi)
+    .WithHttpEndpoint(name: "http")
+    .WithEnvironment("Anthropic__ApiKey", epicwebAiAnthropicApiKey)
+    .WithReference(cache);
+```
+
+Inject endpoint url as environment variable:
+
+```cs
+    .WithEnvironment("Epicweb__AIAssistant__ApiUrl", storefrontEpicwebAi.GetEndpoint("http"))
+```
+
 ## Deployment
 
 The bridge is designed to run as a private Azure Container App. Deployment must not

@@ -22,15 +22,64 @@ using Hj.EShop.Cli.Repo;
 namespace Hj.EShop.Cli.AppHost;
 
 internal sealed class AppHostSessionRunner(
-    IOutputSink output, IToolExecutor toolExecutor, IConsoleKeyReader keyReader, RepoPaths paths, IRunSettingsReader runSettingsReader)
-    : IAppHostSessionRunner
+    IOutputSink output,
+    IToolExecutor toolExecutor,
+    IConsoleKeyReader keyReader,
+    IBuildRunner buildRunner,
+    RepoPaths paths,
+    IRunSettingsReader runSettingsReader) : IAppHostSessionRunner
 {
     public async Task<int> RunAsync(IReadOnlyList<string> extraArguments, CancellationToken cancellationToken)
     {
         string relativeAppHost = Path.GetRelativePath(paths.Root, paths.AppHostProject);
-
         IReadOnlyDictionary<string, string> runEnvironmentVariables = await runSettingsReader.GetRunEnvironmentVariablesAsync(cancellationToken);
 
+        while (true)
+        {
+            ProcessResult startResult = await StartAsync(relativeAppHost, extraArguments, runEnvironmentVariables, cancellationToken);
+            if (!startResult.Succeeded)
+            {
+                return startResult.ExitCode;
+            }
+
+            AppHostAction action;
+            try
+            {
+                output.Text("Press 'b' to rebuild and restart, or 'q' to stop the AppHost and exit.");
+                action = await WaitForActionAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                action = AppHostAction.Quit;
+            }
+
+            ProcessResult stopResult = await StopAsync(relativeAppHost, runEnvironmentVariables);
+            if (!stopResult.Succeeded || action == AppHostAction.Quit)
+            {
+                return stopResult.ExitCode;
+            }
+
+            try
+            {
+                int buildExitCode = await buildRunner.RunAsync(cancellationToken);
+                if (buildExitCode != 0)
+                {
+                    return buildExitCode;
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                return stopResult.ExitCode;
+            }
+        }
+    }
+
+    private async Task<ProcessResult> StartAsync(
+        string relativeAppHost,
+        IReadOnlyList<string> extraArguments,
+        IReadOnlyDictionary<string, string> runEnvironmentVariables,
+        CancellationToken cancellationToken)
+    {
         ProcessResult startResult = await toolExecutor.RunAsync(
             new ToolInvocation(
                 "aspire",
@@ -43,34 +92,19 @@ internal sealed class AppHostSessionRunner(
         // own captured output is where the dashboard URL banner lives, so it has to be
         // printed explicitly or the user never sees it.
         output.Text(startResult.StandardOutput + startResult.StandardError);
+        return startResult;
+    }
 
-        if (!startResult.Succeeded)
-        {
-            // Nothing started - there is nothing to wait for 'q' on or to stop.
-            return startResult.ExitCode;
-        }
-
-        output.Text("Press 'q' to stop the AppHost and exit.");
-
-        try
-        {
-            await WaitForQKeyAsync(cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            // Falls through to the same single stop call the 'q'/EOF path takes below.
-        }
-
-        ProcessResult stopResult = await toolExecutor.RunAsync(
+    private Task<ProcessResult> StopAsync(string relativeAppHost, IReadOnlyDictionary<string, string> runEnvironmentVariables)
+    {
+        return toolExecutor.RunAsync(
             new ToolInvocation(
                 "aspire", ["stop", "--non-interactive", "--apphost", relativeAppHost],
                 WorkingDirectory: paths.Root, EnvironmentVariables: runEnvironmentVariables),
             CancellationToken.None);
-
-        return stopResult.ExitCode;
     }
 
-    private async Task WaitForQKeyAsync(CancellationToken cancellationToken)
+    private async Task<AppHostAction> WaitForActionAsync(CancellationToken cancellationToken)
     {
         while (true)
         {
@@ -78,7 +112,12 @@ internal sealed class AppHostSessionRunner(
             char? key = await keyReader.ReadKeyAsync(cancellationToken);
             if (key is 'q' or 'Q')
             {
-                return;
+                return AppHostAction.Quit;
+            }
+
+            if (key is 'b' or 'B')
+            {
+                return AppHostAction.Rebuild;
             }
 
             if (key is null)
@@ -88,8 +127,13 @@ internal sealed class AppHostSessionRunner(
                 // This is not a quit request: keep the AppHost running and block until
                 // a real exit signal (Ctrl+C/SIGTERM, surfaced as cancellation) arrives.
                 await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
-                return;
             }
         }
+    }
+
+    private enum AppHostAction
+    {
+        Quit,
+        Rebuild,
     }
 }

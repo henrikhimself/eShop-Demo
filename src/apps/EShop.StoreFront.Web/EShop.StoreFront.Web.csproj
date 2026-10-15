@@ -20,6 +20,7 @@
 
   <ItemGroup>
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" />
+		<PackageReference Include="Optimizely.Cms.Opal.Tools" />
 		<PackageReference Include="Scrutor" />
     <PackageReference Include="EPiServer.Azure" />
     <PackageReference Include="EPiServer.Cms.UI.VisitorGroups" />
@@ -35,12 +36,12 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" />
     <PackageReference Include="Microsoft.Data.SqlClient" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" />
     <PackageReference Include="StackExchange.Redis" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../nonfree/EShop.StoreFront.EpicwebAI.Cms/EShop.StoreFront.EpicwebAI.Cms.csproj" />
     <ProjectReference Include="../../shared/EShop.Common/EShop.Common.csproj" />
     <ProjectReference Include="../../shared/EShop.TicketStore/EShop.TicketStore.csproj" />
     <ProjectReference Include="../../migrations/EShop.Migrations.Common/EShop.Migrations.Common.csproj" />

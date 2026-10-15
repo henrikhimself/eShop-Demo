@@ -26,11 +26,16 @@ namespace Hj.EShop.Cli.Commands;
 // non-empty, including style-only diagnostics.
 internal sealed class BuildCommand(
     IOutputSink output, IToolExecutor toolExecutor, RepoPaths paths, IBuildSettingsReader buildSettingsReader)
-    : AsyncCommand<DefaultSettings>
+    : AsyncCommand<DefaultSettings>, IBuildRunner
 {
     private const string FormatReportFileName = "build-format.json";
 
-    public override async Task<int> ExecuteAsync(CommandContext context, DefaultSettings settings, CancellationToken cancellationToken)
+    public override Task<int> ExecuteAsync(CommandContext context, DefaultSettings settings, CancellationToken cancellationToken)
+    {
+        return RunAsync(cancellationToken);
+    }
+
+    public async Task<int> RunAsync(CancellationToken cancellationToken)
     {
         output.Heading(1, "Build Result");
 

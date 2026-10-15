@@ -67,13 +67,6 @@ IResourceBuilder<AzureManagedRedisResource> cache = builder.AddAzureManagedRedis
 #endregion
 
 #region Projects
-IResourceBuilder<ParameterResource> epicwebAiAnthropicApiKey = builder.AddParameter(KnownNames.ResourceStorefrontEpicwebAiAnthropicApiKey, secret: true);
-IResourceBuilder<ProjectResource> storefrontEpicwebAi = builder
-    .AddProject<EShop_StoreFront_Web_EpicwebAI>(KnownNames.ResourceStorefrontEpicwebAi)
-    .WithHttpEndpoint(name: "http")
-    .WithEnvironment("Anthropic__ApiKey", epicwebAiAnthropicApiKey)
-    .WithReference(cache);
-
 builder.AddProject<EShop_SellerPortal_MigrationRunner>(KnownNames.ResourceSellerDbMigrationRunner)
     .WithReference(sellerDb);
 IResourceBuilder<ProjectResource> sellerPortalBff = builder
@@ -110,7 +103,7 @@ IResourceBuilder<ProjectResource> storefrontWeb = builder
     .WithEnvironment("Optimizely__ContentGraph__Secret", builder.AddParameter("optimizely-contentgraph-secret", true))
     .WithEnvironment("Optimizely__ContentGraph__SingleKey", builder.AddParameter("optimizely-contentgraph-singlekey", true))
     .WithEnvironment("Optimizely__ContentGraph__AllowSendingLog", builder.AddParameter("optimizely-contentgraph-allowsendinglog", false))
-    .WithEnvironment("Epicweb__AIAssistant__ApiUrl", storefrontEpicwebAi.GetEndpoint("http"))
+    .WithEnvironment("Optimizely__Cms__Mcp__Secret", builder.AddParameter("optimizely-cms-mcp-secret", true))
     .WithReference(storageBlob)
     .WithReference(cache);
 #endregion

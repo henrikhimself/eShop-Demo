@@ -28,6 +28,7 @@ internal sealed class RunCommand(
     ILocalToolLocator localToolLocator,
     IAppHostSessionRunner sessionRunner,
     IContainerRunner containerRunner,
+    IGlobalOptionsAccessor globalOptions,
     RepoPaths paths,
     IRunSettingsReader runSettingsReader) : AsyncCommand<RunSettings>
 {
@@ -49,10 +50,31 @@ internal sealed class RunCommand(
         // No local `aspire` CLI - the whole start/wait/stop cycle must run as one
         // continuous session inside a single container (see AppHostContainerScript).
         string relativeAppHost = Path.GetRelativePath(paths.Root, paths.AppHostProject);
-        string script = AppHostContainerScript.Build(relativeAppHost, settings.AppHostArguments);
+        string relativeCliBinary = Path.GetRelativePath(paths.Root, Environment.ProcessPath
+            ?? throw new InvalidOperationException("The CLI executable path is unavailable."));
+        string[] buildGlobalArguments = BuildGlobalArguments(globalOptions.Options.Tools);
+        string[] runGlobalArguments = BuildGlobalArguments(ExecutionMode.Local);
+        string script = AppHostContainerScript.Build(
+            relativeAppHost, settings.AppHostArguments, relativeCliBinary, buildGlobalArguments, runGlobalArguments);
         IReadOnlyDictionary<string, string> runEnvironmentVariables = await runSettingsReader.GetRunEnvironmentVariablesAsync(cancellationToken);
         ProcessResult result = await containerRunner.RunAsync(
             new ToolInvocation("bash", ["-c", script], Interactive: true, EnvironmentVariables: runEnvironmentVariables), cancellationToken);
         return result.ExitCode;
+    }
+
+    private string[] BuildGlobalArguments(ExecutionMode tools)
+    {
+        List<string> arguments = ["--tools", tools.ToString()];
+        if (globalOptions.Options.Output == OutputMode.Ai)
+        {
+            arguments.Add("--agent");
+        }
+
+        if (globalOptions.Options.Debug)
+        {
+            arguments.Add("--debug");
+        }
+
+        return [.. arguments];
     }
 }

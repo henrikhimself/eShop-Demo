@@ -33,7 +33,7 @@ public static class EpicwebAiAssistantCmsExtensions
                 options.ProviderName = "CustomAI";
                 options.AIModel = "claude-sonnet-5-5";
                 options.EnableChat = true;
-                options.ChatRoles = ["WebEditors", "CmsEditors", "WebAdmins", "CmsAdmins"];
+                options.ChatRoles = ["AIEditors", "WebEditors", "CmsEditors", "WebAdmins", "CmsAdmins"];
                 options.MaxToolIterations = 8;
             })
             .RegisterMcpToolType(typeof(BuiltinTools))

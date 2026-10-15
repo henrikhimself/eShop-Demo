@@ -16,15 +16,15 @@
 
 using System.Net;
 using System.Text.Json;
-using Hj.EShop.StoreFront.Web.EpicwebAI.Configuration;
-using Hj.EShop.StoreFront.Web.EpicwebAI.Models;
-using Hj.EShop.StoreFront.Web.EpicwebAI.Services;
+using Hj.EShop.StoreFront.EpicwebAI.Bridge.Configuration;
+using Hj.EShop.StoreFront.EpicwebAI.Bridge.Models;
+using Hj.EShop.StoreFront.EpicwebAI.Bridge.Services;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;
 
-namespace Hj.EShop.StoreFront.Web.EpicwebAI.Tests;
+namespace Hj.EShop.StoreFront.EpicwebAI.Bridge.Tests;
 
 public sealed class EpicwebAiServiceTests
 {

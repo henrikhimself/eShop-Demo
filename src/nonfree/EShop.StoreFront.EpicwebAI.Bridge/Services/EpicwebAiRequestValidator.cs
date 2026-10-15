@@ -14,10 +14,10 @@
 // limitations under the License.
 // </copyright>
 
-using Hj.EShop.StoreFront.Web.EpicwebAI.Configuration;
-using Hj.EShop.StoreFront.Web.EpicwebAI.Models;
+using Hj.EShop.StoreFront.EpicwebAI.Bridge.Configuration;
+using Hj.EShop.StoreFront.EpicwebAI.Bridge.Models;
 
-namespace Hj.EShop.StoreFront.Web.EpicwebAI.Services;
+namespace Hj.EShop.StoreFront.EpicwebAI.Bridge.Services;
 
 internal static class EpicwebAiRequestValidator
 {

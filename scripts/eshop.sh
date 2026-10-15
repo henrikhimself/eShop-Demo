@@ -121,4 +121,11 @@ if [ "${X_NEEDS_PUBLISH}" -eq 1 ]; then
   echo "${X_CURRENT_HASH}" > "${X_SOURCE_HASH_FILE}"
 fi
 
+if [ "${1:-}" != "env" ]; then
+  printf '%s\n' 'SCRIPTS:'
+  printf '\t%s\n' "aspire.sh - Runs the Aspire CLI in the repository-local sandbox that EShop.Cli uses for local tools"
+  printf '\t%s\n' "eshop.sh - Bootstraps and runs EShop.Cli, which provides the project development workflows"
+  printf '\n'
+fi
+
 exec "${X_BINARY}" "$@"

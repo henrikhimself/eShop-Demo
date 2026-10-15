@@ -55,6 +55,7 @@ registrar.Register(typeof(IAppHostGuard), typeof(AppHostGuard));
 registrar.Register(typeof(IConsoleInput), typeof(ConsoleInput));
 registrar.Register(typeof(IConsoleKeyReader), typeof(ConsoleKeyReader));
 registrar.Register(typeof(IAppHostSessionRunner), typeof(AppHostSessionRunner));
+registrar.Register(typeof(IBuildRunner), typeof(BuildCommand));
 registrar.Register(typeof(IBuildSettingsReader), typeof(BuildSettingsReader));
 registrar.Register(typeof(ITestSettingsReader), typeof(TestSettingsReader));
 registrar.Register(typeof(IRunSettingsReader), typeof(RunSettingsReader));
@@ -98,7 +99,7 @@ app.Configure(config =>
     });
 
     config.AddCommand<RunCommand>("run")
-        .WithDescription("Start the Aspire AppHost (dashboard, live logs, hot reload).");
+        .WithDescription("Start the Aspire AppHost (dashboard, live logs).");
 
     config.AddCommand<ScreenshotCommand>("screenshot")
         .WithDescription("Screenshot a URL using headless Chromium (always containerized).");

@@ -15,7 +15,7 @@
 // </copyright>
 
 using Hj.EShop.ServiceDefaults;
-using Hj.EShop.StoreFront.Web.EpicwebAI;
+using Hj.EShop.StoreFront.EpicwebAI.Bridge;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();

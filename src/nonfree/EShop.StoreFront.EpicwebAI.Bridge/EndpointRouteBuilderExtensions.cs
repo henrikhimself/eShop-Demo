@@ -14,13 +14,13 @@
 // limitations under the License.
 // </copyright>
 
-using Hj.EShop.StoreFront.Web.EpicwebAI.Configuration;
-using Hj.EShop.StoreFront.Web.EpicwebAI.Models;
-using Hj.EShop.StoreFront.Web.EpicwebAI.Services;
+using Hj.EShop.StoreFront.EpicwebAI.Bridge.Configuration;
+using Hj.EShop.StoreFront.EpicwebAI.Bridge.Models;
+using Hj.EShop.StoreFront.EpicwebAI.Bridge.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
-namespace Hj.EShop.StoreFront.Web.EpicwebAI;
+namespace Hj.EShop.StoreFront.EpicwebAI.Bridge;
 
 internal static class EndpointRouteBuilderExtensions
 {
