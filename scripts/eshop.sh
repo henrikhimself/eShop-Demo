@@ -122,10 +122,19 @@ if [ "${X_NEEDS_PUBLISH}" -eq 1 ]; then
 fi
 
 if [ "${1:-}" != "env" ]; then
-  printf '%s\n' 'SCRIPTS:'
-  printf '\t%s\n' "aspire.sh - Runs the Aspire CLI in the repository-local sandbox that EShop.Cli uses for local tools"
-  printf '\t%s\n' "eshop.sh - Bootstraps and runs EShop.Cli, which provides the project development workflows"
-  printf '\n'
+  for X_ARGUMENT in "$@"; do
+    if [ "${X_ARGUMENT}" = "--agent" ]; then
+      printf '%s\n\n' '# Scripts'
+      printf '%s\n' "aspire.sh - Runs the Aspire CLI in the repository-local sandbox that EShop.Cli uses for local tools"
+      printf '%s\n' "eshop.sh - Bootstraps and runs EShop.Cli, which provides the project development workflows"
+      printf '\n'
+      break
+    fi
+  done
+fi
+
+if [ "$#" -eq 1 ] && [ "${1}" = "--agent" ]; then
+  exec "${X_BINARY}"
 fi
 
 exec "${X_BINARY}" "$@"

@@ -1,4 +1,4 @@
-// <copyright file="SiteSettingsUiDescriptor.cs" company="Henrik Jensen">
+// <copyright file="AdditionalCmsViewNames.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -14,19 +14,12 @@
 // limitations under the License.
 // </copyright>
 
-using EPiServer.Core;
-using EPiServer.Shell;
-using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
+namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Internal;
 
-namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Descriptors;
-
-[UIDescriptorRegistration]
-internal sealed class SiteSettingsUiDescriptor : UIDescriptor<ISiteSettingsBlock>
+internal static class AdditionalCmsViewNames
 {
-    public SiteSettingsUiDescriptor()
-        : base(ContentTypeCssClassNames.SharedBlock)
-    {
-        IsPrimaryType = true;
-        ContainerTypes = [typeof(ContentFolder)];
-    }
+    /// <summary>
+    /// Expose view name defined in internal VisualBuilderView class.
+    /// </summary>
+    public const string VisualBuilderView = "visualbuilderview";
 }

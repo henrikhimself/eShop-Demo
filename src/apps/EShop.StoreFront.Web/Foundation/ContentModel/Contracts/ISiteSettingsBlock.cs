@@ -15,9 +15,13 @@
 // </copyright>
 
 using EPiServer.Core;
+using EPiServer.DataAnnotations;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
 
+[ContentType(
+    GUID = "d6314fbd-2c73-4161-9445-ed0f8cfd835b",
+    Description = "A settings block")]
 internal interface ISiteSettingsBlock : IContentData
 {
 }

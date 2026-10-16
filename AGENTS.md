@@ -39,12 +39,21 @@ Before proposing or implementing functionality, architecture, or system landscap
 
 ## Common Commands
 
-`EShop.Cli` (`src/dev/EShop.Cli/`) is the developer CLI for this repository, and the entry point for every command below (ADR 0016). Always add `--agent`: it switches output to a stable, ANSI-free, agent-friendly format, with no color, emoji, or spinners.
+`scripts/eshop.sh` is the developer command entry point for this repository. Always add `--agent` to its commands: it switches output to a stable, ANSI-free, agent-friendly format, with no color, emoji, or spinners.
 
-A bootstrap script builds and runs the CLI:
+Use the wrapper for repository commands:
 
 ```bash
 ./scripts/eshop.sh <command> --agent
+```
+
+`scripts/aspire.sh` runs the Aspire CLI in the same repository-local sandbox that
+`scripts/eshop.sh env` configures for local tools. Use it for direct Aspire CLI commands. Its `--agent` argument prints the script help and is not passed to the Aspire CLI:
+
+Use the wrapper for aspire commands:
+
+```bash
+./scripts/aspire.sh <command>
 ```
 
 ### Development
@@ -65,12 +74,12 @@ A bootstrap script builds and runs the CLI:
 ```
 
 ```bash
-# Delete bin/obj, Next.js build caches, and tmp/ - use after a rename, branch switch, or any time local build state looks stale (never touches node_modules, .cache/, or the utility image)
+# Delete bin/obj, Next.js build caches, and tmp/ - use after a rename, branch switch, or any time local build state looks stale
 ./scripts/eshop.sh clean --agent
 ```
 
 ```bash
-# Print `export` statements for the same .cache/-sandboxed environment ToolExecutor uses for local tools - for running a utility the CLI doesn't wrap itself against that same sandbox
+# Print `export` statements for the same .cache/-sandboxed environment used for local tools - for running a utility that scripts/eshop.sh does not wrap against that same sandbox
 eval "$(./scripts/eshop.sh env --agent)"
 ```
 

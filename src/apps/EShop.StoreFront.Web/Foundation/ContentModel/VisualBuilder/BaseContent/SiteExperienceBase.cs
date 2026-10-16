@@ -14,21 +14,17 @@
 // limitations under the License.
 // </copyright>
 
-using System.ComponentModel.DataAnnotations;
 using EPiServer.DataAbstraction;
-using EPiServer.DataAnnotations;
 using EPiServer.VisualBuilder;
-using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Internal;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.VisualBuilder.BaseContent;
 
-public abstract class SiteExperienceBase : ExperienceData, IDisableIndexing
+public abstract class SiteExperienceBase : ExperienceData
 {
-    [CultureSpecific]
-    [Display(
-        Name = "Disable indexing",
-        Description = "Exclude content from being included when searching.",
-        GroupName = SystemTabNames.Settings,
-        Order = 100)]
-    public virtual bool? DisableIndexing { get; set; }
+    public override void SetDefaultValues(ContentType contentType)
+    {
+        base.SetDefaultValues(contentType);
+        ContentDefaults.ApplyDefaultsAttribute(this, contentType);
+    }
 }

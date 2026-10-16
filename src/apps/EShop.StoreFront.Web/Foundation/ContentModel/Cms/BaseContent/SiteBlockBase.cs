@@ -14,11 +14,9 @@
 // limitations under the License.
 // </copyright>
 
-using System.ComponentModel;
-using System.Reflection;
-using Castle.Core.Internal;
 using EPiServer.Core;
 using EPiServer.DataAbstraction;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Internal;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms.BaseContent;
 
@@ -27,22 +25,6 @@ public abstract class SiteBlockBase : BlockData
     public override void SetDefaultValues(ContentType contentType)
     {
         base.SetDefaultValues(contentType);
-
-        Type? baseType = GetType().BaseType;
-        if (baseType == null)
-        {
-            base.SetDefaultValues(contentType);
-            return;
-        }
-
-        PropertyInfo[] properties = baseType.GetProperties();
-        foreach (PropertyInfo property in properties)
-        {
-            DefaultValueAttribute defaultValueAttribute = property.GetAttribute<DefaultValueAttribute>();
-            if (defaultValueAttribute != null)
-            {
-                this[property.Name] = defaultValueAttribute.Value;
-            }
-        }
+        ContentDefaults.ApplyDefaultsAttribute(this, contentType);
     }
 }

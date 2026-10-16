@@ -18,6 +18,7 @@ using EPiServer.Core;
 using EPiServer.DataAbstraction;
 using EPiServer.DataAnnotations;
 using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Internal;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
 
@@ -26,4 +27,10 @@ namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
     GUID = "480cb694-84d3-43ae-9e3f-2c616c342d3f")]
 public class FolderPage : PageData, IContainerPage
 {
+    public override void SetDefaultValues(ContentType contentType)
+    {
+        base.SetDefaultValues(contentType);
+        VisibleInMenu = false;
+        ContentDefaults.ApplyDefaultsAttribute(this, contentType);
+    }
 }

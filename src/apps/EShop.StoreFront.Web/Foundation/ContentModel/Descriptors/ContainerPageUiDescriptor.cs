@@ -16,6 +16,7 @@
 
 using EPiServer.Shell;
 using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Internal;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Descriptors;
 
@@ -25,15 +26,15 @@ internal sealed class ContainerPageUiDescriptor : UIDescriptor<IContainerPage>
     public ContainerPageUiDescriptor()
         : base(ContentTypeCssClassNames.Container)
     {
-        DefaultView = CmsViewNames.ContentListingView;
+        DefaultView = CmsViewNames.AllPropertiesView;
+        IsPrimaryType = true;
         EnableStickyView = true;
         DisabledViews = [
-            CmsViewNames.AllPropertiesView,
-            CmsViewNames.ContentListingView,
             CmsViewNames.OnPageEditView,
             CmsViewNames.PreviewView,
-            CmsViewNames.AllPropertiesCompareView,
+            CmsViewNames.ContentListingView,
             CmsViewNames.SideBySideCompareView,
+            AdditionalCmsViewNames.VisualBuilderView,
         ];
     }
 }

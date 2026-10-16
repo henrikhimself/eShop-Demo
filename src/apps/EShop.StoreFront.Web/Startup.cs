@@ -22,12 +22,14 @@ using EPiServer.Web.Routing;
 using Hj.EShop.Common;
 using Hj.EShop.ServiceDefaults;
 using Hj.EShop.StoreFront.Web.Features.HealthChecks;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel;
 using Hj.EShop.StoreFront.Web.Foundation.Conventions;
 using Hj.EShop.StoreFront.Web.Initialization;
 using Mediachase.Commerce.Anonymous;
 using Microsoft.AspNetCore.HttpOverrides;
 using Optimizely.Cms.Opal.Tools;
 using Optimizely.Graph.Commerce;
+using Optimizely.Graph.DependencyInjection;
 
 namespace Hj.EShop.StoreFront.Web;
 
@@ -52,6 +54,10 @@ internal sealed class Startup(IConfiguration configuration, IWebHostEnvironment 
         services
             .AddCms()
             .AddCommerce()
+            .AddContentGraph(configureConventions: conventions =>
+            {
+                ContentModelGraphConventions.Configure(conventions);
+            })
             .AddCommerceGraph()
             .AddLanguageManager()
             .AddForms()

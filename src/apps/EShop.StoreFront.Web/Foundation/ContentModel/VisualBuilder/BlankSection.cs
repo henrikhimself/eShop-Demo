@@ -16,13 +16,13 @@
 
 using EPiServer.DataAbstraction;
 using EPiServer.DataAnnotations;
-using EPiServer.VisualBuilder;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.VisualBuilder.BaseContent;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.VisualBuilder;
 
 [ContentType(
     DisplayName = "Blank Section",
     GUID = "f9d73df0-28ba-443c-9bef-74d59d8a3235")]
-public class BlankSection : SectionData
+public class BlankSection : BlankSectionBase
 {
 }

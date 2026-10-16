@@ -1,4 +1,4 @@
-// <copyright file="IDisableIndexing.cs" company="Henrik Jensen">
+// <copyright file="BlankSectionBase.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -14,11 +14,17 @@
 // limitations under the License.
 // </copyright>
 
-using EPiServer.Core;
+using EPiServer.DataAbstraction;
+using EPiServer.VisualBuilder;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Internal;
 
-namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
+namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.VisualBuilder.BaseContent;
 
-internal interface IDisableIndexing : IContentData
+public abstract class BlankSectionBase : SectionData
 {
-    bool? DisableIndexing { get; }
+    public override void SetDefaultValues(ContentType contentType)
+    {
+        base.SetDefaultValues(contentType);
+        ContentDefaults.ApplyDefaultsAttribute(this, contentType);
+    }
 }
