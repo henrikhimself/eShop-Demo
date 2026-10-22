@@ -8,7 +8,7 @@
         </p>
 		<div class="overflow-hidden">
 			<div class="container px-5">
-				<img @Html.EditAttributes(m => m.HeroImage) src="@Url.ContentUrl(Model.HeroImage)" class="img-fluid border rounded-3 shadow-lg mb-4" width="700" height="500" loading="lazy">
+                <img epi-property="HeroImage" class="img-fluid border rounded-3 shadow-lg mb-4" width="700" height="500" loading="lazy" />
 			</div>
 		</div>
         <div class="container col-8 px-4 py-5">
@@ -20,12 +20,10 @@
 <div class="container col-8 px-4 py-5">
     <div class="row align-items-center g-5 py-5">
         <div class="col">
-            <div class="display-5 fw-bold lh-1 mb-3">
-                <span epi-property="WatchOnTvContent"/>
-            </div>
+            <div class="display-6 fw-bold lh-1 mb-3" epi-property="WatchOnTvContent" />
         </div>
         <div class="col-5">
-            <img @Html.EditAttributes(m => m.WatchOnTvImage) src="@Url.ContentUrl(Model.WatchOnTvImage)" class="d-block mx-lg-auto img-fluid" width="700" height="500" loading="lazy">
+            <img epi-property="WatchOnTvImage" class="d-block mx-lg-auto img-fluid" width="700" height="500" loading="lazy" />
         </div>
     </div>
 </div>

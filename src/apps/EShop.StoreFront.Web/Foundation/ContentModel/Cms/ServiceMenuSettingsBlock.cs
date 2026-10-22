@@ -1,4 +1,4 @@
-// <copyright file="NewsItemBlock.cs" company="Henrik Jensen">
+// <copyright file="ServiceMenuSettingsBlock.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -15,29 +15,22 @@
 // </copyright>
 
 using System.ComponentModel.DataAnnotations;
-using EPiServer.Core;
-using EPiServer.DataAbstraction;
 using EPiServer.DataAnnotations;
-using EPiServer.Web;
+using EPiServer.SpecializedProperties;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms.BaseContent;
+using Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Contracts;
 
-namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms.Blocks;
+namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
 
 [ContentType(
-    DisplayName = "News Item",
-    GUID = "1b7bebab-bc9c-492f-9dbb-2ef95b48faf6")]
-[AvailableContentTypes(IncludeOn = [typeof(NewsListPage)])]
-public class NewsItemBlock : BlockData
+    DisplayName = "Service Menu Settings",
+    GUID = "328edd40-4313-4f56-bd6c-da4b5c6b9f93")]
+public class ServiceMenuSettingsBlock : SiteBlockBase, ISiteSettingsBlock
 {
     [CultureSpecific]
     [Display(
-        Name = "Title",
-        Order = 10)]
-    public virtual string? Title { get; set; }
-
-    [CultureSpecific]
-    [Display(
-        Name = "Main Body",
-        Order = 20)]
-    [UIHint(UIHint.Textarea)]
-    public virtual string? MainBody { get; set; }
+        Name = "Navigation Links",
+        Description = "A list of links to display in the service menu.",
+        Order = 100)]
+    public virtual LinkItemCollection? NavigationLinks { get; set; }
 }

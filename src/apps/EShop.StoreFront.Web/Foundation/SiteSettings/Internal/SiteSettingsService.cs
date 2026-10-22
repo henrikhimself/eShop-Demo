@@ -18,13 +18,13 @@ using System.Reflection;
 using EPiServer;
 using EPiServer.Core;
 using EPiServer.SpecializedProperties;
-using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
 using Hj.EShop.StoreFront.Web.Foundation.Operations;
+using Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Contracts;
 using Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Models;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Internal;
 
-internal class SiteSettingsService : ISiteSettingsService
+internal sealed class SiteSettingsService : ISiteSettingsService
 {
     private readonly IContentRepository _contentRepository;
     private readonly IEnumerable<ISiteSettingsLoader> _siteSettingsLoaders;

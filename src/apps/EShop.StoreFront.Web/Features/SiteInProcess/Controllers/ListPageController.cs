@@ -1,4 +1,4 @@
-// <copyright file="ISiteSettingsPage.cs" company="Henrik Jensen">
+// <copyright file="ListPageController.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -14,11 +14,16 @@
 // limitations under the License.
 // </copyright>
 
-using EPiServer.Core;
+using EPiServer.Web.Mvc;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
+using Microsoft.AspNetCore.Mvc;
 
-namespace Hj.EShop.StoreFront.Web.Foundation.SiteSettings;
+namespace Hj.EShop.StoreFront.Web.Features.SiteInProcess.Controllers;
 
-internal interface ISiteSettingsPage : IContent
+public class ListPageController : PageController<ListPage>
 {
-    ContentArea? SiteSettings { get; }
+    public IActionResult Index(ListPage currentPage)
+    {
+        return View(currentPage);
+    }
 }

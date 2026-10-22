@@ -6,6 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-qhrr-8q5h-9q3h" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../../../lib/DotNet-ReverseProxy/src/ReverseProxy.Aspire/ReverseProxy.Aspire.csproj" />
     <ProjectReference Include="../../../lib/DotNet-ReverseProxy/src/ReverseProxy/ReverseProxy.csproj" />
     <ProjectReference Include="../../EShop.ServiceDefaults/EShop.ServiceDefaults.csproj" />

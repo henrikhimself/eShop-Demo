@@ -15,9 +15,13 @@
 // </copyright>
 
 using EPiServer.Core;
+using EPiServer.DataAnnotations;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
 
+[ContentType(
+    DisplayName = "Container Page",
+    GUID = "14995978-6ba6-40bd-aba9-4584ffc0118f")]
 internal interface IContainerPage : IContentData
 {
 }

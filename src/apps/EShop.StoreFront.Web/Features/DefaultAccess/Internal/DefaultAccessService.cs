@@ -95,8 +95,10 @@ internal sealed class DefaultAccessService : IDefaultAccessService
     private void Reset(ContentReference contentReference, SecuritySaveType securitySaveType, Action<IContentSecurityDescriptor> action)
     {
         var content = (IContentSecurable)_contentLoader.Get<IContent>(contentReference);
-        var acl = (IContentSecurityDescriptor)content.GetContentSecurityDescriptor().CreateWritableClone();
-        action(acl);
-        _contentSecurityRepository.Save(acl.ContentLink, acl, securitySaveType);
+
+        var contentSecurityDescriptor = (IContentSecurityDescriptor)content.GetContentSecurityDescriptor().CreateWritableClone();
+        action(contentSecurityDescriptor);
+
+        _contentSecurityRepository.Save(contentSecurityDescriptor.ContentLink, contentSecurityDescriptor, securitySaveType);
     }
 }

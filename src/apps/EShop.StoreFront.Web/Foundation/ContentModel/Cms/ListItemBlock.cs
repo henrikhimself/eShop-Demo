@@ -1,4 +1,4 @@
-// <copyright file="LayoutSettingsBlock.cs" company="Henrik Jensen">
+// <copyright file="ListItemBlock.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -16,22 +16,27 @@
 
 using System.ComponentModel.DataAnnotations;
 using EPiServer.Core;
+using EPiServer.DataAbstraction;
 using EPiServer.DataAnnotations;
-using EPiServer.Web;
 using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms.BaseContent;
 using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
 
-namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms.Blocks.SiteSettings;
+namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
 
 [ContentType(
-    DisplayName = "Layout Settings",
-    GUID = "eff62260-2e12-4b3d-b79e-ea83f9f232fc")]
-public class LayoutSettingsBlock : SiteBlockBase, ISiteSettingsBlock
+    DisplayName = "List Item",
+    GUID = "1b7bebab-bc9c-492f-9dbb-2ef95b48faf6")]
+[AvailableContentTypes(IncludeOn = [typeof(ListPage)])]
+public class ListItemBlock : SiteBlockBase, IRelatedContent
 {
+    [IndexingType(IndexingType.Searchable)]
     [Display(
-        Name = "Logo",
+        Name = "Title",
         Order = 100)]
-    [AllowedTypes(typeof(ImageMedia))]
-    [UIHint(UIHint.Image)]
-    public virtual ContentReference? Logo { get; set; }
+    public virtual string? Title { get; set; }
+
+    [Display(
+        Name = "Related Content",
+        Order = 110)]
+    public virtual IList<ContentReference>? RelatedContent { get; set; }
 }

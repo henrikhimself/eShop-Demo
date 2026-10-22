@@ -18,13 +18,14 @@ using EPiServer;
 using EPiServer.Applications;
 using EPiServer.Core;
 using EPiServer.Web;
-using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
 using Hj.EShop.StoreFront.Web.Foundation.Operations;
+using Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Contracts;
 using Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Models;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Internal;
 
-internal class InProcessWebsiteLoader : ISiteSettingsLoader
+internal sealed class InProcessWebsiteLoader : ISiteSettingsLoader
 {
     private readonly IApplicationResolver _applicationResolver;
     private readonly IContentLoader _contentLoader;
@@ -66,7 +67,19 @@ internal class InProcessWebsiteLoader : ISiteSettingsLoader
                 inProcessWebsite.EntryPoint,
                 [LanguageLoaderOption.FallbackWithMaster(request.Data.Language)]);
 
-            var settings = (T?)page.SiteSettings?
+            ContentReference? siteSettingsReference = page.SiteSettings;
+            if (ContentReference.IsNullOrEmpty(siteSettingsReference))
+            {
+                return request.Fail<T>("Missing link to site settings");
+            }
+
+            if (!_contentLoader.TryGet<SiteSettingsPage>(siteSettingsReference, out SiteSettingsPage? siteSettingsPage))
+            {
+                return request.Fail<T>("Referenced site settings do not exist");
+            }
+
+            var settings = (T?)siteSettingsPage
+                .SiteSettings?
                 .Items
                 .Select(item => _contentAreaLoader.LoadContent(item))
                 .SingleOrDefault(item => item?.GetOriginalType() == typeof(T));

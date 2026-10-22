@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+		<PackageReference Include="EPiServer.Cms.UI.ContentManager" />
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" />
 		<PackageReference Include="Optimizely.Cms.Opal.Tools" />
 		<PackageReference Include="Scrutor" />

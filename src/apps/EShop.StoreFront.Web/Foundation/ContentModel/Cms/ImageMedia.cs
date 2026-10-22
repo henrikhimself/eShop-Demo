@@ -14,10 +14,10 @@
 // limitations under the License.
 // </copyright>
 
-using EPiServer.Core;
 using EPiServer.DataAbstraction;
 using EPiServer.DataAnnotations;
 using EPiServer.Framework.DataAnnotations;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms.BaseContent;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
 
@@ -25,6 +25,6 @@ namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
     DisplayName = "Image",
     GUID = "c9da2b70-6050-4f97-807e-b0094c871824")]
 [MediaDescriptor(ExtensionString = "gif,jpg,jpeg,jfif,pjpeg,pjp,png,svg,webp")]
-public class ImageMedia : ImageData
+public class ImageMedia : SiteImageBase
 {
 }

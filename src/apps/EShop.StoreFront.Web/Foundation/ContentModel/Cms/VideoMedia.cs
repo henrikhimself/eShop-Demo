@@ -14,10 +14,10 @@
 // limitations under the License.
 // </copyright>
 
-using EPiServer.Core;
 using EPiServer.DataAbstraction;
 using EPiServer.DataAnnotations;
 using EPiServer.Framework.DataAnnotations;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms.BaseContent;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
 
@@ -25,6 +25,6 @@ namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
     DisplayName = "Video",
     GUID = "0f3d70f0-f21e-4bbb-ab36-1de15927b2b9")]
 [MediaDescriptor(ExtensionString = "mp4,webm")]
-public class VideoMedia : VideoData
+public class VideoMedia : SiteVideoBase
 {
 }

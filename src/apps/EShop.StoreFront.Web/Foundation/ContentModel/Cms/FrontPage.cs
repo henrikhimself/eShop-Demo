@@ -20,8 +20,7 @@ using EPiServer.DataAbstraction;
 using EPiServer.DataAnnotations;
 using EPiServer.Web;
 using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms.BaseContent;
-using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
-using Hj.EShop.StoreFront.Web.Foundation.SiteSettings;
+using Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Contracts;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
 
@@ -30,13 +29,12 @@ namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
     GUID = "3c952f63-1e40-4288-8545-548ce6d103d4")]
 public class FrontPage : SitePageBase, ISiteSettingsPage
 {
-    [CultureSpecific]
     [Display(
         Name = "Site Settings",
-        Order = 10,
+        Order = -100,
         GroupName = SystemTabNames.Settings)]
-    [AllowedTypes(typeof(ISiteSettingsBlock))]
-    public virtual ContentArea? SiteSettings { get; set; }
+    [AllowedTypes(typeof(SiteSettingsPage))]
+    public virtual ContentReference? SiteSettings { get; set; }
 
     [CultureSpecific]
     [Display(

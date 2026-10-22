@@ -14,14 +14,25 @@
 // limitations under the License.
 // </copyright>
 
+using System.ComponentModel.DataAnnotations;
 using EPiServer.Core;
 using EPiServer.DataAbstraction;
+using EPiServer.DataAnnotations;
 using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Internal;
+using Hj.EShop.StoreFront.Web.Foundation.DisableIndexing.Contracts;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms.BaseContent;
 
-public abstract class SitePageBase : PageData
+public abstract class SitePageBase : PageData, IDisableIndexing
 {
+    [IndexingType(IndexingType.Disabled)]
+    [Display(
+        Name = IDisableIndexing.PropertyName,
+        Description = IDisableIndexing.PropertyDescription,
+        Order = IDisableIndexing.PropertyOrder,
+        GroupName = IDisableIndexing.PropertyGroupName)]
+    public virtual bool? DisableIndexing { get; set; }
+
     public override void SetDefaultValues(ContentType contentType)
     {
         base.SetDefaultValues(contentType);

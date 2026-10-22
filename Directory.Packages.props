@@ -24,6 +24,7 @@
     <PackageVersion Include="EPiServer.Azure" Version="13.3.0" />
     <PackageVersion Include="EPiServer.CMS" Version="13.3.0" />
     <PackageVersion Include="EPiServer.CMS.Core" Version="13.3.0" />
+    <PackageVersion Include="EPiServer.Cms.UI.ContentManager" Version="13.3.0" />
     <PackageVersion Include="EPiServer.Cms.UI.VisitorGroups" Version="13.3.0" />
     <PackageVersion Include="EPiServer.Commerce" Version="15.2.0" />
     <PackageVersion Include="EPiServer.Commerce.Core" Version="15.2.0" />

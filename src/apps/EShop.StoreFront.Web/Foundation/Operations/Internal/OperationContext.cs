@@ -20,7 +20,7 @@ using EPiServer.Core;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.Operations.Internal;
 
-internal class OperationContext
+internal sealed class OperationContext
 {
     public IPrincipal? Principal { get; init; }
 

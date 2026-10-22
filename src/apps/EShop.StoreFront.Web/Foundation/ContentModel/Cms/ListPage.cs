@@ -1,4 +1,4 @@
-// <copyright file="ServiceMenuSettingsBlock.cs" company="Henrik Jensen">
+// <copyright file="ListPage.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -15,22 +15,22 @@
 // </copyright>
 
 using System.ComponentModel.DataAnnotations;
+using EPiServer.Core;
+using EPiServer.DataAbstraction;
 using EPiServer.DataAnnotations;
-using EPiServer.SpecializedProperties;
 using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms.BaseContent;
-using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
 
-namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms.Blocks.SiteSettings;
+namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
 
 [ContentType(
-    DisplayName = "Service Menu Settings",
-    GUID = "328edd40-4313-4f56-bd6c-da4b5c6b9f93")]
-public class ServiceMenuSettingsBlock : SiteBlockBase, ISiteSettingsBlock
+    DisplayName = "List",
+    GUID = "d28e12d0-32ee-4a1a-a5fe-98b271bf4069")]
+public class ListPage : SitePageBase
 {
     [CultureSpecific]
     [Display(
-        Name = "Navigation Links",
-        Description = "A list of links to display in the service menu.",
+        Name = "Items",
         Order = 100)]
-    public virtual LinkItemCollection? NavigationLinks { get; set; }
+    [AllowedTypes(typeof(ListItemBlock))]
+    public virtual ContentArea? Items { get; set; }
 }

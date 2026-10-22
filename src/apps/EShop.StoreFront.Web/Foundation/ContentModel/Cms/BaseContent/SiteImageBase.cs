@@ -1,4 +1,4 @@
-// <copyright file="NewsListPage.cs" company="Henrik Jensen">
+// <copyright file="SiteImageBase.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -14,21 +14,17 @@
 // limitations under the License.
 // </copyright>
 
-using System.ComponentModel.DataAnnotations;
+using EPiServer.Core;
 using EPiServer.DataAbstraction;
-using EPiServer.DataAnnotations;
-using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms.BaseContent;
-using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms.Blocks;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Internal;
 
-namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
+namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms.BaseContent;
 
-[ContentType(
-    DisplayName = "News List",
-    GUID = "d28e12d0-32ee-4a1a-a5fe-98b271bf4069")]
-public class NewsListPage : SitePageBase
+public abstract class SiteImageBase : ImageData
 {
-    [Display(
-        Name = "News Items",
-        Order = 100)]
-    public virtual IList<NewsItemBlock>? NewsItems { get; set; }
+    public override void SetDefaultValues(ContentType contentType)
+    {
+        base.SetDefaultValues(contentType);
+        ContentDefaults.ApplyDefaultsAttribute(this, contentType);
+    }
 }

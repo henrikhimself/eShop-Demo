@@ -59,6 +59,7 @@ internal sealed class Startup(IConfiguration configuration, IWebHostEnvironment 
                 ContentModelGraphConventions.Configure(conventions);
             })
             .AddCommerceGraph()
+            .AddContentManager()
             .AddLanguageManager()
             .AddForms()
             .AddVisitorGroupsMvc()

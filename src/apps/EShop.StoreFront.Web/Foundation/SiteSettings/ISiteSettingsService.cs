@@ -14,8 +14,8 @@
 // limitations under the License.
 // </copyright>
 
-using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
 using Hj.EShop.StoreFront.Web.Foundation.Operations;
+using Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Contracts;
 using Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Models;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.SiteSettings;
