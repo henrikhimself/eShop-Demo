@@ -14,29 +14,19 @@
 // limitations under the License.
 // </copyright>
 
-using System.ComponentModel.DataAnnotations;
 using EPiServer.Core;
 using EPiServer.DataAbstraction;
 using EPiServer.DataAnnotations;
 using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Contracts;
 using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Internal;
-using Hj.EShop.StoreFront.Web.Foundation.DisableIndexing.Contracts;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
 
 [ContentType(
     DisplayName = "Folder",
     GUID = "480cb694-84d3-43ae-9e3f-2c616c342d3f")]
-public class FolderPage : PageData, IContainerPage, IDisableIndexing
+public class FolderPage : PageData, IContainerPage
 {
-    [IndexingType(IndexingType.Disabled)]
-    [Display(
-        Name = IDisableIndexing.PropertyName,
-        Description = IDisableIndexing.PropertyDescription,
-        Order = IDisableIndexing.PropertyOrder,
-        GroupName = IDisableIndexing.PropertyGroupName)]
-    public virtual bool? DisableIndexing { get; set; }
-
     public override void SetDefaultValues(ContentType contentType)
     {
         base.SetDefaultValues(contentType);

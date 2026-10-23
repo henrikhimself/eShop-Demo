@@ -29,7 +29,6 @@ namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
     GUID = "b00db64f-7216-4881-b660-98d94d32ec4e")]
 public class SiteSettingsPage : PageData, IDisableIndexing
 {
-    [IndexingType(IndexingType.Disabled)]
     [ScaffoldColumn(false)]
     public virtual bool? DisableIndexing { get; set; }
 
@@ -45,7 +44,6 @@ public class SiteSettingsPage : PageData, IDisableIndexing
     {
         base.SetDefaultValues(contentType);
         VisibleInMenu = false;
-        DisableIndexing = true;
         ContentDefaults.ApplyDefaultsAttribute(this, contentType);
     }
 }

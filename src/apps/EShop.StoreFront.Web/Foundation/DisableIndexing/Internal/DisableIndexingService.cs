@@ -27,6 +27,7 @@ internal sealed class DisableIndexingService : IDisableIndexingService
 {
     private readonly IContentEvents _contentEvents;
     private readonly IContentRepository _contentRepository;
+    private readonly IContentTypeRepository _contentTypeRepository;
     private readonly IContentSecurityRepository _contentSecurityRepository;
     private readonly IContentVersionRepository _contentVersionRepository;
     private readonly ContentRootRepository _contentRootRepository;
@@ -34,12 +35,14 @@ internal sealed class DisableIndexingService : IDisableIndexingService
     public DisableIndexingService(
         IContentEvents contentEvents,
         IContentRepository contentRepository,
+        IContentTypeRepository contentTypeRepository,
         IContentSecurityRepository contentSecurityRepository,
         IContentVersionRepository contentVersionRepository,
         ContentRootRepository contentRootRepository)
     {
         _contentEvents = contentEvents;
         _contentRepository = contentRepository;
+        _contentTypeRepository = contentTypeRepository;
         _contentSecurityRepository = contentSecurityRepository;
         _contentVersionRepository = contentVersionRepository;
         _contentRootRepository = contentRootRepository;
@@ -47,6 +50,8 @@ internal sealed class DisableIndexingService : IDisableIndexingService
 
     public void Initialize()
     {
+        _contentEvents.CreatingContent += OnCreatingContent;
+        _contentEvents.CreatedContent += OnCreatedContent;
         _contentEvents.PublishedContent += OnPublishedContent;
 
         EnsureNotIndexedFolder(_contentRootRepository.Load(SystemContentRootNames.GlobalAssets));
@@ -55,30 +60,61 @@ internal sealed class DisableIndexingService : IDisableIndexingService
     public void Uninitialize()
     {
         _contentEvents.PublishedContent -= OnPublishedContent;
+        _contentEvents.CreatedContent -= OnCreatedContent;
+        _contentEvents.CreatingContent -= OnCreatingContent;
+    }
+
+    public void OnCreatingContent(object? sender, ContentEventArgs e)
+    {
+        if (IgnoreContent(e))
+        {
+            return;
+        }
+
+        SetDisableIndexValue(e.Content, true);
+    }
+
+    public void OnCreatedContent(object? sender, ContentEventArgs e)
+    {
+        if (IgnoreContent(e))
+        {
+            return;
+        }
+
+        var contentSecurable = (IContentSecurable)e.Content;
+        var csd = (IContentSecurityDescriptor)contentSecurable.GetContentSecurityDescriptor().CreateWritableClone();
+        csd.ToLocal(true);
+        DisableIndexing(csd);
     }
 
     public void OnPublishedContent(object? sender, ContentEventArgs e)
     {
-        if (e.Content is not IDisableIndexing newContent
-            || newContent is not IContentSecurable contentSecurable
-            || newContent.DisableIndexing is null)
+        if (IgnoreContent(e))
         {
             return;
         }
 
-        IDisableIndexing? previousContent = GetPreviousVersion(e.ContentLink);
-        if (previousContent is not null && previousContent.DisableIndexing == newContent.DisableIndexing)
+        IContent newContent = e.Content;
+        bool? disableIndex = GetDisableIndexValue(newContent);
+        if (disableIndex is null)
         {
             return;
         }
 
+        bool? previousDisableIndex = GetPreviousDisableIndexValue(e);
+        if (previousDisableIndex is not null && previousDisableIndex == disableIndex)
+        {
+            return;
+        }
+
+        var contentSecurable = (IContentSecurable)newContent;
         IContentSecurityDescriptor csd = contentSecurable.GetContentSecurityDescriptor();
         if (csd.IsInherited)
         {
             return;
         }
 
-        if (newContent.DisableIndexing.Value)
+        if (disableIndex.Value)
         {
             DisableIndexing(csd);
         }
@@ -90,9 +126,11 @@ internal sealed class DisableIndexingService : IDisableIndexingService
 
     public void DisableIndexing(IContentSecurityDescriptor contentSecurityDescriptor)
     {
-        AccessControlEntry searchIndexerEntry = new(SearchIndexerRole.RoleName, AccessLevel.NoAccess, SecurityEntityType.Role);
+        IContentSecurityDescriptor writable = contentSecurityDescriptor.IsReadOnly
+            ? (IContentSecurityDescriptor)contentSecurityDescriptor.CreateWritableClone()
+            : contentSecurityDescriptor;
 
-        var writable = (IContentSecurityDescriptor)contentSecurityDescriptor.CreateWritableClone();
+        AccessControlEntry searchIndexerEntry = new(SearchIndexerRole.RoleName, AccessLevel.NoAccess, SecurityEntityType.Role);
         writable.AddEntry(searchIndexerEntry);
 
         _contentSecurityRepository.Save(writable.ContentLink, writable, SecuritySaveType.Replace);
@@ -100,9 +138,11 @@ internal sealed class DisableIndexingService : IDisableIndexingService
 
     public void EnableIndexing(IContentSecurityDescriptor contentSecurityDescriptor)
     {
-        AccessControlEntry searchIndexerEntry = new(SearchIndexerRole.RoleName, AccessLevel.Read | AccessLevel.Edit, SecurityEntityType.Role);
+        IContentSecurityDescriptor writable = contentSecurityDescriptor.IsReadOnly
+            ? (IContentSecurityDescriptor)contentSecurityDescriptor.CreateWritableClone()
+            : contentSecurityDescriptor;
 
-        var writable = (IContentSecurityDescriptor)contentSecurityDescriptor.CreateWritableClone();
+        AccessControlEntry searchIndexerEntry = new(SearchIndexerRole.RoleName, AccessLevel.Read | AccessLevel.Edit, SecurityEntityType.Role);
         writable.AddEntry(searchIndexerEntry);
 
         _contentSecurityRepository.Save(writable.ContentLink, writable, SecuritySaveType.Replace);
@@ -128,19 +168,50 @@ internal sealed class DisableIndexingService : IDisableIndexingService
         DisableIndexing(csd);
     }
 
-    public IDisableIndexing? GetPreviousVersion(ContentReference contentReference)
+    public bool? GetPreviousDisableIndexValue(ContentEventArgs e)
     {
-        ContentVersion? previousVersion = _contentVersionRepository.ListPublished(contentReference)
+        ContentVersion? previousVersion = _contentVersionRepository.ListPublished(e.ContentLink)
             .OrderDescending()
             .Skip(1)
             .FirstOrDefault();
 
         if (previousVersion is not null)
         {
-            IDisableIndexing previousContent = _contentRepository.Get<IDisableIndexing>(previousVersion.ContentLink);
-            return previousContent;
+            IContent previousContent = _contentRepository.Get<IContent>(previousVersion.ContentLink);
+            return GetDisableIndexValue(previousContent);
         }
 
         return null;
+    }
+
+    public bool IgnoreContent(ContentEventArgs e)
+    {
+        IContent content = e.Content;
+
+        if (content is not IContentSecurable)
+        {
+            return true;
+        }
+
+        ContentType contractType = _contentTypeRepository.Load<IDisableIndexing>();
+        ContentType contentType = _contentTypeRepository.Load(content.ContentTypeID);
+        bool hasContract = contentType.Contracts.Any(x => x.GUID == contractType.GUID);
+        if (hasContract)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool? GetDisableIndexValue(IContentData content)
+    {
+        bool? value = content.Property[nameof(IDisableIndexing.DisableIndexing)].Value as bool?;
+        return value;
+    }
+
+    private static void SetDisableIndexValue(IContentData content, bool? value)
+    {
+        content.Property[nameof(IDisableIndexing.DisableIndexing)].Value = value;
     }
 }

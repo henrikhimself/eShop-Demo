@@ -31,6 +31,5 @@ internal interface IDisableIndexing : IContentData
     const string PropertyGroupName = SystemTabNames.Settings;
     const int PropertyOrder = -100;
 
-    [IndexingType(IndexingType.Disabled)]
     bool? DisableIndexing { get; set; }
 }
