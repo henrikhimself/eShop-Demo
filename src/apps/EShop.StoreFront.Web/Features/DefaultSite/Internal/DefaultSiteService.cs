@@ -18,6 +18,7 @@ using System.Globalization;
 using EPiServer;
 using EPiServer.Applications;
 using EPiServer.Core;
+using EPiServer.DataAbstraction;
 using EPiServer.DataAccess;
 using EPiServer.Security;
 using Hj.EShop.StoreFront.Web.Foundation.Operations;
@@ -28,52 +29,101 @@ internal sealed class DefaultSiteService : IDefaultSiteService
 {
     private readonly IApplicationRepository _applicationRepository;
     private readonly IContentRepository _contentRepository;
+    private readonly ContentRootRepository _contentRootRepository;
 
     public DefaultSiteService(
         IApplicationRepository applicationRepository,
-        IContentRepository contentRepository)
+        IContentRepository contentRepository,
+        ContentRootRepository contentRootRepository)
     {
         _applicationRepository = applicationRepository;
         _contentRepository = contentRepository;
+        _contentRootRepository = contentRootRepository;
     }
 
-    public async Task<OperationDataResponse<IRoutableApplication>> GetOrCreateAsync(OperationDataRequest<DefaultSiteData> request)
+    public async Task<OperationDataResponse<DefaultSiteDataDetail>> GetDefaultSiteAsync(OperationRequest request)
     {
         IRoutableApplication? defaultSite = await _applicationRepository.GetDefaultAsync();
-        if (defaultSite is not null)
+        if (defaultSite is null)
         {
-            return request.Ok(defaultSite);
+            return request.Ok<DefaultSiteDataDetail>(null);
         }
 
-        IContent? startPage = GetDefault(request.Data.StartPageType, ContentReference.RootPage, request.Data.MainLanguage);
+        ApplicationHost? primaryHost = defaultSite.GetPrimaryHost();
+        if (primaryHost is null)
+        {
+            return request.Fail<DefaultSiteDataDetail>("Missing primary host on default application");
+        }
+
+        if (!_contentRepository.TryGet(defaultSite.EntryPoint, out IContent startPage))
+        {
+            return request.Fail<DefaultSiteDataDetail>("Missing entry point for start page");
+        }
+
+        DefaultSiteDataDetail data = ToDefaultSiteDataDetail(defaultSite, primaryHost, startPage);
+        return request.Ok(data);
+    }
+
+    public async Task<OperationDataResponse<DefaultSiteDataDetail>> CreateDefaultSiteAsync(OperationDataRequest<DefaultSiteData> request)
+    {
+        OperationDataResponse<DefaultSiteDataDetail> defaultSiteResponse = await GetDefaultSiteAsync(request);
+        if (defaultSiteResponse.HasData)
+        {
+            return request.Fail<DefaultSiteDataDetail>("Default site exists");
+        }
+
+        ContentReference rootPage = _contentRootRepository.Load(SystemContentRootNames.RootPage);
+
+        IContent? startPage = GetDefault(request.Data.StartPageType, rootPage, request.Data.MainLanguage);
         if (startPage is null)
         {
-            return request.Fail<IRoutableApplication>("Missing start page");
+            return request.Fail<DefaultSiteDataDetail>("Missing start page");
         }
 
         string appName = request.Data.Name;
         startPage.Name = appName;
-        _contentRepository.Save(startPage, SaveAction.Publish, AccessLevel.NoAccess);
 
-        ContentReference startPageReference = startPage.ContentLink;
+        ContentReference startPageReference = _contentRepository.Save(startPage, SaveAction.Publish, AccessLevel.NoAccess);
+
         var websiteApp = new InProcessWebsite(appName.ToLowerInvariant(), startPageReference)
         {
             DisplayName = appName
         };
-        var host = new ApplicationHost(request.Data.Authority)
+        var primaryHost = new ApplicationHost(request.Data.Authority)
         {
             Type = ApplicationHostType.Default,
             PreferredUrlScheme = request.Data.PreferredUrlScheme ?? UrlScheme.Https,
             Locale = request.Data.MainLanguage,
         };
-        websiteApp.Hosts.Add(host);
+        websiteApp.Hosts.Add(primaryHost);
 
         await _applicationRepository.SaveAsync(websiteApp, CancellationToken.None);
 
-        defaultSite = websiteApp;
+        IRoutableApplication defaultSite = websiteApp;
         await _applicationRepository.MakeDefaultAsync(defaultSite, true, CancellationToken.None);
 
-        return request.Ok(defaultSite);
+        DefaultSiteDataDetail data = ToDefaultSiteDataDetail(defaultSite, primaryHost, startPage);
+        return request.Ok(data);
+    }
+
+    private static DefaultSiteDataDetail ToDefaultSiteDataDetail(IRoutableApplication defaultSite, ApplicationHost primaryHost, IContent startPage)
+    {
+        CultureInfo mainLanguage = primaryHost.Locale ?? CultureInfo.GetCultureInfo("en");
+        List<CultureInfo> languages = [.. ((ILocalizable)startPage).ExistingLanguages];
+
+        DefaultSiteDataDetail data = new()
+        {
+            RoutableApplication = defaultSite,
+            Name = startPage.Name,
+            Authority = primaryHost.Authority,
+            MainLanguage = mainLanguage,
+            Languages = languages,
+            StartPageType = startPage.GetOriginalType(),
+            EntryPoint = startPage.ContentLink,
+            PreferredUrlScheme = primaryHost.PreferredUrlScheme,
+        };
+
+        return data;
     }
 
     private IContent? GetDefault(Type contentType, ContentReference parent, CultureInfo langauge)

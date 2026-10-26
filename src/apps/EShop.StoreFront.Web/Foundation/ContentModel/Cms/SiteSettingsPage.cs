@@ -19,8 +19,8 @@ using EPiServer.Core;
 using EPiServer.DataAbstraction;
 using EPiServer.DataAnnotations;
 using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Internal;
-using Hj.EShop.StoreFront.Web.Foundation.DisableIndexing.Contracts;
-using Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Contracts;
+using Hj.EShop.StoreFront.Web.Foundation.DisableIndexing;
+using Hj.EShop.StoreFront.Web.Foundation.SiteSettings;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
 

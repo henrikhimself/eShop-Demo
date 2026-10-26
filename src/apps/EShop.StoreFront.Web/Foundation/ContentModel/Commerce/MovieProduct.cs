@@ -17,6 +17,7 @@
 using System.ComponentModel.DataAnnotations;
 using EPiServer.Commerce.Catalog.DataAnnotations;
 using EPiServer.Core;
+using EPiServer.DataAbstraction;
 using EPiServer.DataAnnotations;
 using EPiServer.Web;
 using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
@@ -25,7 +26,7 @@ using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Commerce.BaseContent;
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Commerce;
 
 [CatalogContentType(
-    DisplayName = "Movie",
+    DisplayName = "Movie Product",
     GUID = "e9e0b060-1bc8-46a4-86ea-7ad68de19c4c",
     MetaClassName = nameof(MovieProduct))]
 public class MovieProduct : SiteProductBase
@@ -38,18 +39,11 @@ public class MovieProduct : SiteProductBase
     [UIHint(UIHint.Image)]
     public virtual ContentReference? PosterImage { get; set; }
 
-    [CultureSpecific]
-    [Display(
-        Name = "Trailer Video",
-        Order = 110)]
-    [AllowedTypes(typeof(VideoMedia))]
-    [UIHint(UIHint.Video)]
-    public virtual ContentReference? TrailerVideo { get; set; }
-
+    [IndexingType(IndexingType.Searchable)]
     [CultureSpecific]
     [Display(
         Name = "Description",
-        Order = 120)]
+        Order = 110)]
     [UIHint(UIHint.Textarea)]
     public virtual string? Description { get; set; }
 }

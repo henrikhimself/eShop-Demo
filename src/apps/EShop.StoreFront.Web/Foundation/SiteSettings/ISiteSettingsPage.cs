@@ -18,7 +18,7 @@ using EPiServer.Core;
 using EPiServer.DataAbstraction;
 using EPiServer.DataAnnotations;
 
-namespace Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Contracts;
+namespace Hj.EShop.StoreFront.Web.Foundation.SiteSettings;
 
 internal interface ISiteSettingsPage : IContent
 {

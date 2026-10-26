@@ -16,15 +16,18 @@
 
 using System.ComponentModel.DataAnnotations;
 using EPiServer.Commerce.Catalog.DataAnnotations;
+using EPiServer.DataAbstraction;
+using EPiServer.DataAnnotations;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Commerce;
 
 [CatalogContentType(
-    DisplayName = "Digital",
+    DisplayName = "Movie Digital Variation",
     GUID = "58cd9ed8-2420-4177-8494-763cc3b667ae",
     MetaClassName = nameof(MovieDigitalVariation))]
 public class MovieDigitalVariation : MovieVariationBase
 {
+    [IndexingType(IndexingType.Disabled)]
     [Display(
         Name = "Entitlement Key",
         Order = 100)]

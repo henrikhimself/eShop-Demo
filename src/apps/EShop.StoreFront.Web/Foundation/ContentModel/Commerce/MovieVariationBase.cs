@@ -15,17 +15,21 @@
 // </copyright>
 
 using System.ComponentModel.DataAnnotations;
+using EPiServer.DataAbstraction;
+using EPiServer.DataAnnotations;
 using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Commerce.BaseContent;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Commerce;
 
 public abstract class MovieVariationBase : SiteVariationBase
 {
+    [IndexingType(IndexingType.Queryable)]
     [Display(
         Name = "Release Year",
         Order = 100)]
-    public virtual string? ReleaseYear { get; set; }
+    public virtual DateTime? ReleaseYear { get; set; }
 
+    [IndexingType(IndexingType.Queryable)]
     [Display(
         Name = "Duration (minutes)",
         Order = 110)]

@@ -1,4 +1,4 @@
-// <copyright file="ContentModelGraphConventions.cs" company="Henrik Jensen">
+// <copyright file="DefaultSiteDataDetail.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -14,15 +14,17 @@
 // limitations under the License.
 // </copyright>
 
-using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
-using Optimizely.Graph.Cms.Conventions;
+using System.Globalization;
+using EPiServer.Applications;
+using EPiServer.Core;
 
-namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel;
+namespace Hj.EShop.StoreFront.Web.Features.DefaultSite;
 
-internal static class ContentModelGraphConventions
+internal sealed class DefaultSiteDataDetail : DefaultSiteData
 {
-    public static void Configure(GraphConventionsBuilder builder)
-    {
-        builder.ExcludeContentType<FolderPage>();
-    }
+    public required IRoutableApplication RoutableApplication { get; set; }
+
+    public List<CultureInfo> Languages { get; set; } = [];
+
+    public ContentReference EntryPoint { get; set; } = ContentReference.EmptyReference;
 }

@@ -18,7 +18,7 @@ using EPiServer.Core;
 using EPiServer.DataAbstraction;
 using EPiServer.DataAnnotations;
 
-namespace Hj.EShop.StoreFront.Web.Foundation.DisableIndexing.Contracts;
+namespace Hj.EShop.StoreFront.Web.Foundation.DisableIndexing;
 
 [ContentType(
     GUID = "155ae549-9c1f-41bd-9156-9cc829086bae",

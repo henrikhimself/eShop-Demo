@@ -19,7 +19,7 @@ using EPiServer.Commerce.Catalog.DataAnnotations;
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Commerce;
 
 [CatalogContentType(
-    DisplayName = "Variation",
+    DisplayName = "Movie Shipped Variation",
     GUID = "a41c5610-f520-4700-be07-af87c99288a9",
     MetaClassName = nameof(MovieShippedVariation))]
 public class MovieShippedVariation : MovieVariationBase

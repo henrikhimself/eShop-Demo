@@ -25,5 +25,5 @@ internal sealed class DefaultAccessData
 
     public required Action<IContentSecurityDescriptor> Action { get; init; }
 
-    public SecuritySaveType SaveType { get; init; } = SecuritySaveType.Replace;
+    public required SecuritySaveType SaveType { get; init; }
 }

@@ -23,6 +23,7 @@ using EPiServer.Framework.Initialization;
 using EPiServer.Security;
 using Hj.EShop.Common;
 using Hj.EShop.StoreFront.Web.Features.DefaultAccess;
+using Hj.EShop.StoreFront.Web.Features.DefaultContent;
 using Hj.EShop.StoreFront.Web.Features.DefaultSite;
 using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
 using Hj.EShop.StoreFront.Web.Foundation.Operations;
@@ -44,11 +45,22 @@ internal sealed class SiteInitialization : IInitializableModule
         context.InitComplete -= InitCompleteAsync;
     }
 
-    private static async Task<IRoutableApplication> EnsureDefaultSiteAsync(
+    private static async Task<DefaultSiteDataDetail> EnsureDefaultSiteAsync(
         OperationRequest request,
         IDefaultSiteService defaultSiteService,
         IOptions<SiteInitializationOptions> options)
     {
+        OperationDataResponse<DefaultSiteDataDetail> response = await defaultSiteService.GetDefaultSiteAsync(request);
+        if (response.HasError)
+        {
+            throw response.Error;
+        }
+
+        if (response.HasData)
+        {
+            return response.Data;
+        }
+
         SiteInitializationOptions config = options.Value;
         string? applicationName = config?.ApplicationName;
         string? applicationAuthority = config?.ApplicationAuthority;
@@ -68,7 +80,7 @@ internal sealed class SiteInitialization : IInitializableModule
             StartPageType = typeof(FrontPage),
             PreferredUrlScheme = UrlScheme.Http,
         };
-        OperationDataResponse<IRoutableApplication> response = await defaultSiteService.GetOrCreateAsync(request.CreateOperationRequest(defaultSiteData));
+        response = await defaultSiteService.CreateDefaultSiteAsync(request.CreateOperationRequest(defaultSiteData));
 
         if (response.HasError)
         {
@@ -85,7 +97,7 @@ internal sealed class SiteInitialization : IInitializableModule
 
     private static void EnsureDefaultAccess(
         OperationRequest request,
-        IRoutableApplication defaultSite,
+        DefaultSiteDataDetail defaultSite,
         IDefaultAccessService defaultAccessService)
     {
         defaultAccessService.ResetRootPage();
@@ -102,12 +114,19 @@ internal sealed class SiteInitialization : IInitializableModule
                     acl.ToInherited();
                 }
             },
+            SaveType = SecuritySaveType.Replace,
         };
         defaultAccessService.Reset(request.CreateOperationRequest(defaultAppAccess));
     }
 
-    private static void MapCatalogRoute(IRoutableApplication defaultSite)
+    private static async Task EnsureDefaultCatalogAsync(
+        OperationRequest request,
+        DefaultSiteDataDetail defaultSite,
+        IDefaultContentService defaultContentService)
     {
+        OperationDataRequest<DefaultSiteDataDetail> catalogRequest = request.CreateOperationRequest(defaultSite);
+        await defaultContentService.CreateCatalog(catalogRequest);
+
         bool enableOutgoingSeoUri = false;
         CatalogRouteHelper.MapDefaultHierarchialRouter(() => defaultSite.EntryPoint, enableOutgoingSeoUri);
     }
@@ -124,7 +143,7 @@ internal sealed class SiteInitialization : IInitializableModule
         await using AsyncServiceScope scope = context.Services.CreateAsyncScope();
         IServiceProvider serviceProvider = scope.ServiceProvider;
 
-        IRoutableApplication defaultSite = await EnsureDefaultSiteAsync(
+        DefaultSiteDataDetail defaultSite = await EnsureDefaultSiteAsync(
             request,
             serviceProvider.GetRequiredService<IDefaultSiteService>(),
             serviceProvider.GetRequiredService<IOptions<SiteInitializationOptions>>());
@@ -134,6 +153,9 @@ internal sealed class SiteInitialization : IInitializableModule
             defaultSite,
             serviceProvider.GetRequiredService<IDefaultAccessService>());
 
-        MapCatalogRoute(defaultSite);
+        await EnsureDefaultCatalogAsync(
+            request,
+            defaultSite,
+            serviceProvider.GetRequiredService<IDefaultContentService>());
     }
 }

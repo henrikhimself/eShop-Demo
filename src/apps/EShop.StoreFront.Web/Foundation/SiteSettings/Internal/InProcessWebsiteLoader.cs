@@ -20,7 +20,6 @@ using EPiServer.Core;
 using EPiServer.Web;
 using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
 using Hj.EShop.StoreFront.Web.Foundation.Operations;
-using Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Contracts;
 using Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Models;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Internal;

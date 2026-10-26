@@ -18,7 +18,6 @@ using EPiServer;
 using EPiServer.Security;
 using EPiServer.Core;
 using EPiServer.DataAbstraction;
-using Hj.EShop.StoreFront.Web.Foundation.DisableIndexing.Contracts;
 using EPiServer.DataAccess;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.DisableIndexing.Internal;

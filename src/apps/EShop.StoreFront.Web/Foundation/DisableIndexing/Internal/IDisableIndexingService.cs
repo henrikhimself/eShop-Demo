@@ -1,4 +1,4 @@
-// <copyright file="ISiteSettingsBlock.cs" company="Henrik Jensen">
+// <copyright file="IDisableIndexingService.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -14,15 +14,17 @@
 // limitations under the License.
 // </copyright>
 
-using EPiServer.Core;
-using EPiServer.DataAnnotations;
+using EPiServer.Security;
 
-namespace Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Contracts;
+namespace Hj.EShop.StoreFront.Web.Foundation.DisableIndexing.Internal;
 
-[ContentType(
-    GUID = "d6314fbd-2c73-4161-9445-ed0f8cfd835b",
-    DisplayName = "Settings Block",
-    Description = "A settings block")]
-internal interface ISiteSettingsBlock : IContentData
+internal interface IDisableIndexingService
 {
+    void Initialize();
+
+    void Uninitialize();
+
+    void DisableIndexing(IContentSecurityDescriptor contentSecurityDescriptor);
+
+    void EnableIndexing(IContentSecurityDescriptor contentSecurityDescriptor);
 }

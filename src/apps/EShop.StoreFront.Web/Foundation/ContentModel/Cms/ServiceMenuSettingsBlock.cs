@@ -18,7 +18,7 @@ using System.ComponentModel.DataAnnotations;
 using EPiServer.DataAnnotations;
 using EPiServer.SpecializedProperties;
 using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms.BaseContent;
-using Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Contracts;
+using Hj.EShop.StoreFront.Web.Foundation.SiteSettings;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
 

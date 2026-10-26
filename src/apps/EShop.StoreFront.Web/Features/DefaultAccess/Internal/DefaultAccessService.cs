@@ -25,11 +25,6 @@ namespace Hj.EShop.StoreFront.Web.Features.DefaultAccess.Internal;
 
 internal sealed class DefaultAccessService : IDefaultAccessService
 {
-    private const AccessLevel AdminAccess = AccessLevel.FullAccess;
-    private const AccessLevel EditorAccess = AccessLevel.Create | AccessLevel.Read | AccessLevel.Edit | AccessLevel.Delete | AccessLevel.Publish;
-    private const AccessLevel EveryoneAccess = AccessLevel.Read;
-    private const AccessLevel SearchIndexerAccess = AccessLevel.Read | AccessLevel.Edit;
-
     private readonly IContentLoader _contentLoader;
     private readonly IContentSecurityRepository _contentSecurityRepository;
     private readonly ContentRootRepository _contentRootRepository;
@@ -50,10 +45,10 @@ internal sealed class DefaultAccessService : IDefaultAccessService
         Reset(rootReference, SecuritySaveType.Replace, acl =>
         {
             acl.Clear();
-            acl.AddEntry(new(Roles.CmsAdmins, AdminAccess));
-            acl.AddEntry(new(Roles.CmsEditors, EditorAccess));
-            acl.AddEntry(new(EveryoneRoleName, EveryoneAccess));
-            acl.AddEntry(new(SearchIndexerRoleName, SearchIndexerAccess));
+            acl.AddEntry(new(Roles.CmsAdmins, DefaultAccessConstants.AdminAccess));
+            acl.AddEntry(new(Roles.CmsEditors, DefaultAccessConstants.EditorAccess));
+            acl.AddEntry(new(EveryoneRoleName, DefaultAccessConstants.EveryoneAccess));
+            acl.AddEntry(new(SearchIndexerRoleName, DefaultAccessConstants.SearchIndexerAccess));
         });
     }
 
@@ -64,9 +59,9 @@ internal sealed class DefaultAccessService : IDefaultAccessService
         {
             acl.Clear();
             acl.IsInherited = false;
-            acl.AddEntry(new(Roles.CmsAdmins, AdminAccess));
-            acl.AddEntry(new(Roles.CmsEditors, EditorAccess));
-            acl.AddEntry(new(SearchIndexerRoleName, SearchIndexerAccess));
+            acl.AddEntry(new(Roles.CmsAdmins, DefaultAccessConstants.AdminAccess));
+            acl.AddEntry(new(Roles.CmsEditors, DefaultAccessConstants.EditorAccess));
+            acl.AddEntry(new(SearchIndexerRoleName, DefaultAccessConstants.SearchIndexerAccess));
         });
     }
 
@@ -77,8 +72,8 @@ internal sealed class DefaultAccessService : IDefaultAccessService
         {
             acl.Clear();
             acl.IsInherited = false;
-            acl.AddEntry(new(Roles.CmsAdmins, AdminAccess));
-            acl.AddEntry(new(Roles.CmsEditors, EditorAccess));
+            acl.AddEntry(new(Roles.CmsAdmins, DefaultAccessConstants.AdminAccess));
+            acl.AddEntry(new(Roles.CmsEditors, DefaultAccessConstants.EditorAccess));
         });
     }
 

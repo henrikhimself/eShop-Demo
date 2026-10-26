@@ -19,7 +19,7 @@ using EPiServer.Core;
 using EPiServer.DataAnnotations;
 using EPiServer.Web;
 using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms.BaseContent;
-using Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Contracts;
+using Hj.EShop.StoreFront.Web.Foundation.SiteSettings;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
 

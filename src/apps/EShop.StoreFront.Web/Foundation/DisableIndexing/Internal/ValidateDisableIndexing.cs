@@ -16,7 +16,6 @@
 
 using EPiServer.Security;
 using EPiServer.Validation;
-using Hj.EShop.StoreFront.Web.Foundation.DisableIndexing.Contracts;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.DisableIndexing.Internal;
 

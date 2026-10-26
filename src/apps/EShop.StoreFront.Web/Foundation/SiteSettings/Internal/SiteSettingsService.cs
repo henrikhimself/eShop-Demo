@@ -19,7 +19,6 @@ using EPiServer;
 using EPiServer.Core;
 using EPiServer.SpecializedProperties;
 using Hj.EShop.StoreFront.Web.Foundation.Operations;
-using Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Contracts;
 using Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Models;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.SiteSettings.Internal;

@@ -1,4 +1,4 @@
-// <copyright file="IDisableIndexingService.cs" company="Henrik Jensen">
+// <copyright file="DefaultAccessConstants.cs" company="Henrik Jensen">
 // Copyright 2026 Henrik Jensen
 //
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -16,15 +16,12 @@
 
 using EPiServer.Security;
 
-namespace Hj.EShop.StoreFront.Web.Foundation.DisableIndexing;
+namespace Hj.EShop.StoreFront.Web.Features.DefaultAccess.Internal;
 
-internal interface IDisableIndexingService
+internal static class DefaultAccessConstants
 {
-    void Initialize();
-
-    void Uninitialize();
-
-    void DisableIndexing(IContentSecurityDescriptor contentSecurityDescriptor);
-
-    void EnableIndexing(IContentSecurityDescriptor contentSecurityDescriptor);
+    internal const AccessLevel AdminAccess = AccessLevel.FullAccess;
+    internal const AccessLevel EditorAccess = AccessLevel.Create | AccessLevel.Read | AccessLevel.Edit | AccessLevel.Delete | AccessLevel.Publish;
+    internal const AccessLevel EveryoneAccess = AccessLevel.Read;
+    internal const AccessLevel SearchIndexerAccess = AccessLevel.Read | AccessLevel.Edit;
 }

@@ -14,12 +14,13 @@
 // limitations under the License.
 // </copyright>
 
-using EPiServer.Applications;
 using Hj.EShop.StoreFront.Web.Foundation.Operations;
 
 namespace Hj.EShop.StoreFront.Web.Features.DefaultSite;
 
 internal interface IDefaultSiteService
 {
-    Task<OperationDataResponse<IRoutableApplication>> GetOrCreateAsync(OperationDataRequest<DefaultSiteData> request);
+    Task<OperationDataResponse<DefaultSiteDataDetail>> GetDefaultSiteAsync(OperationRequest request);
+
+    Task<OperationDataResponse<DefaultSiteDataDetail>> CreateDefaultSiteAsync(OperationDataRequest<DefaultSiteData> request);
 }

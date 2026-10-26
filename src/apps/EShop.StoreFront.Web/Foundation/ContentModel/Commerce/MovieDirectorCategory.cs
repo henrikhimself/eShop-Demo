@@ -14,15 +14,23 @@
 // limitations under the License.
 // </copyright>
 
+using System.ComponentModel.DataAnnotations;
 using EPiServer.Commerce.Catalog.DataAnnotations;
+using EPiServer.DataAbstraction;
+using EPiServer.DataAnnotations;
 using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Commerce.BaseContent;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Commerce;
 
 [CatalogContentType(
-    DisplayName = "Director",
+    DisplayName = "Director Category",
     GUID = "e81b514e-7ba5-430f-9075-94aeedd1c3f5",
     MetaClassName = nameof(MovieDirectorCategory))]
 public class MovieDirectorCategory : SiteNodeBase
 {
+    [IndexingType(IndexingType.Searchable)]
+    [Display(
+        Name = "Director Name",
+        Order = 100)]
+    public virtual string? DirectoryName { get; set; }
 }

@@ -25,7 +25,7 @@ using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Commerce.BaseContent;
 namespace Hj.EShop.StoreFront.Web.Foundation.ContentModel.Commerce;
 
 [CatalogContentType(
-    DisplayName = "Bundle",
+    DisplayName = "Movie Bundle",
     GUID = "6225341c-ed52-41e7-acc3-436dc0661a1f",
     MetaClassName = nameof(MovieBundle))]
 public class MovieBundle : SiteBundleBase

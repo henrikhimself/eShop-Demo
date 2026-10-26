@@ -22,7 +22,6 @@ using EPiServer.Web.Routing;
 using Hj.EShop.Common;
 using Hj.EShop.ServiceDefaults;
 using Hj.EShop.StoreFront.Web.Features.HealthChecks;
-using Hj.EShop.StoreFront.Web.Foundation.ContentModel;
 using Hj.EShop.StoreFront.Web.Foundation.Conventions;
 using Hj.EShop.StoreFront.Web.Initialization;
 using Mediachase.Commerce.Anonymous;

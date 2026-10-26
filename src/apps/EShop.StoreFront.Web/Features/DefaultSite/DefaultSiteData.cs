@@ -19,15 +19,15 @@ using EPiServer.Applications;
 
 namespace Hj.EShop.StoreFront.Web.Features.DefaultSite;
 
-internal sealed class DefaultSiteData
+internal class DefaultSiteData
 {
     public required string Name { get; set; }
 
     public required string Authority { get; set; }
 
-    public required CultureInfo MainLanguage { get; set; }
-
     public required Type StartPageType { get; set; }
+
+    public required CultureInfo MainLanguage { get; set; }
 
     public UrlScheme? PreferredUrlScheme { get; set; }
 }
