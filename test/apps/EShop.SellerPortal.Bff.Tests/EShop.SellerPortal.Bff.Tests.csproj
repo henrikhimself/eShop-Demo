@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+    <PackageReference Include="xunit.v3.mtp-v2" />
+    <PackageReference Include="System.Security.Cryptography.Xml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../src/migrations/EShop.Migrations.Common/EShop.Migrations.Common.csproj" />
+    <ProjectReference Include="../../../src/migrations/EShop.Migrations.Orchestration/EShop.Migrations.Orchestration.csproj" />
+    <ProjectReference Include="../../../src/apps/EShop.SellerPortal.Bff/EShop.SellerPortal.Bff.csproj" />
+    <ProjectReference Include="../../EShop.Testing.Common/EShop.Testing.Common.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -23,18 +23,18 @@
     <Project Path="src/shared/EShop.TicketStore/EShop.TicketStore.csproj" />
   </Folder>
   <Folder Name="/test/">
+    <Project Path="test/apps/EShop.SellerPortal.Bff.Tests/EShop.SellerPortal.Bff.Tests.csproj" />
+    <Project Path="test/apps/EShop.StoreFront.MigrationRunner.Tests/EShop.StoreFront.MigrationRunner.Tests.csproj" />
+    <Project Path="test/apps/EShop.StoreFront.Web.Tests/EShop.StoreFront.Web.Tests.csproj" />
     <Project Path="test/EShop.AppHost.Tests/EShop.AppHost.Tests.csproj" />
-    <Project Path="test/EShop.Cli.Tests/EShop.Cli.Tests.csproj" />
-    <Project Path="test/EShop.DevTools.Tests/EShop.DevTools.Tests.csproj" />
-    <Project Path="test/EShop.Migrations.Common.Tests/EShop.Migrations.Common.Tests.csproj" />
-    <Project Path="test/EShop.Migrations.Orchestration.Tests/EShop.Migrations.Orchestration.Tests.csproj" />
-    <Project Path="test/EShop.Messaging.Tests/EShop.Messaging.Tests.csproj" />
-    <Project Path="test/EShop.Migrations.Optimizely.Tests/EShop.Migrations.Optimizely.Tests.csproj" />
-    <Project Path="test/EShop.SellerPortal.Bff.Tests/EShop.SellerPortal.Bff.Tests.csproj" />
-    <Project Path="test/EShop.StoreFront.MigrationRunner.Tests/EShop.StoreFront.MigrationRunner.Tests.csproj" />
-    <Project Path="test/EShop.StoreFront.Web.Tests/EShop.StoreFront.Web.Tests.csproj" />
-    <Project Path="test/EShop.StoreFront.EpicwebAI.Bridge.Tests/EShop.StoreFront.EpicwebAI.Bridge.Tests.csproj" />
+    <Project Path="test/dev/EShop.Cli.Tests/EShop.Cli.Tests.csproj" />
+    <Project Path="test/dev/EShop.DevTools.Tests/EShop.DevTools.Tests.csproj" />
+    <Project Path="test/migrations/EShop.Migrations.Common.Tests/EShop.Migrations.Common.Tests.csproj" />
+    <Project Path="test/migrations/EShop.Migrations.Optimizely.Tests/EShop.Migrations.Optimizely.Tests.csproj" />
+    <Project Path="test/migrations/EShop.Migrations.Orchestration.Tests/EShop.Migrations.Orchestration.Tests.csproj" />
     <Project Path="test/EShop.Testing.Common/EShop.Testing.Common.csproj" />
-    <Project Path="test/EShop.TicketStore.Tests/EShop.TicketStore.Tests.csproj" />
+    <Project Path="test/nonfree/EShop.StoreFront.EpicwebAI.Bridge.Tests/EShop.StoreFront.EpicwebAI.Bridge.Tests.csproj" />
+    <Project Path="test/shared/EShop.Messaging.Tests/EShop.Messaging.Tests.csproj" />
+    <Project Path="test/shared/EShop.TicketStore.Tests/EShop.TicketStore.Tests.csproj" />
   </Folder>
 </Solution>

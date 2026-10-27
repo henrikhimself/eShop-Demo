@@ -23,11 +23,11 @@ namespace Hj.EShop.StoreFront.Web.Features.SiteInProcess.Controllers;
 
 public class ProductListPageController : PageController<ProductListPage>
 {
-    public IActionResult Index(ProductListPage currentPage)
+    public IActionResult Index(ProductListPage currentContent)
     {
         ProductListViewModel vm = new()
         {
-            CurrentContent = currentPage,
+            CurrentContent = currentContent,
             Movies = [],
         };
         return View(vm);

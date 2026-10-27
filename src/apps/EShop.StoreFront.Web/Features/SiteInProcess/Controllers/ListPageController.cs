@@ -22,8 +22,8 @@ namespace Hj.EShop.StoreFront.Web.Features.SiteInProcess.Controllers;
 
 public class ListPageController : PageController<ListPage>
 {
-    public IActionResult Index(ListPage currentPage)
+    public IActionResult Index(ListPage currentContent)
     {
-        return View(currentPage);
+        return View(currentContent);
     }
 }

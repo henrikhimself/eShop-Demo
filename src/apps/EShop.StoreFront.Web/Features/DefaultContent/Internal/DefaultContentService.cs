@@ -14,15 +14,19 @@
 // limitations under the License.
 // </copyright>
 
+using System.Globalization;
 using EPiServer;
 using EPiServer.Commerce.Catalog.ContentTypes;
 using EPiServer.Commerce.SpecializedProperties;
 using EPiServer.Core;
+using EPiServer.DataAbstraction;
 using EPiServer.DataAccess;
 using EPiServer.Security;
 using Hj.EShop.StoreFront.Web.Features.DefaultSite;
+using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Cms;
 using Hj.EShop.StoreFront.Web.Foundation.ContentModel.Commerce;
 using Hj.EShop.StoreFront.Web.Foundation.Operations;
+using Hj.EShop.StoreFront.Web.Foundation.SiteSettings;
 using Mediachase.Commerce.Catalog;
 
 namespace Hj.EShop.StoreFront.Web.Features.DefaultContent.Internal;
@@ -31,13 +35,16 @@ internal sealed class DefaultContentService : IDefaultContentService
 {
     private readonly ReferenceConverter _referenceConverter;
     private readonly IContentRepository _contentRepository;
+    private readonly IContentTypeRepository _contentTypeRepository;
 
     public DefaultContentService(
         ReferenceConverter referenceConverter,
-        IContentRepository contentRepository)
+        IContentRepository contentRepository,
+        IContentTypeRepository contentTypeRepository)
     {
         _referenceConverter = referenceConverter;
         _contentRepository = contentRepository;
+        _contentTypeRepository = contentTypeRepository;
     }
 
     public async Task<OperationResponse> CreateCatalog(OperationDataRequest<DefaultSiteDataDetail> request)
@@ -72,6 +79,54 @@ internal sealed class DefaultContentService : IDefaultContentService
 
     public async Task<OperationResponse> CreateSiteSettings(OperationDataRequest<DefaultSiteDataDetail> request)
     {
-        throw new NotImplementedException();
+        DefaultSiteDataDetail defaultSite = request.Data;
+        ContentReference entryPoint = defaultSite.EntryPoint;
+        CultureInfo language = defaultSite.MainLanguage;
+
+        ISiteSettingsPage referencingPage = _contentRepository.Get<ISiteSettingsPage>(entryPoint, language);
+        if (referencingPage.SiteSettings is not null)
+        {
+            return request.Ok();
+        }
+
+        SiteSettingsPage siteSettingsPage = _contentRepository.GetDefault<SiteSettingsPage>(entryPoint, language);
+        siteSettingsPage.Name = "Site Settings";
+        ContentReference siteSettingsReference = _contentRepository.Save(siteSettingsPage, SaveAction.Publish, AccessLevel.NoAccess);
+
+        Type[] settingsBlockTypes = [
+            typeof(LayoutSettingsBlock),
+            typeof(ServiceMenuSettingsBlock)
+        ];
+
+        siteSettingsPage.SiteSettings = new();
+        foreach (Type settingsBlockType in settingsBlockTypes)
+        {
+            ContentType? settingsBlockContentType = _contentTypeRepository.Load(settingsBlockType);
+            if (settingsBlockContentType is null || Activator.CreateInstance(settingsBlockType) is not BlockData settingsBlock)
+            {
+                continue;
+            }
+
+            settingsBlock.ContentTypeID = settingsBlockContentType.ID;
+            ContentAreaItem contentAreaItem = new()
+            {
+                InlineBlock = settingsBlock,
+            };
+            siteSettingsPage.SiteSettings.Items.Add(contentAreaItem);
+        }
+
+        if (_contentRepository.Save(siteSettingsPage, SaveAction.Publish, AccessLevel.NoAccess) is null)
+        {
+            return request.Fail("Could not save and publish site settings page");
+        }
+
+        var writableReferencingPage = (ISiteSettingsPage)referencingPage.CreateWritableClone();
+        writableReferencingPage.SiteSettings = siteSettingsReference;
+        if (_contentRepository.Save(writableReferencingPage, SaveAction.Publish, AccessLevel.NoAccess) is null)
+        {
+            return request.Fail("Could not save and publish site settings referencing page");
+        }
+
+        return request.Ok();
     }
 }

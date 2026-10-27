@@ -15,13 +15,14 @@
 // </copyright>
 
 using EPiServer.Core;
+using EPiServer.Data.Entity;
 using EPiServer.DataAbstraction;
 using EPiServer.DataAnnotations;
 
 namespace Hj.EShop.StoreFront.Web.Foundation.SiteSettings;
 
-internal interface ISiteSettingsPage : IContent
+internal interface ISiteSettingsPage : IContent, IReadOnly
 {
     [IndexingType(IndexingType.Disabled)]
-    ContentReference? SiteSettings { get; }
+    ContentReference? SiteSettings { get; set; }
 }

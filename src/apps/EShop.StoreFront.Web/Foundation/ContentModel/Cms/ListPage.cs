@@ -29,8 +29,8 @@ public class ListPage : SitePageBase
 {
     [CultureSpecific]
     [Display(
-        Name = "Items",
+        Name = "List Items",
         Order = 100)]
     [AllowedTypes(typeof(ListItemBlock))]
-    public virtual ContentArea? Items { get; set; }
+    public virtual ContentArea? ListItems { get; set; }
 }

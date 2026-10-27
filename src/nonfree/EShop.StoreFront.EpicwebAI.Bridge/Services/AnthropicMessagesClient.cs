@@ -42,14 +42,20 @@ internal sealed class AnthropicMessagesClient(
 
         if (!response.IsSuccessStatusCode)
         {
-            logger.LogWarning("Anthropic Messages API returned status {StatusCode} with request ID {RequestId}.", (int)response.StatusCode, requestId);
+            if (logger.IsEnabled(LogLevel.Warning))
+            {
+                logger.LogWarning("Anthropic Messages API returned status {StatusCode} with request ID {RequestId}.", (int)response.StatusCode, requestId);
+            }
             throw new HttpRequestException("Anthropic rejected the request.", null, response.StatusCode);
         }
 
         AnthropicMessageResponse? message = await response.Content.ReadFromJsonAsync<AnthropicMessageResponse>(cancellationToken);
         if (message is null)
         {
-            logger.LogWarning("Anthropic Messages API returned an empty response with request ID {RequestId}.", requestId);
+            if (logger.IsEnabled(LogLevel.Warning))
+            {
+                logger.LogWarning("Anthropic Messages API returned an empty response with request ID {RequestId}.", requestId);
+            }
             throw new HttpRequestException("Anthropic returned an empty response.", null, response.StatusCode);
         }
 

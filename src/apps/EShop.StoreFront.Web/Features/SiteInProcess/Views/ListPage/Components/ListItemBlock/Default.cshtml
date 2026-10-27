@@ -1,0 +1,16 @@
+@using EPiServer.Web.Routing
+@model ListItemBlock
+@inject IUrlResolver urlResolver
+
+<span epi-property="Title" />
+@if (Model.RelatedContent is not null)
+{
+    foreach (var relatedContent in Model.RelatedContent)
+    {
+        <br/>
+        string href = Url.ContentUrl(relatedContent);
+        <a href="@href">@href</a>
+    }
+    <hr/>
+}
+

@@ -21,6 +21,7 @@ using EPiServer.Core;
 using EPiServer.DataAbstraction;
 using EPiServer.DataAccess;
 using EPiServer.Security;
+using Hj.EShop.StoreFront.Web.Foundation.Extensions;
 using Hj.EShop.StoreFront.Web.Foundation.Operations;
 
 namespace Hj.EShop.StoreFront.Web.Features.DefaultSite.Internal;
@@ -43,16 +44,21 @@ internal sealed class DefaultSiteService : IDefaultSiteService
 
     public async Task<OperationDataResponse<DefaultSiteDataDetail>> GetDefaultSiteAsync(OperationRequest request)
     {
-        IRoutableApplication? defaultSite = await _applicationRepository.GetDefaultAsync();
+        IEnumerable<Application> applications = await _applicationRepository.ListAsync(request.CancellationToken);
+        var defaultSite = (IRoutableApplication?)applications.FirstOrDefault(x => x is IRoutableApplication y && y.IsDefault);
         if (defaultSite is null)
         {
             return request.Ok<DefaultSiteDataDetail>(null);
         }
 
-        ApplicationHost? primaryHost = defaultSite.GetPrimaryHost();
-        if (primaryHost is null)
+        ApplicationHost? defaultHost = defaultSite.Hosts.FirstOrDefault(x => x.Type == ApplicationHostType.Primary);
+        if (defaultHost is null)
         {
-            return request.Fail<DefaultSiteDataDetail>("Missing primary host on default application");
+            defaultHost = defaultSite.Hosts.FirstOrDefault(x => x.Type == ApplicationHostType.Default);
+            if (defaultHost is null)
+            {
+                return request.Fail<DefaultSiteDataDetail>("Missing host on default application");
+            }
         }
 
         if (!_contentRepository.TryGet(defaultSite.EntryPoint, out IContent startPage))
@@ -60,7 +66,7 @@ internal sealed class DefaultSiteService : IDefaultSiteService
             return request.Fail<DefaultSiteDataDetail>("Missing entry point for start page");
         }
 
-        DefaultSiteDataDetail data = ToDefaultSiteDataDetail(defaultSite, primaryHost, startPage);
+        DefaultSiteDataDetail data = ToDefaultSiteDataDetail(defaultSite, defaultHost, startPage);
         return request.Ok(data);
     }
 
@@ -74,7 +80,7 @@ internal sealed class DefaultSiteService : IDefaultSiteService
 
         ContentReference rootPage = _contentRootRepository.Load(SystemContentRootNames.RootPage);
 
-        IContent? startPage = GetDefault(request.Data.StartPageType, rootPage, request.Data.MainLanguage);
+        IContent? startPage = _contentRepository.GetDefault(request.Data.StartPageType, rootPage, request.Data.MainLanguage);
         if (startPage is null)
         {
             return request.Fail<DefaultSiteDataDetail>("Missing start page");
@@ -106,31 +112,23 @@ internal sealed class DefaultSiteService : IDefaultSiteService
         return request.Ok(data);
     }
 
-    private static DefaultSiteDataDetail ToDefaultSiteDataDetail(IRoutableApplication defaultSite, ApplicationHost primaryHost, IContent startPage)
+    private static DefaultSiteDataDetail ToDefaultSiteDataDetail(IRoutableApplication defaultSite, ApplicationHost defaultHost, IContent startPage)
     {
-        CultureInfo mainLanguage = primaryHost.Locale ?? CultureInfo.GetCultureInfo("en");
+        CultureInfo mainLanguage = defaultHost.Locale ?? CultureInfo.GetCultureInfo("en");
         List<CultureInfo> languages = [.. ((ILocalizable)startPage).ExistingLanguages];
 
         DefaultSiteDataDetail data = new()
         {
             RoutableApplication = defaultSite,
             Name = startPage.Name,
-            Authority = primaryHost.Authority,
+            Authority = defaultHost.Authority,
             MainLanguage = mainLanguage,
             Languages = languages,
             StartPageType = startPage.GetOriginalType(),
             EntryPoint = startPage.ContentLink,
-            PreferredUrlScheme = primaryHost.PreferredUrlScheme,
+            PreferredUrlScheme = defaultHost.PreferredUrlScheme,
         };
 
         return data;
-    }
-
-    private IContent? GetDefault(Type contentType, ContentReference parent, CultureInfo langauge)
-    {
-        return _contentRepository.GetType()
-            .GetMethod(nameof(IContentRepository.GetDefault), [typeof(ContentReference), typeof(CultureInfo)])
-            ?.MakeGenericMethod(contentType)
-            ?.Invoke(_contentRepository, [parent, langauge]) as IContent;
     }
 }

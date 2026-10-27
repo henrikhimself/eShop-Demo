@@ -131,6 +131,15 @@ internal sealed class SiteInitialization : IInitializableModule
         CatalogRouteHelper.MapDefaultHierarchialRouter(() => defaultSite.EntryPoint, enableOutgoingSeoUri);
     }
 
+    private static async Task EnsureSiteSettingsAsync(
+        OperationRequest request,
+        DefaultSiteDataDetail defaultSite,
+        IDefaultContentService defaultContentService)
+    {
+        OperationDataRequest<DefaultSiteDataDetail> siteSettingsRequest = request.CreateOperationRequest(defaultSite);
+        await defaultContentService.CreateSiteSettings(siteSettingsRequest);
+    }
+
     private async void InitCompleteAsync(object? sender, EventArgs args)
     {
         if (sender is not InitializationEngine context)
@@ -143,19 +152,29 @@ internal sealed class SiteInitialization : IInitializableModule
         await using AsyncServiceScope scope = context.Services.CreateAsyncScope();
         IServiceProvider serviceProvider = scope.ServiceProvider;
 
+        IDefaultSiteService defaultSiteService = serviceProvider.GetRequiredService<IDefaultSiteService>();
+        IOptions<SiteInitializationOptions> options = serviceProvider.GetRequiredService<IOptions<SiteInitializationOptions>>();
+        IDefaultAccessService defaultAccessService = serviceProvider.GetRequiredService<IDefaultAccessService>();
+        IDefaultContentService defaultContentService = serviceProvider.GetRequiredService<IDefaultContentService>();
+
         DefaultSiteDataDetail defaultSite = await EnsureDefaultSiteAsync(
             request,
-            serviceProvider.GetRequiredService<IDefaultSiteService>(),
-            serviceProvider.GetRequiredService<IOptions<SiteInitializationOptions>>());
+            defaultSiteService,
+            options);
 
         EnsureDefaultAccess(
             request,
             defaultSite,
-            serviceProvider.GetRequiredService<IDefaultAccessService>());
+            defaultAccessService);
 
         await EnsureDefaultCatalogAsync(
             request,
             defaultSite,
-            serviceProvider.GetRequiredService<IDefaultContentService>());
+            defaultContentService);
+
+        await EnsureSiteSettingsAsync(
+            request,
+            defaultSite,
+            defaultContentService);
     }
 }

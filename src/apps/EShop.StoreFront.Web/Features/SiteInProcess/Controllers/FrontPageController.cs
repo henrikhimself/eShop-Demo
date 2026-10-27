@@ -22,8 +22,8 @@ namespace Hj.EShop.StoreFront.Web.Features.SiteInProcess.Controllers;
 
 public class FrontPageController : PageController<FrontPage>
 {
-    public IActionResult Index(FrontPage currentPage)
+    public IActionResult Index(FrontPage currentContent)
     {
-        return View(currentPage);
+        return View(currentContent);
     }
 }
