@@ -28,7 +28,8 @@ namespace Hj.EShop.Cli;
 internal sealed class GlobalOptionsInterceptor(
     GlobalOptionsAccessor accessor,
     IDevCertificateInstaller devCertificateInstaller,
-    IPrerequisiteChecker prerequisiteChecker) : ICommandInterceptor
+    IPrerequisiteChecker prerequisiteChecker,
+    CancellationToken cancellationToken) : ICommandInterceptor
 {
     private const string ToolsEnvironmentVariable = "ESHOP_TOOLS";
     private const string AgentEnvironmentVariable = "ESHOP_AGENT";
@@ -49,7 +50,7 @@ internal sealed class GlobalOptionsInterceptor(
         // must run before accessor.Resolve(...) below, since ToolExecutor's --tools
         // auto routing needs its UnusableLocalTools result baked into GlobalOptions.
         PrerequisiteCheckResult prerequisiteCheckResult =
-            prerequisiteChecker.CheckAsync(CancellationToken.None).GetAwaiter().GetResult();
+            prerequisiteChecker.CheckAsync(cancellationToken).GetAwaiter().GetResult();
         accessor.Resolve(new GlobalOptions(tools, output, prerequisiteCheckResult.UnusableLocalTools) { Debug = globalSettings.Debug });
 
         // IOutputSink can't be constructor-injected here because it depends on the
@@ -67,7 +68,7 @@ internal sealed class GlobalOptionsInterceptor(
             }
         }
 
-        devCertificateInstaller.EnsureTrustedAsync(CancellationToken.None).GetAwaiter().GetResult();
+        devCertificateInstaller.EnsureTrustedAsync(cancellationToken).GetAwaiter().GetResult();
     }
 
     public void InterceptResult(CommandContext context, CommandSettings settings, ref int result)

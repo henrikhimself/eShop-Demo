@@ -68,6 +68,70 @@ public sealed class ProcessRunnerTests
     }
 
     [Fact]
+    public async Task RunAsync_CaptureLimit_KeepsTailAndStillStreamsEveryLine()
+    {
+        ProcessRunner runner = new();
+        ConcurrentQueue<ProcessOutputLine> received = [];
+        ProcessRequest request = new(
+            "sh",
+            ["-c", "i=0; while [ \"$i\" -lt 1000 ]; do printf 'output-%s\\n' \"$i\"; printf 'error-%s\\n' \"$i\" >&2; i=$((i + 1)); done"],
+            OutputLineHandler: received.Enqueue,
+            MaxCapturedOutputCharacters: 128);
+
+        ProcessResult result = await runner.RunAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.StandardOutput.Length <= 128);
+        Assert.True(result.StandardError.Length <= 128);
+        Assert.Contains("output-999", result.StandardOutput, StringComparison.Ordinal);
+        Assert.Contains("error-999", result.StandardError, StringComparison.Ordinal);
+        Assert.DoesNotContain("output-0\\n", result.StandardOutput, StringComparison.Ordinal);
+        Assert.Equal(2000, received.Count);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task RunAsync_InvalidCaptureLimit_ThrowsBeforeStartingProcess(int limit)
+    {
+        ProcessRunner runner = new();
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => runner.RunAsync(
+                new ProcessRequest("no-such-process", [], MaxCapturedOutputCharacters: limit),
+                TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task RunAsync_AlreadyCancelled_DoesNotStartProcess()
+    {
+        ProcessRunner runner = new();
+        using CancellationTokenSource cancellation = new();
+        await cancellation.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => runner.RunAsync(new ProcessRequest("no-such-process", []), cancellation.Token));
+    }
+
+    [Fact]
+    public async Task RunAsync_CancelledNoisyProcess_DrainsCappedOutputAndTerminates()
+    {
+        ProcessRunner runner = new();
+        TaskCompletionSource firstOutput = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using CancellationTokenSource cancellation = new();
+        ProcessRequest request = new(
+            "sh", ["-c", "while :; do printf 'repeated diagnostic\\n' >&2; done"],
+            OutputLineHandler: _ => firstOutput.TrySetResult(),
+            MaxCapturedOutputCharacters: 128);
+        Task<ProcessResult> runTask = runner.RunAsync(request, cancellation.Token);
+
+        await firstOutput.Task.WaitAsync(TestContext.Current.CancellationToken);
+        await cancellation.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => runTask);
+    }
+
+    [Fact]
     public async Task RunAsync_Cancelled_KillsTheChildProcess()
     {
         ProcessRunner runner = new();

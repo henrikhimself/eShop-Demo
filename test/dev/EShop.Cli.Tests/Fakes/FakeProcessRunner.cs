@@ -26,9 +26,12 @@ internal sealed class FakeProcessRunner(Func<ProcessRequest, ProcessResult>? res
 
     public IReadOnlyList<ProcessRequest> Invocations => _invocations;
 
+    public List<CancellationToken> CancellationTokens { get; } = [];
+
     public Task<ProcessResult> RunAsync(ProcessRequest request, CancellationToken cancellationToken)
     {
         _invocations.Add(request);
+        CancellationTokens.Add(cancellationToken);
         ProcessResult result = responder is null
             ? new ProcessResult(0, string.Empty, string.Empty)
             : responder(request);

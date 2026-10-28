@@ -119,3 +119,8 @@ prematurely.
   gains its own frontend build step (it has none yet - no separate JS/TS build).
 - Centralize the Storefront migration runners' script-directory configuration instead of
   repeating it in AppHost resource configuration.
+- Isolate Docker socket resolver test fixtures from the real rootless socket. The
+  missing-socket fallback test fails on a host with a running rootless daemon because
+  another supported fallback finds the real socket. The CLI suite passes in the
+  utility container without a socket mount; this does not remove the native fixture
+  problem.

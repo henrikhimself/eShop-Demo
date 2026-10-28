@@ -77,7 +77,8 @@ internal sealed class ContainerRunner(
             return await processRunner.RunAsync(
                 new ProcessRequest(
                     "docker", arguments, invocation.WorkingDirectory,
-                    Interactive: invocation.Interactive, OutputLineHandler: invocation.OutputLineHandler),
+                    Interactive: invocation.Interactive, OutputLineHandler: invocation.OutputLineHandler,
+                    MaxCapturedOutputCharacters: invocation.MaxCapturedOutputCharacters),
                 cancellationToken);
         }
         catch (OperationCanceledException)

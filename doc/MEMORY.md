@@ -64,6 +64,14 @@
   `EShop.Common` would bring AppHost orchestration binaries into every dependent project.
 - `eshop test e2e` and `eshop screenshot` always use the utility container because it owns
   Chromium. Screenshot login requires caller-supplied same-origin login path and credentials.
+- Certificate prerequisites distinguish a local PFX export from completed utility-container
+  trust. An incomplete import must remain retryable, and an initialized NSS database
+  must not be initialized again. See `DevCertificateInstaller.cs`.
+- Startup prerequisite checks share command cancellation. Cancelling a container-backed
+  check must also remove its container, not only stop the Docker client.
+- The PFX import nickname in NSS can differ from the nickname expected by the .NET
+  combined trust check. Use NSS server-certificate validation and a browser with TLS
+  errors enabled to distinguish a nickname mismatch from missing browser trust.
 - DevTools has no authentication because it is development-only and excluded from deployment.
 - Storefront claim-name mapping must be registered during service registration, before DI
   is built.

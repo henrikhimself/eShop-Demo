@@ -31,7 +31,7 @@ public sealed class GlobalOptionsInterceptorTests
         GlobalOptionsAccessor accessor = new();
         FakeDevCertificateInstaller devCertificateInstaller = new();
         FakePrerequisiteChecker prerequisiteChecker = new([]);
-        GlobalOptionsInterceptor interceptor = new(accessor, devCertificateInstaller, prerequisiteChecker);
+        GlobalOptionsInterceptor interceptor = new(accessor, devCertificateInstaller, prerequisiteChecker, TestContext.Current.CancellationToken);
         DefaultSettings settings = new() { Tools = ExecutionMode.Local, Agent = true, Debug = true };
 
         interceptor.Intercept(context: null!, settings);
@@ -41,6 +41,22 @@ public sealed class GlobalOptionsInterceptorTests
         Assert.True(accessor.Options.Debug);
         Assert.Equal(1, devCertificateInstaller.CallCount);
         Assert.Equal(1, prerequisiteChecker.CallCount);
+        Assert.Equal(TestContext.Current.CancellationToken, prerequisiteChecker.ReceivedToken);
+        Assert.Equal(TestContext.Current.CancellationToken, devCertificateInstaller.ReceivedToken);
+    }
+
+    [Fact]
+    public void Intercept_CancelledStartup_DoesNotRunCertificateSetup()
+    {
+        using CancellationTokenSource cancellation = new();
+        cancellation.Cancel();
+        FakeDevCertificateInstaller installer = new();
+        FakePrerequisiteChecker checker = new([]);
+        GlobalOptionsInterceptor interceptor = new(new GlobalOptionsAccessor(), installer, checker, cancellation.Token);
+
+        Assert.ThrowsAny<OperationCanceledException>(() => interceptor.Intercept(context: null!, new DefaultSettings()));
+
+        Assert.Equal(0, installer.CallCount);
     }
 
     [Fact]
@@ -49,7 +65,7 @@ public sealed class GlobalOptionsInterceptorTests
         GlobalOptionsAccessor accessor = new();
         FakeDevCertificateInstaller devCertificateInstaller = new();
         FakePrerequisiteChecker prerequisiteChecker = new([]);
-        GlobalOptionsInterceptor interceptor = new(accessor, devCertificateInstaller, prerequisiteChecker);
+        GlobalOptionsInterceptor interceptor = new(accessor, devCertificateInstaller, prerequisiteChecker, TestContext.Current.CancellationToken);
 
         interceptor.Intercept(context: null!, new NonGlobalSettings());
 
@@ -63,7 +79,7 @@ public sealed class GlobalOptionsInterceptorTests
         GlobalOptionsAccessor accessor = new();
         FakeDevCertificateInstaller devCertificateInstaller = new();
         FakePrerequisiteChecker prerequisiteChecker = new(["dotnet: version mismatch"]);
-        GlobalOptionsInterceptor interceptor = new(accessor, devCertificateInstaller, prerequisiteChecker);
+        GlobalOptionsInterceptor interceptor = new(accessor, devCertificateInstaller, prerequisiteChecker, TestContext.Current.CancellationToken);
 
         Exception? exception = Record.Exception(() => interceptor.Intercept(context: null!, new DefaultSettings()));
 
@@ -149,9 +165,12 @@ public sealed class GlobalOptionsInterceptorTests
     {
         public int CallCount { get; private set; }
 
+        public CancellationToken ReceivedToken { get; private set; }
+
         public Task EnsureTrustedAsync(CancellationToken cancellationToken)
         {
             CallCount++;
+            ReceivedToken = cancellationToken;
             return Task.CompletedTask;
         }
     }
@@ -160,9 +179,13 @@ public sealed class GlobalOptionsInterceptorTests
     {
         public int CallCount { get; private set; }
 
+        public CancellationToken ReceivedToken { get; private set; }
+
         public Task<PrerequisiteCheckResult> CheckAsync(CancellationToken cancellationToken)
         {
             CallCount++;
+            ReceivedToken = cancellationToken;
+            cancellationToken.ThrowIfCancellationRequested();
             return Task.FromResult(new PrerequisiteCheckResult(generalIssues, [], new HashSet<string>()));
         }
     }

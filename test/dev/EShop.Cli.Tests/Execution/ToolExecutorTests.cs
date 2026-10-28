@@ -120,9 +120,12 @@ public sealed class ToolExecutorTests
             new RecordingOutputSink(),
             new RepoPaths("/repo"));
 
-        await executor.RunAsync(new ToolInvocation("dotnet", ["build"]), TestContext.Current.CancellationToken);
+        await executor.RunAsync(
+            new ToolInvocation("dotnet", ["build"], MaxCapturedOutputCharacters: 128),
+            TestContext.Current.CancellationToken);
 
         ProcessRequest request = Assert.Single(processRunner.Invocations);
+        Assert.Equal(128, request.MaxCapturedOutputCharacters);
         Assert.Empty(containerRunner.Invocations);
         Assert.DoesNotContain("AspireCliPath", request.EnvironmentVariables!);
     }

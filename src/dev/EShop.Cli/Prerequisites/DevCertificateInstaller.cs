@@ -26,53 +26,108 @@ internal sealed class DevCertificateInstaller(
     RepoPaths paths) : IDevCertificateInstaller
 {
     private const string DevCertPassword = "dev-password";
+    private const int MaxDiagnosticCharacters = 64 * 1024;
 
     public async Task EnsureTrustedAsync(CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (!localToolLocator.IsOnPath("dotnet"))
         {
-            // No local .NET SDK to export the cert from - best-effort container trust only.
-            await containerRunner.RunAsync(new ToolInvocation("dotnet", ["dev-certs", "https", "--trust"]), cancellationToken);
+            // No local SDK to export from. Trust the container's own certificate.
+            ProcessResult trust = await containerRunner.RunAsync(
+                new ToolInvocation("dotnet", ["dev-certs", "https", "--trust"],
+                    MaxCapturedOutputCharacters: MaxDiagnosticCharacters),
+                cancellationToken);
+            EnsureSucceeded(trust, "trust the container development certificate");
             return;
         }
 
         string devCertPath = Path.Combine(paths.TmpDir, "devcert.pfx");
-        if (File.Exists(devCertPath))
+        string markerPath = Path.Combine(paths.CacheHomeDir, ".pki", "nssdb", ".import-devcert.done");
+        if (File.Exists(devCertPath) && File.Exists(markerPath))
         {
             return;
         }
 
-        // Exporting must always happen locally, never via IToolExecutor's --tools
-        // routing - it has to reach *this* machine's dev-certs store regardless of
-        // --tools container.
-        await processRunner.RunAsync(
-            new ProcessRequest("dotnet", ["dev-certs", "https", "--export-path", devCertPath, "--password", DevCertPassword]),
-            cancellationToken);
+        if (!File.Exists(devCertPath))
+        {
+            // A new export invalidates any import marker left by an older certificate.
+            if (File.Exists(markerPath))
+            {
+                File.Delete(markerPath);
+            }
 
+            await ExportAsync(devCertPath, cancellationToken);
+        }
+
+        // An existing export is not proof of a successful import. Retry after a
+        // failed import or after the container's shared home/cache was removed.
         await ImportIntoContainerNssDatabaseAsync(devCertPath, cancellationToken);
+    }
+
+    private async Task ExportAsync(string devCertPath, CancellationToken cancellationToken)
+    {
+        Directory.CreateDirectory(paths.TmpDir);
+        string temporaryPath = Path.Combine(paths.TmpDir, $"devcert-{Guid.NewGuid():N}.pfx");
+
+        try
+        {
+            // Always local: this must reach this machine's dev-certs store, not
+            // IToolExecutor's --tools routing. Publish the export only on success.
+            ProcessResult export = await processRunner.RunAsync(
+                new ProcessRequest("dotnet",
+                    ["dev-certs", "https", "--export-path", temporaryPath, "--password", DevCertPassword],
+                    MaxCapturedOutputCharacters: MaxDiagnosticCharacters),
+                cancellationToken);
+            EnsureSucceeded(export, "export the local development certificate");
+            File.Move(temporaryPath, devCertPath, overwrite: true);
+        }
+        finally
+        {
+            File.Delete(temporaryPath);
+        }
     }
 
     private async Task ImportIntoContainerNssDatabaseAsync(string devCertPath, CancellationToken cancellationToken)
     {
         string relativeDevCertPath = Path.GetRelativePath(paths.Root, devCertPath);
+        string quotedDevCertPath = "'" + relativeDevCertPath.Replace("'", "'\\''", StringComparison.Ordinal) + "'";
 
-        // Imports the exported cert into the utility container's NSS database (used by
-        // Chromium/Playwright for `eshop test e2e`) and marks it done so
-        // `GlobalOptionsInterceptor` running this before every `eshop` command stays a
-        // no-op after the first successful import.
+        // The NSS database may already exist without our completion marker.
+        // certutil -N on an initialized database changes its password; --empty-password
+        // alone does not prevent that path from prompting for the old password.
         string script =
             $"""
+            set -eu
+            exec </dev/null
             nssdb="$HOME/.pki/nssdb"
             marker="$nssdb/.import-devcert.done"
             if [ -f "$marker" ]; then exit 0; fi
             mkdir -p "$nssdb"
-            certutil -N -d "sql:$nssdb" --empty-password \
-              && pk12util -d "sql:$nssdb" -i "{relativeDevCertPath}" -W "{DevCertPassword}" \
-              && dotnet dev-certs https --clean --import "{relativeDevCertPath}" --password "{DevCertPassword}" \
-              && dotnet dev-certs https --trust \
-              && touch "$marker"
+            password_file="$(mktemp)"
+            trap 'rm -f "$password_file"' 0
+            printf '\n' > "$password_file"
+            if [ ! -f "$nssdb/cert9.db" ] && [ ! -f "$nssdb/key4.db" ]; then
+              certutil -N -d "sql:$nssdb" --empty-password -f "$password_file" -@ "$password_file"
+            fi
+            pk12util -d "sql:$nssdb" -i {quotedDevCertPath} -k "$password_file" -W "{DevCertPassword}"
+            dotnet dev-certs https --clean --import {quotedDevCertPath} --password "{DevCertPassword}"
+            dotnet dev-certs https --trust
+            touch "$marker"
             """;
 
-        await containerRunner.RunAsync(new ToolInvocation("sh", ["-c", script]), cancellationToken);
+        ProcessResult import = await containerRunner.RunAsync(
+            new ToolInvocation("sh", ["-c", script], MaxCapturedOutputCharacters: MaxDiagnosticCharacters),
+            cancellationToken);
+        EnsureSucceeded(import, "import and trust the development certificate in the utility container");
+    }
+
+    private static void EnsureSucceeded(ProcessResult result, string action)
+    {
+        if (!result.Succeeded)
+        {
+            throw new InvalidOperationException(
+                $"Failed to {action} (exit code {result.ExitCode}).\nLast captured output:\n{result.StandardOutput}{result.StandardError}");
+        }
     }
 }

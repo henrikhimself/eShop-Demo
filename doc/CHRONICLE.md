@@ -129,3 +129,39 @@ constraints belong in `MEMORY.md`; accepted architecture decisions belong in ADR
   Pkcs and Xml packages only in projects whose resolved graphs otherwise contain an
   affected version. Central transitive pinning was rejected because it surfaced unrelated
   dependency-downgrade errors across the solution.
+
+### Certificate initialization hang and cancellation correction
+
+- The apparent hang after CLI publishing was in the certificate prerequisite that runs
+  before `env`, not in publishing or the AppHost keyboard menu. Repeating
+  `certutil -N --empty-password` against an initialized NSS database enters NSS
+  password-change logic. Without a controlling terminal, it repeats
+  `Error opening input terminal for read` and `Invalid password.  Try again.` The utility image and
+  a disposable copy of the affected database both reproduced this behavior.
+- The proposed terminal guard around the AppHost key menu was discarded. Original
+  Bash input handling did not produce the NSS messages. The guard preserved terminal
+  keys but unnecessarily disabled piped key input and could not affect `env`.
+- Certificate setup now initializes only a missing NSS database and supplies explicit
+  password sources. An exported PFX is not a completion marker: failed imports and a
+  removed shared home remain retryable. Exports are staged until successful; command
+  failures are reported; the completion marker is written only after trust succeeds.
+- Startup checks previously received an uncancellable token while the CLI's Ctrl-C
+  handler suppressed immediate exit. They now receive the command token, which lets
+  container cancellation reach the existing independent container-removal path.
+  Certificate diagnostics retain a bounded tail per stream; other tools retain full
+  output because build and test diagnostics depend on it.
+- Verification used fresh and existing NSS databases, repeated setup, an invalid PFX
+  followed by retry, and a password-protected database. The invalid inputs failed
+  without a password loop or a false completion marker. Ctrl-C during blocked setup
+  returned exit code 130 and removed the utility container.
+- The independent .NET combined trust check reported a nickname mismatch for the
+  PFX-imported NSS entry, not missing browser trust. NSS server validation succeeded,
+  and real Chromium loaded HTTPS with `ignoreHTTPSErrors=false`. No trust-store
+  nickname migration was added to this correction.
+- All 213 CLI tests passed in the utility container without a Docker socket mount.
+  Native execution exposed the pre-existing socket-fixture issue tracked in
+  `TODO.md`. Full repository restore and build also passed after reducing .NET
+  concurrency with `DOTNET_PROCESSOR_COUNT=2` and disabling MSBuild node reuse for
+  verification. This devbox had a two-GiB cgroup memory limit despite host-level
+  `free` output showing more RAM; cgroup counters recorded OOM kills during the
+  initial unrestricted attempt.

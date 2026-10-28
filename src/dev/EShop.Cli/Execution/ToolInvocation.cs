@@ -21,7 +21,8 @@ namespace Hj.EShop.Cli.Execution;
 // needs the container's Playwright/Chromium install regardless of --tools.
 // EnvironmentVariables and OutputLineHandler are set by ToolExecutor itself (not by
 // callers) to pass NO_COLOR=1 through to the child process in AI mode and stream debug
-// output - see ToolExecutor.RunAsync.
+// output - see ToolExecutor.RunAsync. MaxCapturedOutputCharacters optionally bounds
+// the diagnostic tail retained per stream without limiting streamed output.
 internal sealed record ToolInvocation(
     string Tool,
     IReadOnlyList<string> Arguments,
@@ -29,4 +30,5 @@ internal sealed record ToolInvocation(
     bool Interactive = false,
     ExecutionMode? ForceMode = null,
     IReadOnlyDictionary<string, string>? EnvironmentVariables = null,
-    Action<ProcessOutputLine>? OutputLineHandler = null);
+    Action<ProcessOutputLine>? OutputLineHandler = null,
+    int? MaxCapturedOutputCharacters = null);

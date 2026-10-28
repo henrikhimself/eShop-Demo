@@ -146,11 +146,12 @@ public sealed class ContainerRunnerTests
         Action<ProcessOutputLine> handler = _ => { };
 
         await runner.RunAsync(
-            new ToolInvocation("pnpm", ["install"], OutputLineHandler: handler),
+            new ToolInvocation("pnpm", ["install"], OutputLineHandler: handler, MaxCapturedOutputCharacters: 128),
             TestContext.Current.CancellationToken);
 
         ProcessRequest request = Assert.Single(processRunner.Invocations);
         Assert.Same(handler, request.OutputLineHandler);
+        Assert.Equal(128, request.MaxCapturedOutputCharacters);
     }
 
     [Fact]

@@ -34,7 +34,16 @@ GlobalOptionsAccessor globalOptionsAccessor = new();
 RepoRootLocator repoRootLocator = new();
 RepoPaths repoPaths = new(repoRootLocator.Find());
 
+// Startup checks and commands share cancellation, including work in containers.
+using CancellationTokenSource cancellationTokenSource = new();
+Console.CancelKeyPress += (_, e) =>
+{
+    e.Cancel = true;
+    cancellationTokenSource.Cancel();
+};
+
 TypeRegistrar registrar = new(new ServiceCollection());
+registrar.RegisterInstance(typeof(CancellationToken), cancellationTokenSource.Token);
 registrar.RegisterInstance(typeof(IGlobalOptionsAccessor), globalOptionsAccessor);
 registrar.RegisterInstance(typeof(GlobalOptionsAccessor), globalOptionsAccessor);
 registrar.RegisterInstance(typeof(RepoPaths), repoPaths);
@@ -112,15 +121,6 @@ app.Configure(config =>
         generate.AddCommand<GenerateTypesCommand>("types")
             .WithDescription("Regenerate the Seller Portal Web's TypeScript API types."));
 });
-
-// Ctrl+C must reach RunCommand's AppHostSessionRunner so it can run `aspire stop`
-// before exiting, rather than the process dying immediately and orphaning the AppHost.
-using CancellationTokenSource cancellationTokenSource = new();
-Console.CancelKeyPress += (_, e) =>
-{
-    e.Cancel = true;
-    cancellationTokenSource.Cancel();
-};
 
 int exitCode = await app.RunAsync(args, cancellationTokenSource.Token);
 

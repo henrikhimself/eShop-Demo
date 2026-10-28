@@ -83,7 +83,8 @@ internal sealed class ToolExecutor(
         return processRunner.RunAsync(
             new ProcessRequest(
                 invocation.Tool, invocation.Arguments, invocation.WorkingDirectory,
-                environmentVariables, Interactive: invocation.Interactive, OutputLineHandler: invocation.OutputLineHandler),
+                environmentVariables, Interactive: invocation.Interactive, OutputLineHandler: invocation.OutputLineHandler,
+                MaxCapturedOutputCharacters: invocation.MaxCapturedOutputCharacters),
             cancellationToken);
     }
 }

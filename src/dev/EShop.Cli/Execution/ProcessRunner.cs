@@ -23,6 +23,12 @@ internal sealed class ProcessRunner : IProcessRunner
 {
     public async Task<ProcessResult> RunAsync(ProcessRequest request, CancellationToken cancellationToken)
     {
+        if (request.MaxCapturedOutputCharacters is int limit)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(limit);
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
         bool captureOutput = !request.Interactive;
         ProcessStartInfo startInfo = new(request.FileName)
         {
@@ -52,18 +58,19 @@ internal sealed class ProcessRunner : IProcessRunner
         process.Start();
 
         // Killed on cancellation, not just disposed - Process.Dispose() releases the
-        // .NET wrapper only, not the OS process or its children. Known gap: for a
-        // `docker run` child (ContainerRunner) this kills the client process, not the
-        // container itself.
+        // .NET wrapper only, not the OS process or its children. For Docker this
+        // kills the client; ContainerRunner independently removes its named container.
         using CancellationTokenRegistration killRegistration = cancellationToken.Register(
             () => KillProcessTree(process));
 
         if (captureOutput)
         {
             Task standardOutputTask = ReadOutputAsync(
-                process.StandardOutput, ProcessOutputStream.StandardOutput, standardOutput, request.OutputLineHandler);
+                process.StandardOutput, ProcessOutputStream.StandardOutput, standardOutput, request.OutputLineHandler,
+                request.MaxCapturedOutputCharacters);
             Task standardErrorTask = ReadOutputAsync(
-                process.StandardError, ProcessOutputStream.StandardError, standardError, request.OutputLineHandler);
+                process.StandardError, ProcessOutputStream.StandardError, standardError, request.OutputLineHandler,
+                request.MaxCapturedOutputCharacters);
 
             try
             {
@@ -72,6 +79,7 @@ internal sealed class ProcessRunner : IProcessRunner
             catch (OperationCanceledException)
             {
                 await process.WaitForExitAsync(CancellationToken.None);
+                await Task.WhenAll(standardOutputTask, standardErrorTask);
                 throw;
             }
 
@@ -96,11 +104,18 @@ internal sealed class ProcessRunner : IProcessRunner
         StreamReader reader,
         ProcessOutputStream stream,
         StringBuilder output,
-        Action<ProcessOutputLine>? outputLineHandler)
+        Action<ProcessOutputLine>? outputLineHandler,
+        int? maxCapturedOutputCharacters)
     {
         while (await reader.ReadLineAsync() is string line)
         {
             output.AppendLine(line);
+            if (maxCapturedOutputCharacters is int limit && output.Length > limit)
+            {
+                // Keep recent diagnostics, but continue draining and streaming every line.
+                output.Remove(0, output.Length - limit);
+            }
+
             outputLineHandler?.Invoke(new ProcessOutputLine(stream, line));
         }
     }

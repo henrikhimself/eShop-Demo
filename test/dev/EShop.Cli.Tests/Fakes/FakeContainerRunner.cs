@@ -24,9 +24,12 @@ internal sealed class FakeContainerRunner(Func<ToolInvocation, ProcessResult>? r
 
     public IReadOnlyList<ToolInvocation> Invocations => _invocations;
 
+    public List<CancellationToken> CancellationTokens { get; } = [];
+
     public Task<ProcessResult> RunAsync(ToolInvocation invocation, CancellationToken cancellationToken)
     {
         _invocations.Add(invocation);
+        CancellationTokens.Add(cancellationToken);
         ProcessResult result = responder is null
             ? new ProcessResult(0, string.Empty, string.Empty)
             : responder(invocation);
