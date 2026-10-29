@@ -200,6 +200,21 @@ public sealed class DevCertificateInstallerTests : IDisposable
         Assert.EndsWith("touch \"$marker\"", script.TrimEnd(), StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task EnsureTrustedAsync_ImportScript_UsesOnlyNewlineLineEndings()
+    {
+        await CreateExportAsync();
+        FakeContainerRunner containerRunner = new();
+        DevCertificateInstaller installer = CreateInstaller(new FakeProcessRunner(), containerRunner, localDotnet: true);
+
+        await installer.EnsureTrustedAsync(TestContext.Current.CancellationToken);
+
+        string script = Assert.Single(containerRunner.Invocations).Arguments[1];
+        Assert.DoesNotContain('\r', script);
+        Assert.StartsWith("set -eu\n", script, StringComparison.Ordinal);
+        Assert.EndsWith("\n", script, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -302,7 +317,8 @@ public sealed class DevCertificateInstallerTests : IDisposable
 
     private static async Task WriteExecutableAsync(string path, string script)
     {
-        await File.WriteAllTextAsync(path, script, TestContext.Current.CancellationToken);
+        // The fake tool is a shell script: a CRLF checkout of this file must not reach the shebang.
+        await File.WriteAllTextAsync(path, script.ReplaceLineEndings("\n"), TestContext.Current.CancellationToken);
         if (OperatingSystem.IsLinux())
         {
             File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);

@@ -91,30 +91,29 @@ internal sealed class DevCertificateInstaller(
     private async Task ImportIntoContainerNssDatabaseAsync(string devCertPath, CancellationToken cancellationToken)
     {
         string relativeDevCertPath = Path.GetRelativePath(paths.Root, devCertPath);
-        string quotedDevCertPath = "'" + relativeDevCertPath.Replace("'", "'\\''", StringComparison.Ordinal) + "'";
+        string quotedDevCertPath = ShellScriptBuilder.Quote(relativeDevCertPath);
 
         // The NSS database may already exist without our completion marker.
         // certutil -N on an initialized database changes its password; --empty-password
         // alone does not prevent that path from prompting for the old password.
-        string script =
-            $"""
-            set -eu
-            exec </dev/null
-            nssdb="$HOME/.pki/nssdb"
-            marker="$nssdb/.import-devcert.done"
-            if [ -f "$marker" ]; then exit 0; fi
-            mkdir -p "$nssdb"
-            password_file="$(mktemp)"
-            trap 'rm -f "$password_file"' 0
-            printf '\n' > "$password_file"
-            if [ ! -f "$nssdb/cert9.db" ] && [ ! -f "$nssdb/key4.db" ]; then
-              certutil -N -d "sql:$nssdb" --empty-password -f "$password_file" -@ "$password_file"
-            fi
-            pk12util -d "sql:$nssdb" -i {quotedDevCertPath} -k "$password_file" -W "{DevCertPassword}"
-            dotnet dev-certs https --clean --import {quotedDevCertPath} --password "{DevCertPassword}"
-            dotnet dev-certs https --trust
-            touch "$marker"
-            """;
+        string script = new ShellScriptBuilder()
+            .Append("set -eu")
+            .Append("exec </dev/null")
+            .Append("nssdb=\"$HOME/.pki/nssdb\"")
+            .Append("marker=\"$nssdb/.import-devcert.done\"")
+            .Append("if [ -f \"$marker\" ]; then exit 0; fi")
+            .Append("mkdir -p \"$nssdb\"")
+            .Append("password_file=\"$(mktemp)\"")
+            .Append("trap 'rm -f \"$password_file\"' 0")
+            .Append("printf '\\n' > \"$password_file\"")
+            .Append("if [ ! -f \"$nssdb/cert9.db\" ] && [ ! -f \"$nssdb/key4.db\" ]; then")
+            .Append("  certutil -N -d \"sql:$nssdb\" --empty-password -f \"$password_file\" -@ \"$password_file\"")
+            .Append("fi")
+            .Append($"pk12util -d \"sql:$nssdb\" -i {quotedDevCertPath} -k \"$password_file\" -W \"{DevCertPassword}\"")
+            .Append($"dotnet dev-certs https --clean --import {quotedDevCertPath} --password \"{DevCertPassword}\"")
+            .Append("dotnet dev-certs https --trust")
+            .Append("touch \"$marker\"")
+            .Build();
 
         ProcessResult import = await containerRunner.RunAsync(
             new ToolInvocation("sh", ["-c", script], MaxCapturedOutputCharacters: MaxDiagnosticCharacters),

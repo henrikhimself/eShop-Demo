@@ -63,6 +63,15 @@ public sealed class AppHostContainerScriptTests
         Assert.Contains("wait $!", script, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Build_UsesOnlyNewlineLineEndings()
+    {
+        string script = BuildScript();
+
+        Assert.DoesNotContain('\r', script);
+        Assert.EndsWith("\n", script, StringComparison.Ordinal);
+    }
+
     private static string BuildScript()
     {
         return AppHostContainerScript.Build(

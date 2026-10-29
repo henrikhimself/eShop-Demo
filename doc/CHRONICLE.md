@@ -165,3 +165,21 @@ constraints belong in `MEMORY.md`; accepted architecture decisions belong in ADR
   verification. This devbox had a two-GiB cgroup memory limit despite host-level
   `free` output showing more RAM; cgroup counters recorded OOM kills during the
   initial unrestricted attempt.
+
+### Shell script line endings and `ShellScriptBuilder`
+
+- After the certificate correction, `eshop.sh env` failed on a Debian workstation with
+  `sh: 1: set: Illegal option -`. The import script was a C# raw string literal, which
+  keeps the source file's line endings. The working tree was CRLF, so `set -eu\r`
+  reached dash. The index was LF; `.gitattributes` has no `eol` rule for `.cs` files.
+- Shell scripts in the CLI are now composed with `ShellScriptBuilder`, which ends every
+  line with `\n` regardless of source or platform line endings. `AppendFormat` was
+  discarded: `string.Format` treats shell braces as placeholders, and `Append($"...")`
+  covers every need. `AppHostContainerScript` also used `AppendLine`, which emits the
+  platform newline, and now uses the builder too.
+- The installer tests wrote fake `certutil` and `pk12util` scripts from raw literals and
+  failed for the same reason in a CRLF tree; the test helper now normalizes line endings.
+- A `.gitattributes` rule such as `*.cs text eol=lf` was not added; it is a separate
+  repository decision.
+- `eshop.sh build` runs `dotnet format`, which may change files pulled from other
+  developers. Such changes are not part of this correction.
